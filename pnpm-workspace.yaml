@@ -1,0 +1,6 @@
+packages:
+  - "apps/admin-web"
+  - "apps/screen-web"
+  - "apps/user-web"
+allowBuilds:
+  esbuild: true
