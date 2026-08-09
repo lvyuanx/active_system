@@ -1,0 +1,5 @@
+id,task,status,depends_on,task_dir,validation,notes
+1,实现后端 SQLite/JWT 认证与活动 API,DONE,,tasks/backend,python -m pytest -q apps/backend,4 个测试通过
+2,实现管理端登录与活动卡片管理,DONE,1,tasks/admin-web,pnpm --filter @active/admin-web typecheck && pnpm --filter @active/admin-web build,类型检查与生产构建通过
+3,同步配置文档与项目知识文件,DONE,1;2,tasks/docs,git diff --check,无空白错误
+4,执行全量验证并整理交付,DONE,1;2;3,.,pnpm build && python -m pytest -q apps/backend,全量构建测试和浏览器运行态验证通过

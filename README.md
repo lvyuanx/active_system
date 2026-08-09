@@ -27,6 +27,12 @@ pnpm dev:user
 - 用户端：http://localhost:5175
 - API 文档：http://localhost:8000/docs
 
+## 管理员活动管理
+
+启动后端前复制 `.env.example` 为 `.env`，设置 `SUPERUSER_USERNAME`、`SUPERUSER_PASSWORD` 和随机的 `JWT_SECRET`。后端首次启动会初始化 SQLite 数据库和超级用户；只有该超级用户可以登录管理端。
+
+登录后默认进入活动选择页。活动状态为“已关闭”“进行中”“已结束”：新建活动默认为已关闭，可在已关闭和进行中之间反复切换；管理员手动结束后不可再次开启或关闭。活动名称必填，描述、开始时间和结束时间可选，若同时填写时间则结束时间必须晚于开始时间。
+
 ## 验证
 
 ```powershell
@@ -43,4 +49,3 @@ pnpm generate:api -Target all
 ```
 
 生成结果分别写入三个前端应用的 `src/api/generated/`，不使用共享 `packages/` 目录。
-

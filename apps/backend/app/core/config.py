@@ -8,6 +8,11 @@ class Settings(BaseSettings):
     app_host: str = "0.0.0.0"
     app_port: int = 8000
     app_cors_origins: str = "http://localhost:5173"
+    database_path: str = "./data/active_system.db"
+    jwt_secret: str = "development-only-change-this-secret"
+    jwt_expire_minutes: int = 60
+    superuser_username: str = "admin"
+    superuser_password: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -19,4 +24,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

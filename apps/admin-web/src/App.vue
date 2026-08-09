@@ -1,7 +1,14 @@
 <template>
-  <main class="app-shell">
-    <h1>活动系统管理端</h1>
-    <p>基础结构已就绪，后续可从活动配置开始接入业务模块。</p>
-    <RouterView />
-  </main>
+  <RouterView />
 </template>
+
+<script setup lang="ts">
+import { onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
+import { clearToken } from "./api/client";
+
+const router = useRouter();
+const handleUnauthorized = () => { clearToken(); router.push("/login"); };
+onMounted(() => window.addEventListener("admin-unauthorized", handleUnauthorized));
+onUnmounted(() => window.removeEventListener("admin-unauthorized", handleUnauthorized));
+</script>

@@ -3,3 +3,48 @@ const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/
 export function apiURL(path: string): string {
   return `${baseURL}${path}`;
 }
+
+export function getToken(): string | null {
+  return localStorage.getItem("active_admin_token");
+}
+
+export function clearToken(): void {
+  localStorage.removeItem("active_admin_token");
+  localStorage.removeItem("active_admin_username");
+}
+
+export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers);
+  headers.set("Content-Type", "application/json");
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const response = await fetch(apiURL(path), { ...options, headers });
+  if (response.status === 401) {
+    clearToken();
+    window.dispatchEvent(new CustomEvent("admin-unauthorized"));
+  }
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.detail ?? "请求失败，请稍后重试");
+  return body as T;
+}
+
+export interface LoginResponse { access_token: string; token_type: string; username: string }
+export interface Activity {
+  activity_id: string;
+  name: string;
+  description: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  status: "closed" | "open" | "ended";
+  created_at: string;
+  updated_at: string;
+}
+
+export const login = (username: string, password: string) => request<LoginResponse>("/auth/login", {
+  method: "POST", body: JSON.stringify({ username, password }),
+});
+export const listActivities = () => request<Activity[]>("/admin/activities");
+export const createActivity = (payload: Pick<Activity, "name" | "description" | "start_time" | "end_time">) =>
+  request<Activity>("/admin/activities", { method: "POST", body: JSON.stringify(payload) });
+export const changeActivityStatus = (id: string, action: "open" | "close" | "end") =>
+  request<Activity>(`/admin/activities/${id}/${action}`, { method: "POST" });
