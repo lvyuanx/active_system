@@ -24,6 +24,14 @@ CREATE TABLE IF NOT EXISTS activities (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS activity_users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,
+    username TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(activity_id, phone)
+);
 """
 
 

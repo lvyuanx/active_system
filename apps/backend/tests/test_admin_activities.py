@@ -103,3 +103,49 @@ def test_create_activity_validates_time_order(tmp_path: Path) -> None:
         assert blank_name.status_code == 422
     finally:
         app.dependency_overrides.clear()
+
+
+def test_activity_user_registration_login_and_isolation(tmp_path: Path) -> None:
+    client, _ = make_client(tmp_path)
+    try:
+        admin_login = client.post("/api/v1/auth/login", json={"username": "root", "password": "secret-password"})
+        headers = {"Authorization": f"Bearer {admin_login.json()['access_token']}"}
+        first = client.post("/api/v1/admin/activities", headers=headers, json={"name": "第一场"}).json()
+        second = client.post("/api/v1/admin/activities", headers=headers, json={"name": "第二场"}).json()
+        public_activity = client.get(f"/api/v1/activities/{first['activity_id']}")
+        assert public_activity.status_code == 200
+        assert public_activity.json()["name"] == "第一场"
+
+        register = client.post(
+            f"/api/v1/activities/{first['activity_id']}/auth/register",
+            json={"username": "小明", "phone": "13800000000"},
+        )
+        assert register.status_code == 201
+        user_token = register.json()["access_token"]
+        duplicate = client.post(
+            f"/api/v1/activities/{first['activity_id']}/auth/register",
+            json={"username": "小红", "phone": "13800000000"},
+        )
+        assert duplicate.status_code == 409
+        login = client.post(
+            f"/api/v1/activities/{first['activity_id']}/auth/login",
+            json={"username": "小明", "phone": "13800000000"},
+        )
+        assert login.status_code == 200
+        me = client.get(
+            f"/api/v1/activities/{first['activity_id']}/me",
+            headers={"Authorization": f"Bearer {user_token}"},
+        )
+        assert me.status_code == 200 and me.json()["username"] == "小明"
+        cross_activity = client.get(
+            f"/api/v1/activities/{second['activity_id']}/me",
+            headers={"Authorization": f"Bearer {user_token}"},
+        )
+        assert cross_activity.status_code == 403
+        other_activity_registration = client.post(
+            f"/api/v1/activities/{second['activity_id']}/auth/register",
+            json={"username": "小明", "phone": "13800000000"},
+        )
+        assert other_activity_registration.status_code == 201
+    finally:
+        app.dependency_overrides.clear()

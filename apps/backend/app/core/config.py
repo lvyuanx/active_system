@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_host: str = "0.0.0.0"
     app_port: int = 8000
-    app_cors_origins: str = "http://localhost:5173"
+    app_cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175"
     database_path: str = "./data/active_system.db"
     jwt_secret: str = "development-only-change-this-secret"
     jwt_expire_minutes: int = 60

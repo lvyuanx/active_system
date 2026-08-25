@@ -6,6 +6,7 @@ const router = createRouter({
   routes: [
     { path: "/login", component: () => import("../views/login/index.vue") },
     { path: "/", component: () => import("../views/home/index.vue"), meta: { requiresAuth: true } },
+    { path: "/activities/:activityId", component: () => import("../views/activity/index.vue"), meta: { requiresAuth: true } },
     { path: "/:pathMatch(.*)*", redirect: "/" },
   ],
 });

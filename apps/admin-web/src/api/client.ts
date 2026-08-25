@@ -44,6 +44,17 @@ export const login = (username: string, password: string) => request<LoginRespon
   method: "POST", body: JSON.stringify({ username, password }),
 });
 export const listActivities = () => request<Activity[]>("/admin/activities");
+export const getActivity = async (id: string): Promise<Activity> => {
+  try {
+    return await request<Activity>(`/admin/activities/${id}`);
+  } catch (detailError) {
+    // 兼容尚未重启、没有单活动详情接口的旧后端进程。
+    const activities = await listActivities();
+    const activity = activities.find((item) => item.activity_id === id);
+    if (activity) return activity;
+    throw detailError;
+  }
+};
 export const createActivity = (payload: Pick<Activity, "name" | "description" | "start_time" | "end_time">) =>
   request<Activity>("/admin/activities", { method: "POST", body: JSON.stringify(payload) });
 export const changeActivityStatus = (id: string, action: "open" | "close" | "end") =>

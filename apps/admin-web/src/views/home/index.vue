@@ -81,6 +81,10 @@
           :key="activity.activity_id"
           class="activity-card"
           :class="`activity-card--${activity.status}`"
+          role="link"
+          tabindex="0"
+          @click="openActivity(activity.activity_id)"
+          @keydown.enter="openActivity(activity.activity_id)"
         >
           <div class="card-body">
             <div class="card-top">
@@ -96,7 +100,7 @@
               <div><dt>结束时间</dt><dd>{{ formatDate(activity.end_time) }}</dd></div>
             </dl>
           </div>
-          <footer class="card-actions">
+          <footer class="card-actions" @click.stop>
             <span class="activity-code">ID {{ shortId(activity.activity_id) }}</span>
             <div>
               <el-button
@@ -260,6 +264,7 @@ const changeStatus = async (activity: Activity, action: "open" | "close" | "end"
   }
 };
 const logout = () => { clearToken(); router.push("/login"); };
+const openActivity = (activityId: string) => router.push(`/activities/${activityId}`);
 const statusLabel = (status: Activity["status"]) => ({ closed: "已关闭", open: "进行中", ended: "已结束" })[status];
 const formatDate = (value: string | null) => value
   ? new Date(value).toLocaleString("zh-CN", { hour12: false })

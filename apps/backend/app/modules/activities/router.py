@@ -53,6 +53,13 @@ class ActivityResponse(BaseModel):
     updated_at: datetime
 
 
+class ActivityPublicResponse(BaseModel):
+    activity_id: str
+    name: str
+    description: str | None
+    status: ActivityStatus
+
+
 def parse_time(value: str | None) -> datetime | None:
     return datetime.fromisoformat(value) if value else None
 
@@ -73,6 +80,15 @@ def get_activity(activity_id: str, settings: Settings) -> ActivityResponse:
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="活动不存在")
     return row_to_activity(row)
+
+
+@router.get("/{activity_id}", response_model=ActivityResponse)
+def get_activity_detail(
+    activity_id: str,
+    _: str = Depends(require_superuser),
+    settings: Settings = Depends(get_settings),
+) -> ActivityResponse:
+    return get_activity(activity_id, settings)
 
 
 @router.get("", response_model=list[ActivityResponse])

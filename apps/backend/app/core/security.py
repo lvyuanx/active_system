@@ -28,14 +28,21 @@ def verify_password(password: str, encoded: str) -> bool:
         return False
 
 
-def create_access_token(username: str, settings: Settings) -> str:
+def create_access_token(username: str, settings: Settings, *, activity_id: str | None = None) -> str:
     expires = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
-    return jwt.encode({"sub": username, "exp": expires}, settings.jwt_secret, algorithm="HS256")
+    payload: dict[str, object] = {"sub": username, "exp": expires}
+    if activity_id:
+        payload["activity_id"] = activity_id
+    return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
-def decode_access_token(token: str, settings: Settings) -> str:
+def decode_access_token_payload(token: str, settings: Settings) -> dict[str, object]:
     payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
     username = payload.get("sub")
     if not isinstance(username, str) or not username:
         raise jwt.InvalidTokenError("missing subject")
-    return username
+    return payload
+
+
+def decode_access_token(token: str, settings: Settings) -> str:
+    return str(decode_access_token_payload(token, settings)["sub"])

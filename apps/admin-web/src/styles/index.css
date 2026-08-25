@@ -229,3 +229,120 @@ button, input, textarea { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }
+
+/* 活动配置壳层：对应草图的左侧导航、右侧顶栏和主画布。 */
+#app .activity-management {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 16px;
+  min-height: 100dvh;
+  padding: 16px;
+  background: #edf1ef;
+}
+#app .activity-management .app-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 32px);
+  padding: 20px 12px 14px;
+  background: #fff;
+  border: 1px solid #dfe5e2;
+  border-radius: 10px;
+  box-shadow: 0 4px 18px rgb(31 48 41 / 4%);
+}
+#app .activity-management .app-sidebar .brand-lockup { padding: 0 8px 20px; }
+#app .activity-management .back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 2px 0 18px;
+  padding: 10px 8px;
+  color: #64716b;
+  border-radius: 5px;
+  text-align: left;
+}
+#app .activity-management .back-button:hover { color: #0f6652; background: #edf7f4; }
+#app .activity-management .back-icon { font-size: 17px; }
+#app .activity-management .sidebar-context {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 15px 10px;
+  border-top: 1px solid #e4e9e6;
+  border-bottom: 1px solid #e4e9e6;
+}
+#app .activity-management .sidebar-label { color: #147d64; font-size: 10px; font-weight: 750; letter-spacing: 1px; }
+#app .activity-management .sidebar-context strong { overflow: hidden; color: #17211e; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+#app .activity-management .sidebar-context span:last-child { color: #9aa59f; font: 10px Consolas, monospace; }
+#app .activity-management .app-sidebar nav { display: grid; gap: 4px; padding-top: 16px; }
+#app .activity-management .nav-item { min-height: 42px; padding: 10px; }
+#app .activity-management .sidebar-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding: 14px 4px 0;
+  border-top: 1px solid #e4e9e6;
+}
+#app .activity-management .sidebar-footer .account-copy { min-width: 0; flex: 1; }
+#app .activity-management .sidebar-footer .account-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#app .activity-management .sidebar-footer .logout-button { padding: 8px 4px; }
+#app .activity-management .workspace { min-width: 0; }
+#app .activity-management .workspace-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 68px;
+  padding: 0 24px;
+  background: #fff;
+  border: 1px solid #dfe5e2;
+  border-radius: 10px;
+  box-shadow: 0 4px 18px rgb(31 48 41 / 4%);
+}
+#app .activity-management .breadcrumb { display: flex; align-items: center; gap: 10px; color: #849089; font-size: 13px; }
+#app .activity-management .breadcrumb b { color: #c2cbc6; font-weight: 400; }
+#app .activity-management .breadcrumb strong { color: #17211e; font-weight: 650; }
+#app .activity-management .workspace-status { display: inline-flex; align-items: center; gap: 7px; color: #718078; font-size: 12px; }
+#app .activity-management .workspace-status i { width: 7px; height: 7px; background: #a5aea9; border-radius: 50%; }
+#app .activity-management .workspace-status--open { color: #0f7656; }
+#app .activity-management .workspace-status--open i { background: #159a70; }
+#app .activity-management .workspace-status--ended { color: #a8403b; }
+#app .activity-management .workspace-status--ended i { background: #d35c55; }
+#app .activity-management .management-page { width: 100%; padding: 28px 8px 44px; }
+#app .activity-management .activity-titlebar { margin: 0 8px 22px; }
+#app .activity-management .activity-titlebar h1 { font-size: 27px; }
+#app .activity-management .content-surface {
+  min-height: 430px;
+  padding: 28px 30px 30px;
+  background: #fff;
+  border: 1px solid #dfe5e2;
+  border-radius: 12px;
+  box-shadow: 0 8px 26px rgb(31 48 41 / 5%);
+}
+#app .activity-management .content-surface .content-heading { margin-bottom: 26px; }
+#app .activity-management .content-surface .entry-panel { background: #fbfcfc; border-color: #e1e8e4; }
+#app .activity-management .entry-address-panel { min-height: 282px; }
+#app .activity-management .qr-panel { min-height: 282px; }
+#app .activity-management .entry-note { margin-top: 16px; }
+#app .activity-management .nav-item:focus-visible,
+#app .activity-management .back-button:focus-visible,
+#app .activity-management .logout-button:focus-visible { outline: 2px solid #147d64; outline-offset: 2px; }
+@media (max-width: 800px) {
+  #app .activity-management { grid-template-columns: 1fr; padding: 10px; }
+  #app .activity-management .app-sidebar { min-height: auto; padding: 14px 12px; }
+  #app .activity-management .app-sidebar .brand-lockup { padding-bottom: 12px; }
+  #app .activity-management .back-button { width: auto; margin: 0 0 10px; }
+  #app .activity-management .sidebar-context { display: none; }
+  #app .activity-management .app-sidebar nav { grid-template-columns: repeat(3, 1fr); padding-top: 0; }
+  #app .activity-management .sidebar-footer { display: none; }
+  #app .activity-management .workspace-topbar { min-height: 56px; padding: 0 16px; }
+  #app .activity-management .management-page { padding: 22px 0 32px; }
+  #app .activity-management .content-surface { padding: 22px 18px; }
+}
+@media (max-width: 480px) {
+  #app .activity-management .app-sidebar nav { grid-template-columns: 1fr; }
+  #app .activity-management .nav-item { min-height: 44px; }
+  #app .activity-management .breadcrumb { max-width: 65%; overflow: hidden; white-space: nowrap; }
+  #app .activity-management .breadcrumb strong { overflow: hidden; text-overflow: ellipsis; }
+  #app .activity-management .workspace-status { display: none; }
+}

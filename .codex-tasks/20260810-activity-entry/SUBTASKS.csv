@@ -1,0 +1,6 @@
+id,task_type,task,depends_on,status,acceptance_criteria,validation_command,completed_at,notes
+1,single-full,实现活动级用户认证与公开活动接口,,DONE,注册登录接口和活动隔离测试通过,python -m pytest -q apps/backend,2026-08-10,
+2,single-full,实现管理端活动详情页与二维码,1,DONE,活动卡片可进入两栏详情页且管理端构建通过,pnpm --filter @active/admin-web build,2026-08-10,
+3,single-full,实现用户端活动路由注册登录与缓存 token,1,DONE,用户端构建通过且扫码入口流程可用,pnpm --filter @active/user-web build,2026-08-10,
+4,single-full,同步模块文档和项目知识文件,1;2;3,DONE,相关 AGENTS/MEMORY/WIKI/README 反映新行为,git diff --check,2026-08-10,
+5,single-full,执行全量验证,1;2;3;4,DONE,后端测试和三端构建全部通过,pnpm build; python -m pytest -q apps/backend,2026-08-10,
