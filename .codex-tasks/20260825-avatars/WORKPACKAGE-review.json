@@ -1,0 +1,87 @@
+{
+  "work_package_id": "wp-avatar-review",
+  "workflow_id": "activity-avatar-delivery",
+  "task_version": "TASK-v2",
+  "target": "main-worktree",
+  "read_scope": [
+    "TASK-v2.md",
+    "ARCHITECTURE-v1.md",
+    "DEVELOPMENT-HANDOFF-v1.md",
+    "TESTING-HANDOFF-v1.md",
+    "INPUT-SNAPSHOT-v1.json",
+    "TASKGRAPH.json",
+    "WORKPACKAGE-development.json",
+    "WORKPACKAGE-testing.json",
+    "WORKPACKAGE-review.json",
+    "SERIAL-INTEGRATION.md",
+    "PERMISSION-BARRIER.md",
+    "BROWSER-EVIDENCE-v1.md",
+    "apps/backend/**",
+    "apps/user-web/**",
+    "README.md",
+    "MEMORY.md",
+    "LEARNING.md",
+    "WIKI.md",
+    "AGENTS.md",
+    "PROJECT_AGENTS.md"
+    ,".codex/config.toml"
+    ,".codex/agents/**"
+  ],
+  "write_scope": [],
+  "ephemeral_scope": [],
+  "acceptance_refs": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006",
+    "AC-007",
+    "AC-008",
+    "AC-009",
+    "AC-010"
+  ],
+  "upstream_dependencies": ["development", "testing"],
+  "downstream_dependencies": ["acceptance"],
+  "handoff_ref": "TESTING-HANDOFF-v1.md;PERMISSION-BARRIER.md",
+  "input_snapshot": {
+    "head": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5",
+    "head_tree": "1f3a86ae798fd11a6b40f179228177dbe3bf3f7c",
+    "worktree": "D:\\projects\\active_system",
+    "development_manifest_sha256": "dffe54d2dc52812bbc1188c4e32f44931d45652eb9203b8ea147c51590c6e329"
+  },
+  "input_snapshot_id": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5-dffe54d2dc52812bbc1188c4e32f44931d45652eb9203b8ea147c51590c6e329",
+  "input_manifest_sha256": "dffe54d2dc52812bbc1188c4e32f44931d45652eb9203b8ea147c51590c6e329",
+  "input_tree_oid": "1f3a86ae798fd11a6b40f179228177dbe3bf3f7c",
+  "head_snapshot": {
+    "head_sha": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5",
+    "branch_ref": "refs/heads/master",
+    "worktree_path": "D:\\projects\\active_system"
+  },
+  "head_sha": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5",
+  "branch_ref": "refs/heads/master",
+  "worktree_path": "D:\\projects\\active_system",
+  "upstream_patch_shas": [],
+  "output_patch_path": null,
+  "output_patch_sha256": null,
+  "resource_claims": ["workspace:main serial read-only barrier"],
+  "permission_class": "read-only",
+  "file_manifest": {
+    "mode": "development output manifest",
+    "sha256": "dffe54d2dc52812bbc1188c4e32f44931d45652eb9203b8ea147c51590c6e329"
+  },
+  "actual_file_manifest": {
+    "sha256": "dffe54d2dc52812bbc1188c4e32f44931d45652eb9203b8ea147c51590c6e329",
+    "entries_ref": "DEVELOPMENT-HANDOFF-v1.md"
+  },
+  "patch_digest": null,
+  "qualification": "NOT_APPLICABLE",
+  "status": "SUCCEEDED",
+  "mode": {
+    "requested_mode": "READ_ONLY_PARALLEL",
+    "effective_mode": "SERIAL_SHARED_WRITE",
+    "reason_code": "DIRTY_INPUT_UNSAFE",
+    "detached_head": false,
+    "degradation_reason": "主工作树含既有未提交改动；审核在测试门禁后串行读取。"
+  }
+}

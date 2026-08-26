@@ -22,9 +22,9 @@
 | `reviewer.toml` | 审核 | `gpt-5.6-sol` / `xhigh` | `read-only` |
 | `acceptance_owner.toml` | 验收 | `gpt-5.6-luna` / `max` | `read-only` |
 
-项目级线程上限和默认模型配置位于上一级 `.codex/config.toml`。全局默认子 Agent 使用
-`gpt-5.6-luna` / `max`。当前会话最多运行 6 个子线程，主线程不计入；只读批次最多 6 个，隔离写入
-工作包最多 3 个，主工作树集成者最多 1 个。
+项目级线程上限位于上一级 `.codex/config.toml` 的 `[agents] max_threads`。角色文件会从
+`.codex/agents/*.toml` 自动发现；当前会话最多运行 6 个子线程，主线程不计入；只读批次最多 6 个，
+隔离写入工作包最多 3 个，主工作树集成者最多 1 个。
 
 ## 核心接口
 
@@ -33,9 +33,10 @@
 - `name`：稳定、唯一的调用标识。
 - `description`：供 Codex 判断何时选择该角色。
 - `developer_instructions`：岗位边界、工作流程和输出契约。
-- `model` 与 `model_reasoning_effort`：固定模型配置，不允许静默降级。
+- `model` 与 `model_reasoning_effort`：角色模型配置；不可用时必须显式调整并重新验证。
 - `sandbox_mode`：文件系统权限。
-- `[agents] enabled = false`：禁止角色继续派生子 Agent。
+
+角色 TOML 不得添加 `[agents] enabled`。禁止角色继续派生子 Agent 由角色指令和主 Agent 调度门禁共同保证。
 
 所有角色共享 `任务`、`输入版本`、`状态`、`结论`、`证据`、`变更文件`、`风险或阻塞`、
 `下一步` 八个交接字段，并在其后追加岗位专属内容。字段标签不得改名、合并或省略；主 Agent 在进入
@@ -119,6 +120,9 @@ Codex 沙箱提供的硬锁。
 
 ## 配置说明
 
+- `.codex/config.toml` 的 `[agents]` 仅使用当前版本支持的 `max_threads`；不要写入 `enabled`、
+  `max_concurrent_threads_per_session` 或默认子 Agent 模型字段。
+- `.codex/agents/*.toml` 是自动发现的角色配置文件，文件内不要再嵌套 `[agents]` 表。
 - `read-only` 是四个只读角色的默认沙箱；主 Agent 派生前还必须把父任务实时权限设为只读。
 - 主 Agent 自行执行 `T0` 时也必须在首次工具调用前确认父任务实时权限为只读，并核对前后工作树。
 - `developer` 可以在指定工作包中修改任务范围内的生产代码、测试和相关文档，并交付包级补丁证据。

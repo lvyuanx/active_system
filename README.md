@@ -35,6 +35,13 @@ pnpm dev:user
 
 点击活动卡片进入活动管理页，首页会生成用户端地址和二维码。二维码地址由管理端 `VITE_USER_WEB_BASE_URL` 配置（默认 `http://localhost:5175`）。用户端按活动收集用户名和手机号，手机号在同一活动内唯一；登录 token 按活动 ID 缓存，缓存有效时扫码可直接进入活动首页。
 
+登录活动后，用户端底部提供“首页 / 聊天 / 我的”三个入口。每个活动自动拥有聊天室：`open` 活动可发送
+1–500 字符纯文本，`closed` 或 `ended` 活动可查看历史但只读。聊天消息通过 HTTP 游标接口读取，并使用
+首帧认证的 WebSocket 实时广播；Nginx 已配置 WebSocket Upgrade。
+
+活动用户注册成功时会从二十款炭黑/哑金卡通 SVG 头像中随机分配一款；头像按活动和活动用户独立保存。
+历史用户在成功登录或调用 `/me` 时惰性补齐，头像只在活动首页和“我的”页展示，不进入聊天消息。
+
 ## 验证
 
 ```powershell
@@ -51,3 +58,9 @@ pnpm generate:api -Target all
 ```
 
 生成结果分别写入三个前端应用的 `src/api/generated/`，不使用共享 `packages/` 目录。
+
+## Codex 任务配置
+
+项目级子 Agent 配置位于 `.codex/config.toml` 和 `.codex/agents/`。线程上限使用
+`[agents] max_threads`；角色 TOML 会自动发现，不要在配置中使用 `agents.enabled` 或在角色文件中嵌套
+`[agents]` 表。

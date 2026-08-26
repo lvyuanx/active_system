@@ -1,0 +1,203 @@
+{
+  "plan_revision": "1",
+  "task_version": "TASK-v1",
+  "workflow_id": "activity-chat-delivery",
+  "run_id": "20260825-activity-chat-01",
+  "input_snapshot": "HEAD bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5 + tracked dirty diff",
+  "input_snapshot_id": "71662d1d7dabaa5fff187107dc5371a60d620c3aa15608b3931699dbe94af7c8",
+  "limits": {
+    "child_threads": 6,
+    "read_only": 6,
+    "isolated_write_packages": 3,
+    "main_integration_writers": 1
+  },
+  "status": "SUCCEEDED",
+  "nodes": [
+    {
+      "workflow_id": "activity-chat-delivery", "task_version": "TASK-v1",
+      "node_id": "product", "role": "product_manager", "stage": "product",
+      "depends_on": [], "required": true, "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006", "AC-007", "AC-008"],
+      "handoff_ref": "TASK-v1.md", "requested_mode": "READ_ONLY_PARALLEL", "effective_mode": "SERIAL_SHARED_WRITE",
+      "permission_class": "read-only", "priority": 1, "batch_id": "batch-01", "attempt": 2,
+      "thread_id": "/root/product_manager", "outcome": "产品任务单已冻结", "work_package_id": null,
+      "resource_claims": [], "status": "SUCCEEDED", "started_at": "2026-08-25T21:30:00+08:00",
+      "ended_at": "2026-08-25T21:35:00+08:00", "event_refs": ["event-001", "event-002"],
+      "evidence_refs": ["TASK-v1.md"], "reason_code": "PERMISSION_NOT_READONLY"
+    },
+    {
+      "workflow_id": "activity-chat-delivery", "task_version": "TASK-v1",
+      "node_id": "architecture", "role": "solution_architect", "stage": "architecture",
+      "depends_on": ["product"], "required": true, "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006", "AC-007", "AC-008"],
+      "handoff_ref": "TASK-v1.md", "requested_mode": "READ_ONLY_PARALLEL", "effective_mode": "SERIAL_SHARED_WRITE",
+      "permission_class": "read-only", "priority": 2, "batch_id": "batch-02", "attempt": 1,
+      "thread_id": "/root/solution_architect", "outcome": "架构方案已冻结，满足 AC-001～AC-008", "work_package_id": null, "resource_claims": [],
+      "status": "SUCCEEDED", "started_at": "2026-08-25T21:37:00+08:00", "ended_at": "2026-08-25T21:49:00+08:00", "event_refs": ["event-003"], "evidence_refs": ["ARCHITECTURE-v1.md"],
+      "reason_code": "PERMISSION_NOT_READONLY"
+    },
+    {
+      "workflow_id": "activity-chat-delivery", "task_version": "TASK-v1",
+      "node_id": "development", "role": "developer", "stage": "development",
+      "depends_on": ["architecture"], "required": true, "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006", "AC-007", "AC-008"],
+      "handoff_ref": "architecture-handoff", "requested_mode": "ISOLATED_WRITE", "effective_mode": "SERIAL_SHARED_WRITE",
+      "permission_class": "workspace-write", "priority": 3, "batch_id": "batch-03", "attempt": 1,
+      "thread_id": "/root/developer", "outcome": "按审核回退修复三项协议/路由/身份问题并补测试", "work_package_id": "wp-development",
+      "resource_claims": ["main-worktree", "sqlite-schema", "user-web"], "status": "SUCCEEDED",
+      "started_at": "2026-08-25T22:15:00+08:00", "ended_at": "2026-08-25T22:23:00+08:00", "event_refs": ["event-006"], "evidence_refs": ["developer-handoff-v2"], "reason_code": "DIRTY_INPUT_UNSAFE"
+    },
+    {
+      "workflow_id": "activity-chat-delivery", "task_version": "TASK-v1",
+      "node_id": "testing", "role": "tester", "stage": "integration_test",
+      "depends_on": ["development"], "required": true, "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006", "AC-007", "AC-008"],
+      "handoff_ref": "development-handoff", "requested_mode": "SERIAL_SHARED_WRITE", "effective_mode": "SERIAL_SHARED_WRITE",
+      "permission_class": "workspace-write", "priority": 4, "batch_id": "batch-04", "attempt": 1,
+      "thread_id": "/root/tester", "outcome": "回退后 12 项测试、typecheck/build 全部通过", "work_package_id": "wp-testing",
+      "resource_claims": ["main-worktree", "test-database", "local-ports"], "status": "SUCCEEDED",
+      "started_at": "2026-08-25T22:24:00+08:00", "ended_at": "2026-08-25T22:29:00+08:00", "event_refs": ["event-005", "event-007", "event-009"], "evidence_refs": ["tester-handoff-v2"], "reason_code": "DIRTY_INPUT_UNSAFE"
+    },
+    {
+      "workflow_id": "activity-chat-delivery", "task_version": "TASK-v1",
+      "node_id": "review", "role": "reviewer", "stage": "final_review",
+      "depends_on": ["testing"], "required": true, "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006", "AC-007", "AC-008"],
+      "handoff_ref": "testing-handoff", "requested_mode": "READ_ONLY_PARALLEL", "effective_mode": "SERIAL_SHARED_WRITE",
+      "permission_class": "read-only", "priority": 5, "batch_id": "batch-05", "attempt": 1,
+      "thread_id": "/root/reviewer", "outcome": "APPROVED；无 P1/P2，真实浏览器断线 E2E 为非阻断风险", "work_package_id": null, "resource_claims": [],
+      "status": "SUCCEEDED", "started_at": "2026-08-25T22:31:00+08:00", "ended_at": "2026-08-25T22:39:00+08:00", "event_refs": ["event-008"], "evidence_refs": ["reviewer-handoff-v3"],
+      "reason_code": "PERMISSION_NOT_READONLY"
+    },
+    {
+      "workflow_id": "activity-chat-delivery", "task_version": "TASK-v1",
+      "node_id": "acceptance", "role": "acceptance_owner", "stage": "acceptance",
+      "depends_on": ["review"], "required": true, "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006", "AC-007", "AC-008"],
+      "handoff_ref": "review-handoff", "requested_mode": "READ_ONLY_PARALLEL", "effective_mode": "SERIAL_SHARED_WRITE",
+      "permission_class": "read-only", "priority": 6, "batch_id": "batch-06", "attempt": 1,
+      "thread_id": "/root/acceptance_owner", "outcome": "ACCEPTED；AC-001～AC-008 全部 PASS", "work_package_id": null, "resource_claims": [],
+      "status": "SUCCEEDED", "started_at": "2026-08-25T22:42:00+08:00", "ended_at": "2026-08-25T22:49:00+08:00", "event_refs": ["event-010", "event-011"], "evidence_refs": ["acceptance-handoff", "browser-390x844"],
+      "reason_code": "PERMISSION_NOT_READONLY"
+    }
+  ],
+  "batches": [
+    {"batch_id": "batch-01", "permission_class": "read-only", "nodes": ["product"], "status": "SUCCEEDED"},
+    {"batch_id": "batch-02", "permission_class": "read-only", "nodes": ["architecture"], "status": "SUCCEEDED"},
+    {"batch_id": "batch-03", "permission_class": "workspace-write", "nodes": ["development"], "status": "SUCCEEDED"},
+    {"batch_id": "batch-04", "permission_class": "workspace-write", "nodes": ["testing"], "status": "SUCCEEDED"},
+    {"batch_id": "batch-05", "permission_class": "read-only", "nodes": ["review"], "status": "SUCCEEDED"},
+    {"batch_id": "batch-06", "permission_class": "read-only", "nodes": ["acceptance"], "status": "SUCCEEDED"}
+  ],
+  "work_packages": [
+    {
+      "work_package_id": "wp-development", "workflow_id": "activity-chat-delivery", "target": "main-worktree",
+      "read_scope": ["apps/backend", "apps/user-web", "deploy/nginx", "README.md", "MEMORY.md", "WIKI.md", "LEARNING.md"],
+      "write_scope": ["apps/backend/app", "apps/user-web/src", "deploy/nginx/default.conf", "README.md", "MEMORY.md", "WIKI.md", "LEARNING.md"],
+      "ephemeral_scope": ["apps/backend/.pytest_cache", "apps/user-web/dist"],
+      "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006", "AC-007", "AC-008"],
+      "upstream_dependencies": ["architecture"], "downstream_dependencies": ["testing"], "handoff_ref": "architecture-handoff",
+      "input_snapshot": "HEAD + tracked dirty diff", "input_snapshot_id": "71662d1d7dabaa5fff187107dc5371a60d620c3aa15608b3931699dbe94af7c8",
+      "input_manifest_sha256": null, "input_tree_oid": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5",
+      "head_snapshot": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5", "head_sha": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5",
+      "branch_ref": null, "worktree_path": "D:/projects/active_system", "upstream_patch_shas": [],
+      "output_patch_path": null, "output_patch_sha256": null,
+      "resource_claims": ["main-worktree", "sqlite-schema", "user-web"], "file_manifest": [],
+      "actual_file_manifest": ["apps/backend/app", "apps/user-web/src", "deploy/nginx/default.conf", "README.md", "MEMORY.md", "WIKI.md", "LEARNING.md", ".codex-tasks/20260825-activity-chat"],
+      "patch_digest": "SERIAL_SHARED_WRITE_NO_PATCH; git diff --check exit 0; actual_manifest_sha256=200eadb97903f3fcce7b034098c78658d219dbf102989a563641607b91e6f7fc",
+      "qualification": "INELIGIBLE", "status": "SUCCEEDED"
+    },
+    {
+      "work_package_id": "wp-testing", "workflow_id": "activity-chat-delivery", "target": "main-worktree",
+      "read_scope": ["apps/backend", "apps/user-web", "deploy/nginx"],
+      "write_scope": ["apps/backend/tests", "apps/user-web/src"],
+      "ephemeral_scope": ["apps/backend/.pytest_cache", "apps/user-web/dist"],
+      "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006", "AC-007", "AC-008"],
+      "upstream_dependencies": ["development"], "downstream_dependencies": ["review"], "handoff_ref": "development-handoff",
+      "input_snapshot": "post-development main worktree", "input_snapshot_id": null, "input_manifest_sha256": null,
+      "input_tree_oid": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5", "head_snapshot": null,
+      "head_sha": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5", "branch_ref": null,
+      "worktree_path": "D:/projects/active_system", "upstream_patch_shas": [], "output_patch_path": null,
+      "output_patch_sha256": null, "resource_claims": ["main-worktree", "test-database", "local-ports"],
+      "file_manifest": ["apps/backend/tests/test_chat.py", "apps/backend/tests/test_chat_protocol.py", "apps/backend/tests/test_activity_identity.py"],
+      "actual_file_manifest": ["apps/backend/tests/test_chat.py", "apps/backend/tests/test_chat_protocol.py", "apps/backend/tests/test_activity_identity.py"],
+      "patch_digest": "SERIAL_SHARED_WRITE_TESTS; git diff --check exit 0; actual_manifest_sha256=200eadb97903f3fcce7b034098c78658d219dbf102989a563641607b91e6f7fc",
+      "qualification": "INELIGIBLE", "status": "SUCCEEDED"
+    }
+  ],
+  "metrics": {
+    "peak_active_threads": 1,
+    "peak_isolated_write_packages": 0,
+    "queued_node_count": 0,
+    "queue_total_duration": "PT0S",
+    "queue_duration_by_node": {},
+    "batch_duration": {"batch-01": "PT5M"},
+    "degradation_counts": {"resource": 0, "platform": 1, "qualification": 1},
+    "degradation_category": ["platform", "qualification"],
+    "degradation_reason_code": ["PERMISSION_NOT_READONLY", "DIRTY_INPUT_UNSAFE"]
+  },
+  "events": [
+    {
+      "event_id": "event-001", "node_id": "graph", "event": "GRAPH_VALIDATED",
+      "queue_started_at": null, "dequeued_at": null, "active_child_threads": 0,
+      "limits.child_threads": 6, "reason_code": null, "raw_error": null, "retry_attempt": 0,
+      "declaration_order": ["product", "architecture", "development", "testing", "review", "acceptance"],
+      "evidence": {"unique_node_ids": true, "missing_dependencies": [], "self_dependencies": [],
+        "kahn_processed_count": 6, "unprocessed_nodes": []}
+    },
+    {
+      "event_id": "event-002", "node_id": "product", "event": "HANDOFF_REFORMATTED",
+      "queue_started_at": null, "dequeued_at": null, "active_child_threads": 1,
+      "limits.child_threads": 6, "reason_code": "HANDOFF_INVALID", "raw_error": "公共字段未连续置于交接开头",
+      "retry_attempt": 1, "declaration_order": 1, "evidence": "同一角色补全后通过结构校验"
+    },
+    {
+      "event_id": "event-003", "node_id": "architecture", "event": "HANDOFF_ACCEPTED",
+      "queue_started_at": null, "dequeued_at": null, "active_child_threads": 1,
+      "limits.child_threads": 6, "reason_code": "PERMISSION_NOT_READONLY", "raw_error": null, "retry_attempt": 1,
+      "declaration_order": 2, "evidence": "ARCHITECTURE-v1.md；架构方案通过门禁"
+    },
+    {
+      "event_id": "event-004", "node_id": "development", "event": "WORK_PACKAGE_COMPLETED",
+      "queue_started_at": null, "dequeued_at": null, "active_child_threads": 1,
+      "limits.child_threads": 6, "reason_code": "DIRTY_INPUT_UNSAFE", "raw_error": null, "retry_attempt": 1,
+      "declaration_order": 3, "evidence": "developer-handoff；实际文件清单待测试节点复核"
+    },
+    {
+      "event_id": "event-005", "node_id": "testing", "event": "TEST_GATE_PASSED",
+      "queue_started_at": null, "dequeued_at": null, "active_child_threads": 1,
+      "limits.child_threads": 6, "reason_code": "DIRTY_INPUT_UNSAFE", "raw_error": null, "retry_attempt": 1,
+      "declaration_order": 4, "evidence": "10 passed；user-web typecheck/build 退出码 0"
+    },
+    {
+      "event_id": "event-006", "node_id": "development", "event": "REWORK_COMPLETED",
+      "queue_started_at": null, "dequeued_at": null, "active_child_threads": 1,
+      "limits.child_threads": 6, "reason_code": "REVIEW_CHANGES_REQUIRED", "raw_error": null, "retry_attempt": 2,
+      "declaration_order": 3, "evidence": "developer-handoff-v2；12 passed；typecheck/build 通过"
+    },
+    {
+      "event_id": "event-007", "node_id": "review", "event": "DOWNSTREAM_INVALIDATED",
+      "queue_started_at": null, "dequeued_at": null, "active_child_threads": 0,
+      "limits.child_threads": 6, "reason_code": "VERSION_INVALIDATED", "raw_error": "审核要求开发回退修复",
+      "retry_attempt": 1, "declaration_order": 5, "evidence": "旧测试/审核证据在开发修复后需重新执行"
+    },
+    {
+      "event_id": "event-008", "node_id": "review", "event": "FINAL_REVIEW_APPROVED",
+      "queue_started_at": null, "dequeued_at": null, "active_child_threads": 1,
+      "limits.child_threads": 6, "reason_code": "PERMISSION_NOT_READONLY", "raw_error": null, "retry_attempt": 2,
+      "declaration_order": 5, "evidence": "APPROVED；12 passed；typecheck/build 通过"
+    },
+    {
+      "event_id": "event-009", "node_id": "testing", "event": "TEST_GATE_REPASSED",
+      "queue_started_at": null, "dequeued_at": null, "active_child_threads": 1,
+      "limits.child_threads": 6, "reason_code": "VERSION_INVALIDATED", "raw_error": null, "retry_attempt": 2,
+      "declaration_order": 4, "evidence": "12 passed；typecheck/build 退出码 0；AC-005 after_id 补拉确认"
+    },
+    {
+      "event_id": "event-010", "node_id": "acceptance", "event": "INTEGRATION_EVIDENCE_ACCEPTED",
+      "queue_started_at": null, "dequeued_at": null, "active_child_threads": 1,
+      "limits.child_threads": 6, "reason_code": "DIRTY_INPUT_UNSAFE", "raw_error": null, "retry_attempt": 1,
+      "declaration_order": 6, "evidence": "git diff --check=0；主树无越界写入；actual_manifest_sha256=200eadb97903f3fcce7b034098c78658d219dbf102989a563641607b91e6f7fc"
+    },
+    {
+      "event_id": "event-011", "node_id": "acceptance", "event": "ACCEPTANCE_PASSED",
+      "queue_started_at": null, "dequeued_at": null, "active_child_threads": 1,
+      "limits.child_threads": 6, "reason_code": "PERMISSION_NOT_READONLY", "raw_error": null, "retry_attempt": 1,
+      "declaration_order": 6, "evidence": "AC-001～AC-008 全部 PASS；390x844 浏览器验证；12 passed；typecheck/build=0"
+    }
+  ]
+}

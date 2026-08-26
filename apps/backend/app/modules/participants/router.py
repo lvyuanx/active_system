@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime, timezone
 import sqlite3
 
@@ -10,6 +11,13 @@ from app.core.config import Settings, get_settings
 from app.core.database import transaction
 from app.core.security import create_access_token, decode_access_token_payload
 from app.modules.activities.router import ActivityPublicResponse, get_activity
+from app.modules.participants.avatar import (
+    AVATAR_ID_MAX,
+    AVATAR_ID_MIN,
+    AvatarAssignmentError,
+    ensure_avatar_id,
+    random_avatar_id,
+)
 
 
 router = APIRouter(prefix="/activities", tags=["activity-auth"])
@@ -33,7 +41,18 @@ class ActivityUserResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     activity_id: str
+    activity_user_id: int
     username: str
+    joined_at: datetime
+    avatar_id: int = Field(ge=AVATAR_ID_MIN, le=AVATAR_ID_MAX)
+
+
+@dataclass(frozen=True)
+class ActivityPrincipal:
+    activity_id: str
+    activity_user_id: int
+    username: str
+    joined_at: datetime
 
 
 @router.get("/{activity_id}", response_model=ActivityPublicResponse)
@@ -47,11 +66,11 @@ def get_public_activity(activity_id: str, settings: Settings = Depends(get_setti
     )
 
 
-def require_activity_user(
+def get_activity_principal(
     activity_id: str,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
     settings: Settings = Depends(get_settings),
-) -> str:
+) -> ActivityPrincipal:
     if credentials is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请先登录活动")
     try:
@@ -62,21 +81,86 @@ def require_activity_user(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="不能访问其他活动")
     username = str(payload["sub"])
     with transaction(settings) as connection:
-        user = connection.execute(
-            "SELECT id FROM activity_users WHERE activity_id = ? AND username = ?",
-            (activity_id, username),
-        ).fetchone()
+        user = None
+        if "activity_user_id" in payload:
+            activity_user_id = payload["activity_user_id"]
+            if isinstance(activity_user_id, bool) or not isinstance(activity_user_id, int):
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请重新登录活动")
+            user = connection.execute(
+                "SELECT id, username, created_at FROM activity_users "
+                "WHERE activity_id = ? AND id = ?",
+                (activity_id, activity_user_id),
+            ).fetchone()
+            if user and user["username"] != username:
+                user = None
+        else:
+            # Old tokens did not contain the stable ID. They remain valid only when
+            # the username identifies exactly one participant in this activity.
+            matches = connection.execute(
+                "SELECT id, username, created_at FROM activity_users "
+                "WHERE activity_id = ? AND username = ? ORDER BY id",
+                (activity_id, username),
+            ).fetchall()
+            user = matches[0] if len(matches) == 1 else None
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="活动用户不存在")
-    return username
-
-
-def make_user_response(activity_id: str, username: str, settings: Settings) -> ActivityUserResponse:
-    return ActivityUserResponse(
-        access_token=create_access_token(username, settings, activity_id=activity_id),
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请重新登录活动")
+    return ActivityPrincipal(
         activity_id=activity_id,
-        username=username,
+        activity_user_id=int(user["id"]),
+        username=str(user["username"]),
+        joined_at=datetime.fromisoformat(str(user["created_at"])),
     )
+
+
+def require_activity_user(
+    activity_id: str,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
+    settings: Settings = Depends(get_settings),
+) -> str:
+    return get_activity_principal(activity_id, credentials, settings).username
+
+
+def make_user_response(
+    activity_id: str,
+    username: str,
+    settings: Settings,
+    *,
+    activity_user_id: int | None = None,
+    access_token: str | None = None,
+) -> ActivityUserResponse:
+    with transaction(settings) as connection:
+        if activity_user_id is None:
+            row = connection.execute(
+                "SELECT id, username, created_at, avatar_id FROM activity_users "
+                "WHERE activity_id = ? AND username = ? ORDER BY id DESC LIMIT 1",
+                (activity_id, username),
+            ).fetchone()
+        else:
+            row = connection.execute(
+                "SELECT id, username, created_at, avatar_id FROM activity_users "
+                "WHERE activity_id = ? AND id = ?",
+                (activity_id, activity_user_id),
+            ).fetchone()
+        if not row:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="活动用户不存在")
+        try:
+            avatar_id = ensure_avatar_id(connection, activity_id, int(row["id"]), row["avatar_id"])
+        except AvatarAssignmentError as error:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="活动头像分配失败",
+            ) from error
+        return ActivityUserResponse(
+            access_token=access_token
+            or create_access_token(
+                str(row["username"]), settings, activity_id=activity_id, activity_user_id=int(row["id"])
+            ),
+            activity_id=activity_id,
+            activity_user_id=int(row["id"]),
+            username=str(row["username"]),
+            joined_at=datetime.fromisoformat(str(row["created_at"])),
+            avatar_id=avatar_id,
+        )
 
 
 @router.post("/{activity_id}/auth/register", response_model=ActivityUserResponse, status_code=status.HTTP_201_CREATED)
@@ -89,13 +173,31 @@ def register_activity_user(
     now = datetime.now(timezone.utc).isoformat()
     try:
         with transaction(settings) as connection:
-            connection.execute(
-                "INSERT INTO activity_users(activity_id, username, phone, created_at) VALUES (?, ?, ?, ?)",
-                (activity_id, payload.username, payload.phone, now),
+            avatar_id = random_avatar_id()
+            cursor = connection.execute(
+                "INSERT INTO activity_users(activity_id, username, phone, created_at, avatar_id) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (activity_id, payload.username, payload.phone, now, avatar_id),
+            )
+            row = connection.execute(
+                "SELECT id, username, created_at, avatar_id FROM activity_users "
+                "WHERE activity_id = ? AND id = ?",
+                (activity_id, cursor.lastrowid),
+            ).fetchone()
+            if not row:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="活动用户创建失败")
+            return ActivityUserResponse(
+                access_token=create_access_token(
+                    str(row["username"]), settings, activity_id=activity_id, activity_user_id=int(row["id"])
+                ),
+                activity_id=activity_id,
+                activity_user_id=int(row["id"]),
+                username=str(row["username"]),
+                joined_at=datetime.fromisoformat(str(row["created_at"])),
+                avatar_id=int(row["avatar_id"]),
             )
     except sqlite3.IntegrityError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="该活动手机号已注册") from error
-    return make_user_response(activity_id, payload.username, settings)
 
 
 @router.post("/{activity_id}/auth/login", response_model=ActivityUserResponse)
@@ -107,23 +209,25 @@ def login_activity_user(
     get_activity(activity_id, settings)
     with transaction(settings) as connection:
         user = connection.execute(
-            "SELECT username FROM activity_users WHERE activity_id = ? AND username = ? AND phone = ?",
+            "SELECT id, username FROM activity_users WHERE activity_id = ? AND username = ? AND phone = ?",
             (activity_id, payload.username, payload.phone),
         ).fetchone()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或手机号不匹配")
-    return make_user_response(activity_id, payload.username, settings)
+    return make_user_response(activity_id, payload.username, settings, activity_user_id=int(user["id"]))
 
 
 @router.get("/{activity_id}/me", response_model=ActivityUserResponse)
 def get_activity_user(
     activity_id: str,
-    username: str = Depends(require_activity_user),
+    principal: ActivityPrincipal = Depends(get_activity_principal),
     credentials: HTTPAuthorizationCredentials = Depends(bearer),
     settings: Settings = Depends(get_settings),
 ) -> ActivityUserResponse:
-    return ActivityUserResponse(
+    return make_user_response(
+        activity_id,
+        principal.username,
+        settings,
+        activity_user_id=principal.activity_user_id,
         access_token=credentials.credentials,
-        activity_id=activity_id,
-        username=username,
     )

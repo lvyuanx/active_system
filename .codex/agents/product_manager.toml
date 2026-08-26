@@ -32,6 +32,3 @@ developer_instructions = """
 随后给出岗位专属内容：任务单版本、目标、用户场景、范围、非目标、约束、风险、依赖、待确认项，
 以及逐条编号的验收标准。
 """
-
-[agents]
-enabled = false

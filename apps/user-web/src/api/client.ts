@@ -1,6 +1,10 @@
 const baseURL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
 export const apiURL = (path: string) => `${baseURL}${path}`;
+export const chatWebSocketURL = (activityId: string) => {
+  const url = apiURL(`/activities/${activityId}/chat/ws`);
+  return url.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
+};
 
 export interface Activity {
   activity_id: string;
@@ -8,11 +12,47 @@ export interface Activity {
   description: string | null;
   status: "closed" | "open" | "ended";
 }
+export type ActivityAvatarId =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13
+  | 14
+  | 15
+  | 16
+  | 17
+  | 18
+  | 19
+  | 20;
 export interface ActivityUserResponse {
   access_token: string;
   token_type: string;
   activity_id: string;
+  activity_user_id: number;
   username: string;
+  joined_at: string;
+  avatar_id: ActivityAvatarId;
+}
+export interface ChatMessage {
+  message_id: number;
+  activity_id: string;
+  sender_activity_user_id: number;
+  sender_username: string;
+  body: string;
+  created_at: string;
+}
+export interface ChatMessagePage {
+  items: ChatMessage[];
+  has_more: boolean;
 }
 export interface ActivityCredentials {
   username: string;
@@ -68,3 +108,16 @@ export const getActivityMe = (activityId: string, token: string) =>
   request<ActivityUserResponse>(`/activities/${activityId}/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+export const getChatMessages = (
+  activityId: string,
+  token: string,
+  params: { limit?: number; before_id?: number; after_id?: number } = {},
+) => {
+  const search = new URLSearchParams();
+  search.set("limit", String(params.limit ?? 50));
+  if (params.before_id !== undefined) search.set("before_id", String(params.before_id));
+  if (params.after_id !== undefined) search.set("after_id", String(params.after_id));
+  return request<ChatMessagePage>(`/activities/${activityId}/chat/messages?${search.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};

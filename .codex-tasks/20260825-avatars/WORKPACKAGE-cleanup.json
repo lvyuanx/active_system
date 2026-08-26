@@ -1,0 +1,52 @@
+{
+  "work_package_id": "wp-avatar-cleanup",
+  "workflow_id": "activity-avatar-delivery",
+  "task_version": "TASK-v2",
+  "target": "main-worktree",
+  "read_scope": [
+    "TASKGRAPH.json",
+    "WORKPACKAGE-development.json",
+    "WORKPACKAGE-testing.json",
+    "WORKPACKAGE-review.json",
+    "WORKPACKAGE-acceptance.json",
+    "SERIAL-INTEGRATION.md"
+  ],
+  "write_scope": [],
+  "ephemeral_scope": [".codex/worktrees/20260825-avatar-run-01/**"],
+  "acceptance_refs": ["AC-001", "AC-010"],
+  "upstream_dependencies": ["acceptance"],
+  "downstream_dependencies": [],
+  "handoff_ref": "acceptance",
+  "input_snapshot": {
+    "head": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5",
+    "head_tree": "1f3a86ae798fd11a6b40f179228177dbe3bf3f7c",
+    "worktree": "D:\\projects\\active_system"
+  },
+  "input_snapshot_id": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5-dffe54d2dc52812bbc1188c4e32f44931d45652eb9203b8ea147c51590c6e329",
+  "input_manifest_sha256": "dffe54d2dc52812bbc1188c4e32f44931d45652eb9203b8ea147c51590c6e329",
+  "input_tree_oid": "1f3a86ae798fd11a6b40f179228177dbe3bf3f7c",
+  "head_snapshot": {
+    "head_sha": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5",
+    "branch_ref": "refs/heads/master",
+    "worktree_path": "D:\\projects\\active_system"
+  },
+  "head_sha": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5",
+  "branch_ref": "refs/heads/master",
+  "worktree_path": "D:\\projects\\active_system",
+  "upstream_patch_shas": [],
+  "output_patch_path": null,
+  "output_patch_sha256": null,
+  "resource_claims": ["workspace:main serial cleanup"],
+  "file_manifest": {"mode": "no temporary worktrees registered", "paths": []},
+  "actual_file_manifest": {"mode": "no-op cleanup", "paths": []},
+  "patch_digest": null,
+  "qualification": "NOT_APPLICABLE",
+  "status": "SUCCEEDED",
+  "mode": {
+    "requested_mode": "MAIN_INTEGRATION_WRITE",
+    "effective_mode": "MAIN_INTEGRATION_WRITE",
+    "reason_code": null,
+    "detached_head": false,
+    "degradation_reason": "本次使用主树串行写入，无临时 worktree 可清理。"
+  }
+}

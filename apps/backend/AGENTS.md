@@ -23,12 +23,16 @@
 - `app/modules/auth/router.py`：超级用户初始化、登录和管理员权限依赖。
 - `app/modules/activities/router.py`：活动 CRUD 列表、创建和生命周期状态转换接口。
 - `app/modules/participants/router.py`：活动公开详情和活动用户注册、登录、token 校验接口。
+- `app/modules/participants/avatar.py`：活动用户头像范围校验、安全随机分配和空值惰性补齐。
+- `app/modules/chat/`：活动聊天室历史消息、游标查询、WebSocket 认证和广播。
 
 ## 活动状态
 
 活动新建为 `closed`，可在 `closed` 与 `open` 之间反复切换；管理员可从任一非 `ended` 状态手动结束活动，`ended` 不允许再次开启或关闭。活动接口均要求超级用户 Bearer Token。
 
 活动参与用户存储在 `activity_users` 表中，手机号仅在同一 `activity_id` 内唯一。活动用户 JWT 携带 `activity_id` claim，活动用户依赖会拒绝跨活动访问；管理员 JWT 不携带该 claim，保持原有认证兼容性。
+
+活动用户的 `avatar_id` 按 `activity_id + activity_user_id` 隔离，取值为 1–20。新用户在注册事务内分配头像；旧用户保留可空值，仅在成功登录或 `/me` 请求中使用 `avatar_id IS NULL` 条件更新惰性补齐，不执行批量迁移。数据库初始化使用 SQLite `BEGIN IMMEDIATE` 串行化旧表字段迁移；头像分配失败时事务回滚，不返回空头像。
 
 ## 配置
 

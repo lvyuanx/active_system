@@ -14,6 +14,16 @@
 
 活动用户存储在 `activity_users` 表中，以 `activity_id` 隔离；同一活动内手机号唯一。用户 JWT 携带活动 ID，用户端按 `active_user_token:{activity_id}` 缓存 token。管理端二维码目标地址使用 `VITE_USER_WEB_BASE_URL` 拼接 `/activity/{activity_id}`。
 
+### 活动用户头像
+
+`activity_users.avatar_id` 按 `(activity_id, id)` 独立保存，取值为 1–20。新用户注册时在插入事务中使用安全随机数分配头像；旧表初始化只添加可空列，不批量填充，并用 SQLite `BEGIN IMMEDIATE` 串行化字段迁移。登录和 `/me` 对空值用户执行带 `avatar_id IS NULL` 的条件更新，已有头像不会替换，竞争失败时读取胜者值，仍为空才返回错误。
+
+用户端头像由 `ActivityAvatar.vue` 将 1–20 固定映射到本地卡通 SVG，当前只在活动首页和“我的”页展示；聊天接口、消息模型和 WebSocket 协议不携带头像字段。
+
+活动聊天室消息存储在 `activity_chat_messages`，通过 `activity_user_id` 关联发送者，并按 `(activity_id, message_id)`
+提供游标查询。活动用户 JWT 额外携带稳定的 `activity_user_id`；缺少该 claim 的旧令牌仅在同活动用户名唯一时兼容。
+用户端活动壳下包含 `/activity/{activity_id}`、`/chat`、`/me` 三个入口，WebSocket 首帧需发送 `auth`。
+
 ## 用户端移动端视觉
 
 - 用户端活动入口采用 Vue 3 + Vant 4，认证页保留圆环 A 标识和哑金主操作，登录后页展示活动状态、用户摘要和已有服务入口。
@@ -31,3 +41,11 @@
 
 - Windows 双击 `start.cmd`，或执行 `powershell -ExecutionPolicy Bypass -File .\start.ps1`，会分别打开后端和前端窗口。
 - 执行 `powershell -ExecutionPolicy Bypass -File .\start.ps1 -Docker` 会通过 Compose 构建并启动全部容器。
+
+## Codex 子 Agent 配置
+
+- 项目级线程上限配置在 `.codex/config.toml` 的 `[agents] max_threads`，当前值为 6。
+- `.codex/agents/*.toml` 会被 Codex 自动发现；角色文件使用顶层 `name`、`description`、`model`、
+  `model_reasoning_effort`、`sandbox_mode` 和 `developer_instructions`，不要嵌套 `[agents]` 表。
+- `agents.enabled`、`agents.max_concurrent_threads_per_session` 和默认子 Agent 模型字段不是当前桌面端
+  支持的项目配置键，写入后会导致任务创建时报 `expected struct AgentRoleToml`。

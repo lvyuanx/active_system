@@ -1,0 +1,84 @@
+{
+  "work_package_id": "wp-avatar-testing",
+  "workflow_id": "activity-avatar-delivery",
+  "task_version": "TASK-v2",
+  "target": "main-worktree",
+  "read_scope": [
+    "TASK-v2.md",
+    "ARCHITECTURE-v1.md",
+    "DEVELOPMENT-HANDOFF-v1.md",
+    "WORKPACKAGE-development.json",
+    "package.json",
+    "pnpm-workspace.yaml",
+    "pnpm-lock.yaml",
+    "apps/admin-web/**",
+    "apps/screen-web/**",
+    "apps/backend/**",
+    "apps/user-web/**",
+    "README.md",
+    "MEMORY.md",
+    "LEARNING.md",
+    "WIKI.md"
+  ],
+  "write_scope": ["apps/backend/tests/**"],
+  "ephemeral_scope": [
+    "apps/*/dist/**",
+    "apps/**/__pycache__/**",
+    "apps/**/.pytest_cache/**",
+    "**/.vite/**"
+  ],
+  "acceptance_refs": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006",
+    "AC-007",
+    "AC-008",
+    "AC-009",
+    "AC-010"
+  ],
+  "upstream_dependencies": ["development"],
+  "downstream_dependencies": ["review", "acceptance"],
+  "handoff_ref": "DEVELOPMENT-HANDOFF-v1.md",
+  "input_snapshot": {
+    "head": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5",
+    "head_tree": "1f3a86ae798fd11a6b40f179228177dbe3bf3f7c",
+    "worktree": "D:\\projects\\active_system",
+    "development_manifest_sha256": "dffe54d2dc52812bbc1188c4e32f44931d45652eb9203b8ea147c51590c6e329"
+  },
+  "input_snapshot_id": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5-dffe54d2dc52812bbc1188c4e32f44931d45652eb9203b8ea147c51590c6e329",
+  "input_manifest_sha256": "dffe54d2dc52812bbc1188c4e32f44931d45652eb9203b8ea147c51590c6e329",
+  "input_tree_oid": "1f3a86ae798fd11a6b40f179228177dbe3bf3f7c",
+  "head_snapshot": {
+    "head_sha": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5",
+    "branch_ref": "refs/heads/master",
+    "worktree_path": "D:\\projects\\active_system"
+  },
+  "head_sha": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5",
+  "branch_ref": "refs/heads/master",
+  "worktree_path": "D:\\projects\\active_system",
+  "upstream_patch_shas": [],
+  "output_patch_path": null,
+  "output_patch_sha256": null,
+  "resource_claims": ["workspace:main serial workspace-write", "database:test isolated per pytest tmp_path"],
+  "file_manifest": {
+    "mode": "development output manifest",
+    "sha256": "dffe54d2dc52812bbc1188c4e32f44931d45652eb9203b8ea147c51590c6e329"
+  },
+  "actual_file_manifest": {
+    "sha256": "dffe54d2dc52812bbc1188c4e32f44931d45652eb9203b8ea147c51590c6e329",
+    "entries_ref": "DEVELOPMENT-HANDOFF-v1.md"
+  },
+  "patch_digest": "dffe54d2dc52812bbc1188c4e32f44931d45652eb9203b8ea147c51590c6e329",
+  "qualification": "INELIGIBLE",
+  "status": "SUCCEEDED",
+  "mode": {
+    "requested_mode": "SERIAL_SHARED_WRITE",
+    "effective_mode": "SERIAL_SHARED_WRITE",
+    "reason_code": "DIRTY_INPUT_UNSAFE",
+    "detached_head": false,
+    "degradation_reason": "主工作树保留既有聊天室改动；测试在开发门禁后串行执行。"
+  }
+}

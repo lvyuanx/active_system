@@ -1,0 +1,15 @@
+{
+  "task_version": "TASK-v3",
+  "captured_at": "2026-08-26T00:00:00+08:00",
+  "head": "bc5ef243f7c8076ff521ac75aa9d4524ec49dcf5",
+  "worktree": "dirty_before_extension",
+  "preexisting_changes_preserved": true,
+  "scope": [
+    "apps/backend/app/modules/participants/avatar.py",
+    "apps/backend/app/modules/participants/router.py",
+    "apps/backend/tests/test_activity_avatars.py",
+    "apps/user-web/src/api/client.ts",
+    "apps/user-web/src/components/ActivityAvatar.vue",
+    "apps/user-web/src/assets/avatars/"
+  ]
+}

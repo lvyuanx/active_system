@@ -28,11 +28,19 @@ def verify_password(password: str, encoded: str) -> bool:
         return False
 
 
-def create_access_token(username: str, settings: Settings, *, activity_id: str | None = None) -> str:
+def create_access_token(
+    username: str,
+    settings: Settings,
+    *,
+    activity_id: str | None = None,
+    activity_user_id: int | None = None,
+) -> str:
     expires = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
     payload: dict[str, object] = {"sub": username, "exp": expires}
     if activity_id:
         payload["activity_id"] = activity_id
+    if activity_user_id is not None:
+        payload["activity_user_id"] = activity_user_id
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
