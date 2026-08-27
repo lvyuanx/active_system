@@ -35,7 +35,7 @@ type OverlayBootstrap = {
 type StartRequest = {
   apiBaseUrl: string;
   token: string;
-  displayId: number;
+  displayIds: number[];
 };
 type DisplayOption = {
   id: number;
@@ -48,13 +48,14 @@ type DisplayOption = {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 let launcherWindow: BrowserWindow | undefined;
-let overlayWindow: BrowserWindow | undefined;
+const overlayWindows = new Map<number, BrowserWindow>();
 let tray: Tray | undefined;
-let runtime: OverlayBootstrap & { displayId: number } | undefined;
+let runtime: OverlayBootstrap & { displayIds: number[] } | undefined;
 let isQuitting = false;
 
 const isLauncherSender = (sender: Electron.WebContents) => sender === launcherWindow?.webContents;
-const isOverlaySender = (sender: Electron.WebContents) => sender === overlayWindow?.webContents;
+const isOverlaySender = (sender: Electron.WebContents) =>
+  [...overlayWindows.values()].some((window) => window.webContents === sender);
 const launcherFile = () => path.join(app.getAppPath(), "launcher", "index.html");
 const preloadFile = () => path.join(__dirname, "preload.cjs");
 const overlayURL = () => `${process.env.DANMAKU_SCREEN_DEV_URL ?? "http://localhost:5174"}/?danmaku-overlay=1`;
@@ -71,14 +72,19 @@ function normalizeApiBaseUrl(value: unknown): string {
 
 function parseStartRequest(value: unknown): StartRequest {
   if (!value || typeof value !== "object") throw new Error("启动参数无效");
-  const candidate = value as Partial<StartRequest>;
+  const candidate = value as Partial<StartRequest> & { displayId?: unknown };
   const token = typeof candidate.token === "string" ? candidate.token.trim() : "";
   if (!token || token.length > 4096) throw new Error("请粘贴有效的弹幕 token");
-  if (!Number.isInteger(candidate.displayId)) throw new Error("请选择投屏显示器");
+  const requestedDisplayIds = Array.isArray(candidate.displayIds)
+    ? candidate.displayIds
+    : Number.isInteger(candidate.displayId) ? [candidate.displayId] : [];
+  if (requestedDisplayIds.length === 0 || requestedDisplayIds.some((id) => !Number.isInteger(id))) {
+    throw new Error("请至少选择一个投屏显示器");
+  }
   return {
     apiBaseUrl: normalizeApiBaseUrl(candidate.apiBaseUrl),
     token,
-    displayId: Number(candidate.displayId),
+    displayIds: [...new Set(requestedDisplayIds as number[])],
   };
 }
 
@@ -140,11 +146,11 @@ function sendOverlaySession(window: BrowserWindow): void {
   window.webContents.send("danmaku:overlay-session", runtime);
 }
 
-function createOverlayWindow(): void {
+function createOverlayWindow(displayId: number): void {
   if (!runtime) throw new Error("没有可恢复的弹幕会话");
-  const display = screen.getAllDisplays().find((item) => item.id === runtime?.displayId);
+  const display = screen.getAllDisplays().find((item) => item.id === displayId);
   if (!display) throw new Error("所选显示器已不可用");
-  overlayWindow?.destroy();
+  overlayWindows.get(displayId)?.destroy();
   const window = new BrowserWindow({
     x: display.bounds.x,
     y: display.bounds.y,
@@ -170,7 +176,7 @@ function createOverlayWindow(): void {
       sandbox: true,
     },
   });
-  overlayWindow = window;
+  overlayWindows.set(displayId, window);
   window.setIgnoreMouseEvents(true, { forward: true });
   window.setAlwaysOnTop(true, "screen-saver");
   window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
@@ -180,7 +186,7 @@ function createOverlayWindow(): void {
   });
   window.webContents.on("did-finish-load", () => sendOverlaySession(window));
   window.on("closed", () => {
-    if (overlayWindow === window) overlayWindow = undefined;
+    if (overlayWindows.get(displayId) === window) overlayWindows.delete(displayId);
     refreshTrayMenu();
   });
   if (app.isPackaged) {
@@ -191,9 +197,22 @@ function createOverlayWindow(): void {
   refreshTrayMenu();
 }
 
+function createOverlayWindows(): void {
+  if (!runtime) throw new Error("没有可恢复的弹幕会话");
+  const availableDisplayIds = runtime.displayIds.filter((displayId) =>
+    screen.getAllDisplays().some((display) => display.id === displayId),
+  );
+  if (availableDisplayIds.length === 0) throw new Error("所选显示器已不可用");
+  stopOverlay();
+  availableDisplayIds.forEach(createOverlayWindow);
+}
+
 function stopOverlay(): void {
-  overlayWindow?.destroy();
-  overlayWindow = undefined;
+  const windows = [...overlayWindows.values()];
+  overlayWindows.clear();
+  windows.forEach((window) => {
+    if (!window.isDestroyed()) window.destroy();
+  });
   refreshTrayMenu();
 }
 
@@ -204,7 +223,7 @@ function openLauncher(): void {
 }
 
 function toggleOverlay(): void {
-  if (overlayWindow) {
+  if (overlayWindows.size > 0) {
     stopOverlay();
     openLauncher();
     return;
@@ -213,7 +232,7 @@ function toggleOverlay(): void {
     openLauncher();
     return;
   }
-  createOverlayWindow();
+  createOverlayWindows();
   launcherWindow?.hide();
 }
 
@@ -228,7 +247,7 @@ function trayIcon(): Electron.NativeImage {
 
 function refreshTrayMenu(): void {
   if (!tray) return;
-  const isRunning = Boolean(overlayWindow);
+  const isRunning = overlayWindows.size > 0;
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: isRunning ? "停止弹幕" : "恢复弹幕", enabled: Boolean(runtime), click: toggleOverlay },
     { label: "打开控制台", click: openLauncher },
@@ -253,11 +272,12 @@ function installIpcHandlers(): void {
     if (!isLauncherSender(event.sender)) throw new Error("未授权的启动请求");
     const request = parseStartRequest(value);
     const session = await fetchSession(request.apiBaseUrl, request.token);
-    if (!screen.getAllDisplays().some((display) => display.id === request.displayId)) {
+    const availableDisplayIds = new Set(screen.getAllDisplays().map((display) => display.id));
+    if (request.displayIds.some((displayId) => !availableDisplayIds.has(displayId))) {
       throw new Error("所选显示器已不可用");
     }
     runtime = { ...request, session };
-    createOverlayWindow();
+    createOverlayWindows();
     launcherWindow?.hide();
     return session;
   });
@@ -268,7 +288,7 @@ function installIpcHandlers(): void {
   ipcMain.handle("danmaku:resume", (event) => {
     if (!isLauncherSender(event.sender)) throw new Error("未授权的恢复请求");
     if (!runtime) throw new Error("没有可恢复的弹幕会话");
-    createOverlayWindow();
+    createOverlayWindows();
     launcherWindow?.hide();
   });
   ipcMain.handle("danmaku:get-overlay-session", (event) => {
@@ -283,9 +303,18 @@ app.whenReady().then(() => {
   createTray();
   globalShortcut.register("CommandOrControl+Shift+D", toggleOverlay);
   screen.on("display-removed", (_event, display) => {
-    if (runtime?.displayId !== display.id) return;
-    stopOverlay();
-    openLauncher();
+    if (!runtime?.displayIds.includes(display.id)) return;
+    runtime.displayIds = runtime.displayIds.filter((displayId) => displayId !== display.id);
+    const window = overlayWindows.get(display.id);
+    overlayWindows.delete(display.id);
+    if (window && !window.isDestroyed()) window.destroy();
+    if (runtime.displayIds.length === 0) {
+      stopOverlay();
+      runtime = undefined;
+      openLauncher();
+      return;
+    }
+    refreshTrayMenu();
   });
   app.on("activate", openLauncher);
 });

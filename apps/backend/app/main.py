@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.modules.auth import ensure_superuser
+from app.modules.danmaku.testing import danmaku_test_manager
 
 settings = get_settings()
 
@@ -13,7 +14,10 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     ensure_superuser(settings)
-    yield
+    try:
+        yield
+    finally:
+        await danmaku_test_manager.stop_all()
 
 
 app = FastAPI(

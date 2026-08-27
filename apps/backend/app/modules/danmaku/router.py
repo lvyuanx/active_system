@@ -4,10 +4,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel
 
 from app.core.config import Settings, get_settings
+from app.modules.chat.service import ChatReadOnlyError
 from app.modules.auth import require_superuser
 from app.modules.danmaku.manager import danmaku_manager
+from app.modules.danmaku.testing import danmaku_test_manager
 from app.modules.danmaku.service import (
     DanmakuAdminResponse,
     DanmakuMessagePage,
@@ -27,6 +30,11 @@ from app.modules.danmaku.service import (
 admin_router = APIRouter(prefix="/admin/activities", tags=["danmaku-admin"])
 router = APIRouter(prefix="/danmaku", tags=["danmaku"])
 danmaku_bearer = HTTPBearer(auto_error=False)
+
+
+class DanmakuTestStatus(BaseModel):
+    running: bool
+    detail: str
 
 
 def get_danmaku_principal(
@@ -72,6 +80,50 @@ async def rotate_admin_danmaku_token(
     record = await asyncio.to_thread(regenerate_danmaku_token, activity_id, settings)
     await danmaku_manager.invalidate_activity(activity_id, record.token_version)
     return make_admin_response(record, settings)
+
+
+@admin_router.get("/{activity_id}/danmaku/test", response_model=DanmakuTestStatus)
+async def get_admin_danmaku_test(
+    activity_id: str,
+    _: str = Depends(require_superuser),
+    settings: Settings = Depends(get_settings),
+) -> DanmakuTestStatus:
+    get_danmaku_record(activity_id, settings)
+    running = danmaku_test_manager.is_running(activity_id)
+    return DanmakuTestStatus(running=running, detail="弹幕测试运行中" if running else "弹幕测试已关闭")
+
+
+@admin_router.post("/{activity_id}/danmaku/test/start", response_model=DanmakuTestStatus)
+async def start_admin_danmaku_test(
+    activity_id: str,
+    _: str = Depends(require_superuser),
+    settings: Settings = Depends(get_settings),
+) -> DanmakuTestStatus:
+    try:
+        started = await danmaku_test_manager.start(activity_id, settings)
+    except ChatReadOnlyError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="只有进行中的活动可以开启弹幕测试",
+        ) from error
+    return DanmakuTestStatus(
+        running=True,
+        detail="弹幕测试已开启" if started else "弹幕测试已经在运行",
+    )
+
+
+@admin_router.post("/{activity_id}/danmaku/test/stop", response_model=DanmakuTestStatus)
+async def stop_admin_danmaku_test(
+    activity_id: str,
+    _: str = Depends(require_superuser),
+    settings: Settings = Depends(get_settings),
+) -> DanmakuTestStatus:
+    get_danmaku_record(activity_id, settings)
+    stopped = await danmaku_test_manager.stop(activity_id)
+    return DanmakuTestStatus(
+        running=False,
+        detail="弹幕测试已关闭" if stopped else "弹幕测试本来就未开启",
+    )
 
 
 @router.get("/session", response_model=DanmakuSessionResponse)

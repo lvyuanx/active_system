@@ -1,0 +1,89 @@
+{
+  "work_package_id": "main-shared-422",
+  "workflow_id": "activity-danmaku-save-422",
+  "target": "管理端弹幕颜色序列化修复（共享主工作树串行包）",
+  "read_scope": [
+    "AGENTS.md",
+    "PROJECT_AGENTS.md",
+    "apps/admin-web/AGENTS.md",
+    "apps/admin-web/src/views/danmaku/AGENTS.md",
+    "apps/admin-web/src/views/danmaku/index.vue",
+    "apps/admin-web/src/api/client.ts",
+    "apps/admin-web/package.json",
+    "apps/backend/app/modules/danmaku/AGENTS.md",
+    "apps/backend/app/modules/danmaku/service.py",
+    "apps/backend/tests/test_danmaku.py",
+    ".codex-tasks/20260827-danmaku-save-422/TASK-v3.md",
+    ".codex-tasks/20260827-danmaku-save-422/PRODUCT-HANDOFF-v1.md"
+  ],
+  "write_scope": [
+    "apps/admin-web/src/views/danmaku/index.vue",
+    "apps/admin-web/src/views/danmaku/AGENTS.md",
+    "apps/admin-web/scripts/test-danmaku-settings.mjs",
+    "apps/admin-web/package.json",
+    "MEMORY.md",
+    "LEARNING.md",
+    "WIKI.md",
+    ".codex-tasks/20260827-danmaku-save-422/DEVELOPMENT-HANDOFF-v1.md"
+  ],
+  "ephemeral_scope": [
+    "apps/admin-web/dist",
+    "node_modules/.cache",
+    "apps/admin-web/node_modules/.cache"
+  ],
+  "acceptance_refs": ["AC-022", "AC-023"],
+  "upstream_dependencies": ["product"],
+  "downstream_dependencies": ["integration", "integration-test", "review", "acceptance"],
+  "handoff_ref": ".codex-tasks/20260827-danmaku-save-422/PRODUCT-HANDOFF-v1.md",
+  "input_snapshot": "HEAD 52a164fa63a012f16234de966de137edda5970a6 plus dirty worktree status captured before development",
+  "input_snapshot_id": "HEAD:52a164fa63a012f16234de966de137edda5970a6:status_sha256:A7DD2FEEF731D60C2B1E50258E7E77F2F08B2D090A8B045C15AB2BE713606F19",
+  "input_manifest_sha256": "5F2E8E2BD25744EACCBCDF9E20D2C975698BF4129012D2B9F45338EAB0092ACD",
+  "input_tree_oid": "400f5afbb30ec7c92951e9e223da07cf59112f1a",
+  "head_snapshot": {
+    "head_sha": "52a164fa63a012f16234de966de137edda5970a6",
+    "branch_ref": "refs/heads/master",
+    "detached_head": false,
+    "worktree_path": "D:\\projects\\active_system",
+    "git_status": "DIRTY_INPUT_UNSAFE"
+  },
+  "head_sha": "52a164fa63a012f16234de966de137edda5970a6",
+  "branch_ref": "refs/heads/master",
+  "worktree_path": "D:\\projects\\active_system",
+  "detached_head": false,
+  "upstream_patch_shas": [],
+  "output_patch_path": null,
+  "output_patch_sha256": null,
+  "resource_claims": [
+    "repository-main-worktree",
+    "pnpm-node-build-cache",
+    "apps-admin-web-dist"
+  ],
+  "file_manifest": [
+    {"path": ".codex-tasks/20260827-danmaku-save-422/PRODUCT-HANDOFF-v1.md", "exists": true, "sha256": "EBC694B569CCD1E2EF4C1CEBDF8D52755FDD3AD268F1C8DE31DA9770D2C50685"},
+    {"path": ".codex-tasks/20260827-danmaku-save-422/TASK-v3.md", "exists": true, "sha256": "03491DC125A160A62AFFD35F0DB56C37AE56045662C17F65B73E3BBD8E0FFE28"},
+    {"path": "apps/admin-web/package.json", "exists": true, "sha256": "18BA8185542ADF7718F391A8CA2C7F181590E4AD3EAF5EE33C935DD3713722FC"},
+    {"path": "apps/admin-web/src/views/danmaku/AGENTS.md", "exists": true, "sha256": "F53DBC64F90195AED646D718D167D394378ECAD6FC4A822162A2F19584F59765"},
+    {"path": "apps/admin-web/src/views/danmaku/index.vue", "exists": true, "sha256": "0D816976E3570CBECCB4CB6EA59597A83B628774025B4BBB70840897CEAF5AFB"},
+    {"path": "LEARNING.md", "exists": true, "sha256": "C125B5B501BBAFC7E82A47D18CDDE05AABF44085275DB9462F82A3AA76FA5F9B"},
+    {"path": "MEMORY.md", "exists": true, "sha256": "D263CDE16951A00707A8D768C1FD95D2B588C3395FC2B00438303F2A0DC102DA"},
+    {"path": "WIKI.md", "exists": true, "sha256": "5B975C3DB3B4BA7BB1D895EC5DB9AB2C06E41DF24DDA9A43558EAC0EEB387E00"}
+  ],
+  "actual_file_manifest": [
+    {"path": "apps/admin-web/src/views/danmaku/index.vue", "exists": true, "sha256": "6E24B3BA0F2A219A0F732199270D3DB385C4DB45F5B59C53E10503059DDB5437"},
+    {"path": "apps/admin-web/src/views/danmaku/AGENTS.md", "exists": true, "sha256": "9FE9E747077FFB4944CDD9C7E3EB7DF1F04D9242BE8096C8E3156BB8B842E3E5"},
+    {"path": "apps/admin-web/scripts/test-danmaku-settings.mjs", "exists": true, "sha256": "4A02B1419F91DD5C48542782B5BF5528CC556D700BE4B9E7BAD63410A3EDF1CE"},
+    {"path": "apps/admin-web/package.json", "exists": true, "sha256": "92BC08D2DA1AE6B38228AE5120F7EFF0A6E55FA1354611C67200594C6C3DD9F1"},
+    {"path": "MEMORY.md", "exists": true, "sha256": "0310364C4E25D54610AD5D58D8A72C3D95CEC0F0022ED5F3AEE733840BF73418"},
+    {"path": "LEARNING.md", "exists": true, "sha256": "474FB97EE2CC55A7FF1B3D7B4422376D6DD995005D5147E584670A0B0D7F678"},
+    {"path": "WIKI.md", "exists": true, "sha256": "1CE31C59D32A9C657E4D668F5AC230AF69DDBB4E8F13AA4595ECA3180892BE0A"},
+    {"path": ".codex-tasks/20260827-danmaku-save-422/DEVELOPMENT-HANDOFF-v1.md", "exists": true, "sha256": "791D7174D00D2BD5D38AB7B5D76D747957F62A8AD80988F4FEB0984BB873E3FC"}
+  ],
+  "patch_digest": {
+    "status": "NOT_APPLICABLE_SHARED_DIRTY",
+    "scoped_diff_sha256": "4BBAA5A05195DCFEE9BF11E3BEA8C63F01519909EA247FA97EF9C7240B182DA",
+    "note": "共享主树限定差异包含输入阶段已有同范围改动，不可作为独立可应用补丁；仅保留摘要供审计。"
+  },
+  "qualification": "INELIGIBLE",
+  "qualification_reason": "DIRTY_INPUT_UNSAFE",
+  "status": "SUCCEEDED"
+}

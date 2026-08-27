@@ -1,7 +1,7 @@
 const form = document.querySelector("#launch-form");
 const apiBaseUrl = document.querySelector("#api-base-url");
 const token = document.querySelector("#token");
-const displayId = document.querySelector("#display-id");
+const displayList = document.querySelector("#display-list");
 const status = document.querySelector("#status");
 const startButton = document.querySelector("#start-button");
 const resumeButton = document.querySelector("#resume-button");
@@ -15,14 +15,29 @@ const setLoading = (loading) => {
   startButton.disabled = loading;
   resumeButton.disabled = loading;
   stopButton.disabled = loading;
+  displayList.querySelectorAll("input").forEach((input) => {
+    input.disabled = loading;
+  });
 };
+const selectedDisplayIds = () => Array.from(
+  displayList.querySelectorAll("input[name=\"display-id\"]:checked"),
+).map((input) => Number(input.value));
 const loadDisplays = async () => {
   try {
     const displays = await window.danmakuDesktop.listDisplays();
-    displayId.replaceChildren(...displays.map((display) => {
-      const option = document.createElement("option");
-      option.value = String(display.id);
-      option.textContent = `${display.label} - ${display.width} x ${display.height}${display.isPrimary ? "（主屏）" : ""}`;
+    if (displays.length === 0) throw new Error("没有可用的投屏显示器");
+    displayList.replaceChildren(...displays.map((display) => {
+      const option = document.createElement("label");
+      option.className = "display-option";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.name = "display-id";
+      checkbox.value = String(display.id);
+      checkbox.checked = display.isPrimary || displays.length === 1;
+      const copy = document.createElement("span");
+      copy.className = "display-option-copy";
+      copy.textContent = `${display.label} - ${display.width} x ${display.height}${display.isPrimary ? "（主屏）" : ""}`;
+      option.append(checkbox, copy);
       return option;
     }));
     setStatus("");
@@ -35,11 +50,17 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
   setLoading(true);
   setStatus("正在验证 token…");
+  const displayIds = selectedDisplayIds();
+  if (displayIds.length === 0) {
+    setStatus("请至少选择一个投屏显示器", "error");
+    setLoading(false);
+    return;
+  }
   try {
     await window.danmakuDesktop.start({
       apiBaseUrl: apiBaseUrl.value,
       token: token.value,
-      displayId: Number(displayId.value),
+      displayIds,
     });
     setStatus("弹幕已启动", "success");
   } catch (error) {

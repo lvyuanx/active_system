@@ -18,8 +18,9 @@
         <input id="api-base-url" name="api-base-url" type="url" value="http://localhost:8000/api/v1" required />
         <label for="token">弹幕 token</label>
         <textarea id="token" name="token" rows="3" required spellcheck="false"></textarea>
-        <label for="display-id">投屏显示器</label>
-        <select id="display-id" name="display-id" required></select>
+        <label>投屏显示器（可多选）</label>
+        <div id="display-list" class="display-list" role="group" aria-label="投屏显示器"></div>
+        <p class="field-hint">可同时选择多个显示器，弹幕会同步显示在所有选中的屏幕。</p>
         <p id="status" class="status" role="status"></p>
         <button id="start-button" type="submit">启动弹幕</button>
       </form>

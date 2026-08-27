@@ -102,7 +102,7 @@
                 </el-form-item>
                 <el-form-item label="文字颜色">
                   <div class="color-control">
-                    <el-color-picker v-model="form.text_color" show-alpha="false" />
+                    <el-color-picker v-model="form.text_color" :show-alpha="false" color-format="hex" />
                     <code>{{ form.text_color }}</code>
                   </div>
                 </el-form-item>
@@ -111,6 +111,8 @@
                 <el-button native-type="submit" type="primary" :loading="saving">保存播放设置</el-button>
               </div>
             </el-form>
+
+            <DanmakuTestPanel :activity-id="activityId" />
 
             <section class="token-section" aria-labelledby="danmaku-token-title">
               <header class="token-heading">
@@ -169,6 +171,7 @@ import {
   type DanmakuSettings,
 } from "../../api/client";
 import ActivitySidebar from "../../components/ActivitySidebar.vue";
+import DanmakuTestPanel from "./DanmakuTestPanel.vue";
 
 const route = useRoute();
 const activityId = String(route.params.activityId);

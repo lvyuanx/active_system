@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --port 5173",
     "build": "vue-tsc --noEmit && vite build",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "test:danmaku-settings": "node scripts/test-danmaku-settings.mjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",

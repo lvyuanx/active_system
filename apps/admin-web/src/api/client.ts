@@ -55,6 +55,10 @@ export interface DanmakuAdminResponse {
   token_created_at: string;
   updated_at: string;
 }
+export interface DanmakuTestStatus {
+  running: boolean;
+  detail: string;
+}
 
 export const login = (username: string, password: string) => request<LoginResponse>("/auth/login", {
   method: "POST", body: JSON.stringify({ username, password }),
@@ -86,3 +90,9 @@ export const regenerateDanmakuToken = (activityId: string) =>
   request<DanmakuAdminResponse>(`/admin/activities/${activityId}/danmaku/token`, {
     method: "POST",
   });
+export const getDanmakuTestStatus = (activityId: string) =>
+  request<DanmakuTestStatus>(`/admin/activities/${activityId}/danmaku/test`);
+export const startDanmakuTest = (activityId: string) =>
+  request<DanmakuTestStatus>(`/admin/activities/${activityId}/danmaku/test/start`, { method: "POST" });
+export const stopDanmakuTest = (activityId: string) =>
+  request<DanmakuTestStatus>(`/admin/activities/${activityId}/danmaku/test/stop`, { method: "POST" });
