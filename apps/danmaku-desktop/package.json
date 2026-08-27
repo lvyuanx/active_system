@@ -1,0 +1,57 @@
+{
+  "name": "@active/danmaku-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "ACTIVE 活动系统的 Windows 弹幕桌面悬浮工具",
+  "author": "ACTIVE",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "pnpm build:main && electron .",
+    "build": "pnpm build:main",
+    "build:main": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "dist:win": "pnpm --filter @active/screen-web build && pnpm build:main && electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.1",
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.7",
+    "typescript": "^5.7.2"
+  },
+  "build": {
+    "appId": "com.active.danmaku",
+    "productName": "ACTIVE 弹幕工具",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/main.js",
+      "dist/preload.cjs",
+      "launcher/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../screen-web/dist",
+        "to": "screen-web",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

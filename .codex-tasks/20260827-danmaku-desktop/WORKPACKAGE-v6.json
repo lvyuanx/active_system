@@ -1,0 +1,115 @@
+{
+  "work_package_id": "main-integration-repair-ac009",
+  "workflow_id": "activity-danmaku-desktop",
+  "task_version": "TASK-v1",
+  "target": "D:\\projects\\active_system",
+  "read_scope": [
+    "AGENTS.md",
+    "PROJECT_AGENTS.md",
+    "apps/screen-web/AGENTS.md",
+    "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+    "apps/screen-web/src/components/realtime/message-order.ts",
+    "apps/screen-web/scripts/test-message-order.mjs",
+    "apps/screen-web/package.json",
+    "apps/backend/app/modules/danmaku/router.py",
+    ".codex-tasks/20260827-danmaku-desktop/TASK-v1.md",
+    ".codex-tasks/20260827-danmaku-desktop/DEVELOPMENT-HANDOFF-v5.md",
+    ".codex-tasks/20260827-danmaku-desktop/TESTING-BLOCKED-v2.md",
+    ".codex-tasks/20260827-danmaku-desktop/TASKGRAPH-v1.json"
+  ],
+  "write_scope": [
+    "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+    "apps/screen-web/src/components/realtime/message-order.ts",
+    "apps/screen-web/scripts/test-message-order.mjs",
+    "apps/screen-web/package.json",
+    "apps/screen-web/AGENTS.md",
+    ".codex-tasks/20260827-danmaku-desktop/DEVELOPMENT-HANDOFF-v6.md"
+  ],
+  "ephemeral_scope": [
+    "apps/screen-web/dist-test/**",
+    "apps/screen-web/dist/**",
+    "node_modules/**"
+  ],
+  "acceptance_refs": ["AC-009"],
+  "upstream_dependencies": [
+    "DEVELOPMENT-HANDOFF-v5.md",
+    "TESTING-BLOCKED-v2.md"
+  ],
+  "downstream_dependencies": ["main-retests", "review", "acceptance"],
+  "handoff_ref": "TESTING-BLOCKED-v2.md",
+  "input_snapshot": "AC-009 repair baseline before first-ready disconnect fix",
+  "input_snapshot_id": "HEAD:4e35b3da19742aff672cdd58910bbf60b8935f59:manifest:3889B9AA52578B8B7E1E141C9112AD7FBC3A02FA6EF4F85A9A4DDDAB2A54D287",
+  "input_manifest_sha256": "3889B9AA52578B8B7E1E141C9112AD7FBC3A02FA6EF4F85A9A4DDDAB2A54D287",
+  "input_tree_oid": "0b0d3e4ed5a85a37eebe3aadf45782feaa8d0fb4",
+  "head_snapshot": "HEAD:4e35b3da19742aff672cdd58910bbf60b8935f59",
+  "head_sha": "4e35b3da19742aff672cdd58910bbf60b8935f59",
+  "branch_ref": "master",
+  "worktree_path": "D:\\projects\\active_system",
+  "upstream_patch_shas": [],
+  "output_patch_path": null,
+  "output_patch_sha256": null,
+  "resource_claims": [
+    "repository-main-worktree",
+    "node-build-cache"
+  ],
+  "file_manifest": [
+    {
+      "path": "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+      "sha256": "5C42EFECEBCB50135DDD1CA428DBF416DB0F467F8D7726763E0E0FFA6B2DC2B9"
+    },
+    {
+      "path": "apps/screen-web/src/components/realtime/message-order.ts",
+      "sha256": "2595FA0C25BF01556E8491B2A276C6C141587274ADC8B4E0FF50DCA39DB05964"
+    },
+    {
+      "path": "apps/screen-web/scripts/test-message-order.mjs",
+      "sha256": "CF6DCAAE854F564D8E4F7E00A495C4973955531F30B3E34D73806D707587D828"
+    },
+    {
+      "path": "apps/screen-web/package.json",
+      "sha256": "FF50286AD665FD1683E4F631E3CB9951E93E89B48E6BB038DCE6ACB2D4A750DE"
+    },
+    {
+      "path": "apps/screen-web/AGENTS.md",
+      "sha256": "F9FE4F66193E17821E9B65D7D5AA93682C5715FB7B3773C45D2B08DD8171946B"
+    }
+  ],
+  "actual_file_manifest": [
+    {
+      "path": "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+      "sha256": "4123F51480F2DAF371A65D35F9356A2DA309EAAC05BEDB7326AB36DC800A3181"
+    },
+    {
+      "path": "apps/screen-web/src/components/realtime/message-order.ts",
+      "sha256": "FC1E40E7CED9AC858AD3906C9D25BAAA0E660776478A78A562452FCB4AD316AD"
+    },
+    {
+      "path": "apps/screen-web/scripts/test-message-order.mjs",
+      "sha256": "0F207071373C96EE13D25F031221833F66C047FA5C789B4E596CE7A693DCC204"
+    },
+    {
+      "path": "apps/screen-web/AGENTS.md",
+      "sha256": "0DDC6D7C9D2D37351538F3C20332C7B0ABC9194F60872076A6349A5D1AFFBDCE"
+    },
+    {
+      "path": "apps/screen-web/package.json",
+      "sha256": "FF50286AD665FD1683E4F631E3CB9951E93E89B48E6BB038DCE6ACB2D4A750DE"
+    },
+    {
+      "path": ".codex-tasks/20260827-danmaku-desktop/DEVELOPMENT-HANDOFF-v6.md",
+      "sha256": "CAE2B56237FFC5F148256DE84E4D999A001EDAEB3E4CE89E2C90316EC0F607EC"
+    }
+  ],
+  "patch_digest": {
+    "algorithm": "SHA-256",
+    "manifest_sha256": "CD671BDD9F1BAE072A1E336FC798C6C5318C2D05656FCBE7CF241F207881DC93",
+    "note": "Serial shared-worktree AC-009 repair; no Git commit or exported patch."
+  },
+  "qualification": "NOT_APPLICABLE",
+  "status": "SUCCEEDED",
+  "authorization": {
+    "mode": "SERIAL_SHARED_WRITE",
+    "main_worktree_authorized": true,
+    "reason": "This repair uses a single shared writer because its test output and screen-web build cache cannot be isolated from the current main workspace."
+  }
+}

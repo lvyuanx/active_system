@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     database_path: str = "./data/active_system.db"
     jwt_secret: str = "development-only-change-this-secret"
     jwt_expire_minutes: int = 60
+    danmaku_token_secret: str = ""
     superuser_username: str = "admin"
     superuser_password: str = ""
 

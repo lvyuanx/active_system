@@ -44,6 +44,20 @@ CREATE INDEX IF NOT EXISTS idx_activity_chat_messages_cursor
     ON activity_chat_messages(activity_id, message_id);
 CREATE INDEX IF NOT EXISTS idx_activity_users_username
     ON activity_users(activity_id, username, id);
+CREATE TABLE IF NOT EXISTS activity_danmaku_settings (
+    activity_id TEXT PRIMARY KEY REFERENCES activities(activity_id) ON DELETE CASCADE,
+    track_count INTEGER NOT NULL CHECK(track_count BETWEEN 1 AND 12),
+    font_size INTEGER NOT NULL CHECK(font_size BETWEEN 16 AND 96),
+    opacity REAL NOT NULL CHECK(opacity BETWEEN 0.1 AND 1.0),
+    duration_seconds INTEGER NOT NULL CHECK(duration_seconds BETWEEN 5 AND 30),
+    display_top INTEGER NOT NULL CHECK(display_top BETWEEN 0 AND 80),
+    display_bottom INTEGER NOT NULL CHECK(display_bottom BETWEEN 20 AND 100),
+    text_color TEXT NOT NULL,
+    token_version INTEGER NOT NULL,
+    token_created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    CHECK(display_bottom > display_top)
+);
 """
 
 

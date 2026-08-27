@@ -1,0 +1,749 @@
+{
+  "main_integration": {
+    "work_package_id": "main-integration",
+    "workflow_id": "activity-danmaku-desktop",
+    "target": "D:\\projects\\active_system",
+    "read_scope": [
+      "AGENTS.md",
+      "PROJECT_AGENTS.md",
+      "apps/backend/**",
+      "apps/admin-web/**",
+      "apps/screen-web/**",
+      "apps/danmaku-desktop/**",
+      "package.json",
+      "pnpm-workspace.yaml",
+      "pnpm-lock.yaml",
+      "README.md",
+      "WIKI.md",
+      "MEMORY.md"
+    ],
+    "write_scope": [
+      "apps/backend/app/api/router.py",
+      "apps/backend/app/core/config.py",
+      "apps/backend/app/core/database.py",
+      "apps/backend/app/main.py",
+      "apps/backend/app/modules/chat/router.py",
+      "apps/backend/app/modules/danmaku/**",
+      "apps/backend/tests/test_danmaku.py",
+      "apps/admin-web/**",
+      "apps/screen-web/**",
+      "apps/danmaku-desktop/**",
+      "package.json",
+      "pnpm-workspace.yaml",
+      "pnpm-lock.yaml",
+      ".env.example",
+      ".gitignore",
+      "README.md",
+      "WIKI.md",
+      "MEMORY.md",
+      ".codex-tasks/20260827-danmaku-desktop/**"
+    ],
+    "ephemeral_scope": [
+      "apps/*/dist/**",
+      "apps/danmaku-desktop/release/**",
+      "data/danmaku-browser-test.db",
+      "node_modules/**"
+    ],
+    "acceptance_refs": [
+      "AC-001",
+      "AC-002",
+      "AC-003",
+      "AC-004",
+      "AC-005",
+      "AC-006",
+      "AC-007",
+      "AC-008",
+      "AC-009",
+      "AC-010"
+    ],
+    "upstream_dependencies": [
+      "PRODUCT-HANDOFF-v1.md",
+      "ARCHITECTURE-v1.md"
+    ],
+    "downstream_dependencies": [
+      "main-tests",
+      "review",
+      "acceptance"
+    ],
+    "handoff_ref": "DEVELOPMENT-HANDOFF-v1.md",
+    "input_snapshot": "HEAD before TASK-v1 implementation",
+    "input_snapshot_id": "HEAD:4e35b3da19742aff672cdd58910bbf60b8935f59",
+    "input_manifest_sha256": "80EEBE4AB5C4BEBF673C25B5571E672524C10389DE743003598968A15CACE59D",
+    "input_tree_oid": "0b0d3e4ed5a85a37eebe3aadf45782feaa8d0fb4",
+    "head_snapshot": "HEAD:4e35b3da19742aff672cdd58910bbf60b8935f59",
+    "head_sha": "4e35b3da19742aff672cdd58910bbf60b8935f59",
+    "branch_ref": "master",
+    "worktree_path": "D:\\projects\\active_system",
+    "upstream_patch_shas": [],
+    "output_patch_path": null,
+    "output_patch_sha256": null,
+    "resource_claims": [
+      "repository-main-worktree",
+      "pnpm-lock.yaml",
+      "sqlite-schema",
+      "node-build-cache",
+      "test-database"
+    ],
+    "file_manifest": [
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/ARCHITECTURE-v1.md",
+        "sha256": "327BBC8F4542DCB6E138873CCFA06382AB01E534F7B1B458D77F8631F384473F"
+      },
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/DEVELOPMENT-HANDOFF-v1.md",
+        "sha256": "5EE821C4AFCD4CB230E1A87D84B73EB3FFFFD893F6D8B0DF9F5F1726393F2B73"
+      },
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/PRODUCT-HANDOFF-v1.md",
+        "sha256": "148B23635B39DDE18559F6C0CDCE23E110C3767CB034AF9955E431BA041B0479"
+      },
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/TASK-v1.md",
+        "sha256": "4E4ED8542D9688A48A78BD154BFEFB93AA1BEA06252327BE66ACCB2E3D1D9A72"
+      },
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/TASKGRAPH-v1.json",
+        "sha256": "7C8B0CCA480303A8FCCBAFD2CA88114C1B955310405120DC60DFB37680F1D270"
+      },
+      {
+        "path": ".env.example",
+        "sha256": "63866C1A84E0CCFACE0531A4539AC00A12B0325EF4A9AFBCE223ECC8B72E9127"
+      },
+      {
+        "path": ".gitignore",
+        "sha256": "4CD2721497B6C56A19BB1245101FF5B1E861DF64DBC9230CE25ABE2CCDC7723A"
+      },
+      {
+        "path": "apps/admin-web/AGENTS.md",
+        "sha256": "2DF277E0634280FBCECBF8FA0D5E80521BF8425AC28F6F6574604F26332C2866"
+      },
+      {
+        "path": "apps/admin-web/package.json",
+        "sha256": "18BA8185542ADF7718F391A8CA2C7F181590E4AD3EAF5EE33C935DD3713722FC"
+      },
+      {
+        "path": "apps/admin-web/src/api/client.ts",
+        "sha256": "11732B9B203B9B6D2930FED8858333F62B9C0E9C047A95EA3C5367FD2F1CED52"
+      },
+      {
+        "path": "apps/admin-web/src/router/index.ts",
+        "sha256": "EAE93A4BB0C6CC5C861145577D7C0F59A809265B4111D84AE1B8F0648323FE91"
+      },
+      {
+        "path": "apps/admin-web/src/views/activity/index.vue",
+        "sha256": "F19ADC5EF0DB6C0BEBBD3E95D560E7A7496F62ECE2C60E94FDA4D7466F43EACC"
+      },
+      {
+        "path": "apps/admin-web/src/views/danmaku/AGENTS.md",
+        "sha256": "F7038858938A8D243655B8DFF887BAAD129978C6FC82A49CB9B0BD02AAAC6DF5"
+      },
+      {
+        "path": "apps/admin-web/src/views/danmaku/index.vue",
+        "sha256": "31B3421BAF94401A3DC77C6B624A41C9C7912331A055E70607C666CF69913D81"
+      },
+      {
+        "path": "apps/backend/AGENTS.md",
+        "sha256": "7BA0C8F4C8AD5F768F0755B48F4076123D8EF4DB61E1988BC2787BDF79F7752D"
+      },
+      {
+        "path": "apps/backend/app/api/router.py",
+        "sha256": "219106EDDB5E12B3C7C7F54C4A383912C9636E7ED5382718BEB80B56882A7BFB"
+      },
+      {
+        "path": "apps/backend/app/core/config.py",
+        "sha256": "5A166B447A67A4E70B2FA821CD5422F4C21FC4570D864A548A9A6C2D165FFC5B"
+      },
+      {
+        "path": "apps/backend/app/core/database.py",
+        "sha256": "4ABDB8F991F6B54DF1A1A8833CBE02EE71F50330D216F71019B10EFD39E373D1"
+      },
+      {
+        "path": "apps/backend/app/main.py",
+        "sha256": "A698C31DF502D261996E22E0507DD8C55637035D8A32C7F44C65C2820CE2A327"
+      },
+      {
+        "path": "apps/backend/app/modules/chat/AGENTS.md",
+        "sha256": "09B94CCE97A615DD87BD12997796F802B2DAD4E2384F18D907D3A36673108CB9"
+      },
+      {
+        "path": "apps/backend/app/modules/chat/router.py",
+        "sha256": "87618C2A55F4EC6DDC52BD527CAEA57064FD19B9581DFB441D82F8CB1C1EE62E"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/__init__.py",
+        "sha256": "632A4F49198D9EFAF673F9212DDB8B7691E3E5131B2AF58D950113245B181C22"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/AGENTS.md",
+        "sha256": "5A736A9E70929A66DE92907391462EAFC794DE6999514E0A5F896EE1BE99B6A2"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/manager.py",
+        "sha256": "9550A28DE388A48FEC659863A1531E44C107350400C58D0DBB994EF63E8D5C32"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/router.py",
+        "sha256": "B6BB5DF75B931B2A4742905D41747E3D58553214149513E315C8A860A549218A"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/service.py",
+        "sha256": "03670CA69469FE48D47592015E5CF9AE884D41D6927797DE6450F85A60BC3726"
+      },
+      {
+        "path": "apps/backend/tests/test_danmaku.py",
+        "sha256": "7FB82E9996C0EDB6ACD845CA0F97CEA2FD0DC37F33F0E7DCB8251B538D0C3FA7"
+      },
+      {
+        "path": "apps/danmaku-desktop/AGENTS.md",
+        "sha256": "69502A5560006BC84EF71C43BFE151386553EF85B1D27DF1ADA3CF17CB699CDE"
+      },
+      {
+        "path": "apps/danmaku-desktop/launcher/index.html",
+        "sha256": "A658C11C470EC3FF4B7D0EB0EAA7C71A33241BCD881536D049064E02FA26D609"
+      },
+      {
+        "path": "apps/danmaku-desktop/launcher/launcher.js",
+        "sha256": "C1679252AE7E1B60ADF841AF4AE17C12F0F2F33E138AF7F438E0335B3DA02B49"
+      },
+      {
+        "path": "apps/danmaku-desktop/launcher/styles.css",
+        "sha256": "2443707D378EE75BBFDED6304CCE6A6AAD6FAB0E504515B9966FDFA852DEA7BB"
+      },
+      {
+        "path": "apps/danmaku-desktop/package.json",
+        "sha256": "318922CE7E7C1344E518D47E7B870748F953C32BDFD74B0262C93E2C6622EBC1"
+      },
+      {
+        "path": "apps/danmaku-desktop/src/main.ts",
+        "sha256": "0A3AED047D06274F12CE338F478686C71E86FF41370B7EA08DAF0DD6BA239129"
+      },
+      {
+        "path": "apps/danmaku-desktop/src/preload.cts",
+        "sha256": "95BC2B33D39C527FBE317F3ECBC8215B134064159B463F79BF26A254B451A1DA"
+      },
+      {
+        "path": "apps/danmaku-desktop/tsconfig.json",
+        "sha256": "382EA9E9C9B8EBDBE87F8DCAF69A59C023E795B9DDD9A18A1F3072BDC93739C4"
+      },
+      {
+        "path": "apps/screen-web/AGENTS.md",
+        "sha256": "5DE5CC1412DCAD62BA281DE5FBE392DE5AA4E667DDD6AF45F42698D92547936B"
+      },
+      {
+        "path": "apps/screen-web/src/api/client.ts",
+        "sha256": "8CFB1D90E2996C2D2C3F2F6F9C49375244F16679323FBB92C64C3FDE39E1390A"
+      },
+      {
+        "path": "apps/screen-web/src/App.vue",
+        "sha256": "D59A74BBC770DADDB4E9FB71C1EDB60FE79BE431BF03D7E9829A6846F98F0509"
+      },
+      {
+        "path": "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+        "sha256": "256AEFDF1C42DC0B7176F770DD36AF72C14E41D63ED15F38BDBC3E3AFAF3865A"
+      },
+      {
+        "path": "apps/screen-web/src/styles/index.css",
+        "sha256": "C75165FD823F83CFE24F1A8FE440EA792D4E1CBDAE2EC74F4FB5A84950DE0046"
+      },
+      {
+        "path": "apps/screen-web/src/types.d.ts",
+        "sha256": "C576648ACED2087D78B3AFE7F22B19C6922C8EF20073F075883E28A5775CC3E1"
+      },
+      {
+        "path": "apps/screen-web/vite.config.ts",
+        "sha256": "183AC8437825696A01356FDC59906D7DCD2AEDDBBA5695C72FE653548B44C1A4"
+      },
+      {
+        "path": "MEMORY.md",
+        "sha256": "33C5F2908051CEF50CE52F9B0723B132403624837C85136929BB228EA04F77FA"
+      },
+      {
+        "path": "package.json",
+        "sha256": "81D3B5DEBBA9DDFCA232477EDACF1A79BF46D9E5B8175C112335AF2D45A8ED61"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "sha256": "E3D98A2AE7F9B5751293E6760F3696B62D3A8714D907CDAE80C9CE0E7303AE25"
+      },
+      {
+        "path": "pnpm-workspace.yaml",
+        "sha256": "0D814AB912EE8DF9C430AEE7BC660340FDE37634510AD799559F65EAC7143219"
+      },
+      {
+        "path": "README.md",
+        "sha256": "6431DD0518EA8E03A7E01F1260B2FC3336472D7658B80185E6E921F76B819595"
+      },
+      {
+        "path": "WIKI.md",
+        "sha256": "7562BB9ED61F1C99FC3393F2601BA3B628290F3811085F5A5C5572C3A998BDA3"
+      }
+    ],
+    "actual_file_manifest": [
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/ARCHITECTURE-v1.md",
+        "sha256": "327BBC8F4542DCB6E138873CCFA06382AB01E534F7B1B458D77F8631F384473F"
+      },
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/DEVELOPMENT-HANDOFF-v1.md",
+        "sha256": "5EE821C4AFCD4CB230E1A87D84B73EB3FFFFD893F6D8B0DF9F5F1726393F2B73"
+      },
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/PRODUCT-HANDOFF-v1.md",
+        "sha256": "148B23635B39DDE18559F6C0CDCE23E110C3767CB034AF9955E431BA041B0479"
+      },
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/TASK-v1.md",
+        "sha256": "4E4ED8542D9688A48A78BD154BFEFB93AA1BEA06252327BE66ACCB2E3D1D9A72"
+      },
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/TASKGRAPH-v1.json",
+        "sha256": "7C8B0CCA480303A8FCCBAFD2CA88114C1B955310405120DC60DFB37680F1D270"
+      },
+      {
+        "path": ".env.example",
+        "sha256": "63866C1A84E0CCFACE0531A4539AC00A12B0325EF4A9AFBCE223ECC8B72E9127"
+      },
+      {
+        "path": ".gitignore",
+        "sha256": "4CD2721497B6C56A19BB1245101FF5B1E861DF64DBC9230CE25ABE2CCDC7723A"
+      },
+      {
+        "path": "apps/admin-web/AGENTS.md",
+        "sha256": "2DF277E0634280FBCECBF8FA0D5E80521BF8425AC28F6F6574604F26332C2866"
+      },
+      {
+        "path": "apps/admin-web/package.json",
+        "sha256": "18BA8185542ADF7718F391A8CA2C7F181590E4AD3EAF5EE33C935DD3713722FC"
+      },
+      {
+        "path": "apps/admin-web/src/api/client.ts",
+        "sha256": "11732B9B203B9B6D2930FED8858333F62B9C0E9C047A95EA3C5367FD2F1CED52"
+      },
+      {
+        "path": "apps/admin-web/src/router/index.ts",
+        "sha256": "EAE93A4BB0C6CC5C861145577D7C0F59A809265B4111D84AE1B8F0648323FE91"
+      },
+      {
+        "path": "apps/admin-web/src/views/activity/index.vue",
+        "sha256": "F19ADC5EF0DB6C0BEBBD3E95D560E7A7496F62ECE2C60E94FDA4D7466F43EACC"
+      },
+      {
+        "path": "apps/admin-web/src/views/danmaku/AGENTS.md",
+        "sha256": "F7038858938A8D243655B8DFF887BAAD129978C6FC82A49CB9B0BD02AAAC6DF5"
+      },
+      {
+        "path": "apps/admin-web/src/views/danmaku/index.vue",
+        "sha256": "31B3421BAF94401A3DC77C6B624A41C9C7912331A055E70607C666CF69913D81"
+      },
+      {
+        "path": "apps/backend/AGENTS.md",
+        "sha256": "7BA0C8F4C8AD5F768F0755B48F4076123D8EF4DB61E1988BC2787BDF79F7752D"
+      },
+      {
+        "path": "apps/backend/app/api/router.py",
+        "sha256": "219106EDDB5E12B3C7C7F54C4A383912C9636E7ED5382718BEB80B56882A7BFB"
+      },
+      {
+        "path": "apps/backend/app/core/config.py",
+        "sha256": "5A166B447A67A4E70B2FA821CD5422F4C21FC4570D864A548A9A6C2D165FFC5B"
+      },
+      {
+        "path": "apps/backend/app/core/database.py",
+        "sha256": "4ABDB8F991F6B54DF1A1A8833CBE02EE71F50330D216F71019B10EFD39E373D1"
+      },
+      {
+        "path": "apps/backend/app/main.py",
+        "sha256": "A698C31DF502D261996E22E0507DD8C55637035D8A32C7F44C65C2820CE2A327"
+      },
+      {
+        "path": "apps/backend/app/modules/chat/AGENTS.md",
+        "sha256": "09B94CCE97A615DD87BD12997796F802B2DAD4E2384F18D907D3A36673108CB9"
+      },
+      {
+        "path": "apps/backend/app/modules/chat/router.py",
+        "sha256": "87618C2A55F4EC6DDC52BD527CAEA57064FD19B9581DFB441D82F8CB1C1EE62E"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/__init__.py",
+        "sha256": "632A4F49198D9EFAF673F9212DDB8B7691E3E5131B2AF58D950113245B181C22"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/AGENTS.md",
+        "sha256": "5A736A9E70929A66DE92907391462EAFC794DE6999514E0A5F896EE1BE99B6A2"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/manager.py",
+        "sha256": "9550A28DE388A48FEC659863A1531E44C107350400C58D0DBB994EF63E8D5C32"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/router.py",
+        "sha256": "B6BB5DF75B931B2A4742905D41747E3D58553214149513E315C8A860A549218A"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/service.py",
+        "sha256": "03670CA69469FE48D47592015E5CF9AE884D41D6927797DE6450F85A60BC3726"
+      },
+      {
+        "path": "apps/backend/tests/test_danmaku.py",
+        "sha256": "7FB82E9996C0EDB6ACD845CA0F97CEA2FD0DC37F33F0E7DCB8251B538D0C3FA7"
+      },
+      {
+        "path": "apps/danmaku-desktop/AGENTS.md",
+        "sha256": "69502A5560006BC84EF71C43BFE151386553EF85B1D27DF1ADA3CF17CB699CDE"
+      },
+      {
+        "path": "apps/danmaku-desktop/launcher/index.html",
+        "sha256": "A658C11C470EC3FF4B7D0EB0EAA7C71A33241BCD881536D049064E02FA26D609"
+      },
+      {
+        "path": "apps/danmaku-desktop/launcher/launcher.js",
+        "sha256": "C1679252AE7E1B60ADF841AF4AE17C12F0F2F33E138AF7F438E0335B3DA02B49"
+      },
+      {
+        "path": "apps/danmaku-desktop/launcher/styles.css",
+        "sha256": "2443707D378EE75BBFDED6304CCE6A6AAD6FAB0E504515B9966FDFA852DEA7BB"
+      },
+      {
+        "path": "apps/danmaku-desktop/package.json",
+        "sha256": "318922CE7E7C1344E518D47E7B870748F953C32BDFD74B0262C93E2C6622EBC1"
+      },
+      {
+        "path": "apps/danmaku-desktop/src/main.ts",
+        "sha256": "0A3AED047D06274F12CE338F478686C71E86FF41370B7EA08DAF0DD6BA239129"
+      },
+      {
+        "path": "apps/danmaku-desktop/src/preload.cts",
+        "sha256": "95BC2B33D39C527FBE317F3ECBC8215B134064159B463F79BF26A254B451A1DA"
+      },
+      {
+        "path": "apps/danmaku-desktop/tsconfig.json",
+        "sha256": "382EA9E9C9B8EBDBE87F8DCAF69A59C023E795B9DDD9A18A1F3072BDC93739C4"
+      },
+      {
+        "path": "apps/screen-web/AGENTS.md",
+        "sha256": "5DE5CC1412DCAD62BA281DE5FBE392DE5AA4E667DDD6AF45F42698D92547936B"
+      },
+      {
+        "path": "apps/screen-web/src/api/client.ts",
+        "sha256": "8CFB1D90E2996C2D2C3F2F6F9C49375244F16679323FBB92C64C3FDE39E1390A"
+      },
+      {
+        "path": "apps/screen-web/src/App.vue",
+        "sha256": "D59A74BBC770DADDB4E9FB71C1EDB60FE79BE431BF03D7E9829A6846F98F0509"
+      },
+      {
+        "path": "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+        "sha256": "256AEFDF1C42DC0B7176F770DD36AF72C14E41D63ED15F38BDBC3E3AFAF3865A"
+      },
+      {
+        "path": "apps/screen-web/src/styles/index.css",
+        "sha256": "C75165FD823F83CFE24F1A8FE440EA792D4E1CBDAE2EC74F4FB5A84950DE0046"
+      },
+      {
+        "path": "apps/screen-web/src/types.d.ts",
+        "sha256": "C576648ACED2087D78B3AFE7F22B19C6922C8EF20073F075883E28A5775CC3E1"
+      },
+      {
+        "path": "apps/screen-web/vite.config.ts",
+        "sha256": "183AC8437825696A01356FDC59906D7DCD2AEDDBBA5695C72FE653548B44C1A4"
+      },
+      {
+        "path": "MEMORY.md",
+        "sha256": "33C5F2908051CEF50CE52F9B0723B132403624837C85136929BB228EA04F77FA"
+      },
+      {
+        "path": "package.json",
+        "sha256": "81D3B5DEBBA9DDFCA232477EDACF1A79BF46D9E5B8175C112335AF2D45A8ED61"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "sha256": "E3D98A2AE7F9B5751293E6760F3696B62D3A8714D907CDAE80C9CE0E7303AE25"
+      },
+      {
+        "path": "pnpm-workspace.yaml",
+        "sha256": "0D814AB912EE8DF9C430AEE7BC660340FDE37634510AD799559F65EAC7143219"
+      },
+      {
+        "path": "README.md",
+        "sha256": "6431DD0518EA8E03A7E01F1260B2FC3336472D7658B80185E6E921F76B819595"
+      },
+      {
+        "path": "WIKI.md",
+        "sha256": "7562BB9ED61F1C99FC3393F2601BA3B628290F3811085F5A5C5572C3A998BDA3"
+      }
+    ],
+    "patch_digest": {
+      "algorithm": "SHA-256",
+      "manifest_sha256": "80EEBE4AB5C4BEBF673C25B5571E672524C10389DE743003598968A15CACE59D",
+      "note": "Serial shared-write integration; no isolated worktree patch was produced."
+    },
+    "qualification": "NOT_APPLICABLE",
+    "status": "SUCCEEDED"
+  },
+  "main_tests": {
+    "work_package_id": "main-tests",
+    "workflow_id": "activity-danmaku-desktop",
+    "target": "D:\\projects\\active_system",
+    "read_scope": [
+      "AGENTS.md",
+      "PROJECT_AGENTS.md",
+      "apps/backend/**",
+      "apps/admin-web/**",
+      "apps/screen-web/**",
+      "apps/danmaku-desktop/**",
+      "package.json",
+      "pnpm-workspace.yaml",
+      "pnpm-lock.yaml",
+      "README.md",
+      "WIKI.md",
+      "MEMORY.md",
+      ".codex-tasks/20260827-danmaku-desktop/**"
+    ],
+    "write_scope": [
+      "apps/backend/tests/**",
+      "apps/**/dist/**",
+      "apps/danmaku-desktop/release/**",
+      "data/danmaku-browser-test.db"
+    ],
+    "ephemeral_scope": [
+      "apps/*/dist/**",
+      "apps/danmaku-desktop/release/**",
+      "data/danmaku-browser-test.db",
+      "node_modules/**"
+    ],
+    "acceptance_refs": [
+      "AC-001",
+      "AC-002",
+      "AC-003",
+      "AC-004",
+      "AC-005",
+      "AC-006",
+      "AC-007",
+      "AC-008",
+      "AC-009",
+      "AC-010"
+    ],
+    "upstream_dependencies": [
+      "main-integration"
+    ],
+    "downstream_dependencies": [
+      "review",
+      "acceptance"
+    ],
+    "handoff_ref": "DEVELOPMENT-HANDOFF-v1.md",
+    "input_snapshot": "main-integration completed worktree",
+    "input_snapshot_id": "HEAD:4e35b3da19742aff672cdd58910bbf60b8935f59:manifest:80EEBE4AB5C4BEBF673C25B5571E672524C10389DE743003598968A15CACE59D",
+    "input_manifest_sha256": "80EEBE4AB5C4BEBF673C25B5571E672524C10389DE743003598968A15CACE59D",
+    "input_tree_oid": "0b0d3e4ed5a85a37eebe3aadf45782feaa8d0fb4",
+    "head_snapshot": "HEAD:4e35b3da19742aff672cdd58910bbf60b8935f59",
+    "head_sha": "4e35b3da19742aff672cdd58910bbf60b8935f59",
+    "branch_ref": "master",
+    "worktree_path": "D:\\projects\\active_system",
+    "upstream_patch_shas": [],
+    "output_patch_path": null,
+    "output_patch_sha256": null,
+    "resource_claims": [
+      "repository-main-worktree",
+      "test-database",
+      "node-build-cache"
+    ],
+    "file_manifest": [
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/ARCHITECTURE-v1.md",
+        "sha256": "327BBC8F4542DCB6E138873CCFA06382AB01E534F7B1B458D77F8631F384473F"
+      },
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/DEVELOPMENT-HANDOFF-v1.md",
+        "sha256": "5EE821C4AFCD4CB230E1A87D84B73EB3FFFFD893F6D8B0DF9F5F1726393F2B73"
+      },
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/PRODUCT-HANDOFF-v1.md",
+        "sha256": "148B23635B39DDE18559F6C0CDCE23E110C3767CB034AF9955E431BA041B0479"
+      },
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/TASK-v1.md",
+        "sha256": "4E4ED8542D9688A48A78BD154BFEFB93AA1BEA06252327BE66ACCB2E3D1D9A72"
+      },
+      {
+        "path": ".codex-tasks/20260827-danmaku-desktop/TASKGRAPH-v1.json",
+        "sha256": "7C8B0CCA480303A8FCCBAFD2CA88114C1B955310405120DC60DFB37680F1D270"
+      },
+      {
+        "path": ".env.example",
+        "sha256": "63866C1A84E0CCFACE0531A4539AC00A12B0325EF4A9AFBCE223ECC8B72E9127"
+      },
+      {
+        "path": ".gitignore",
+        "sha256": "4CD2721497B6C56A19BB1245101FF5B1E861DF64DBC9230CE25ABE2CCDC7723A"
+      },
+      {
+        "path": "apps/admin-web/AGENTS.md",
+        "sha256": "2DF277E0634280FBCECBF8FA0D5E80521BF8425AC28F6F6574604F26332C2866"
+      },
+      {
+        "path": "apps/admin-web/package.json",
+        "sha256": "18BA8185542ADF7718F391A8CA2C7F181590E4AD3EAF5EE33C935DD3713722FC"
+      },
+      {
+        "path": "apps/admin-web/src/api/client.ts",
+        "sha256": "11732B9B203B9B6D2930FED8858333F62B9C0E9C047A95EA3C5367FD2F1CED52"
+      },
+      {
+        "path": "apps/admin-web/src/router/index.ts",
+        "sha256": "EAE93A4BB0C6CC5C861145577D7C0F59A809265B4111D84AE1B8F0648323FE91"
+      },
+      {
+        "path": "apps/admin-web/src/views/activity/index.vue",
+        "sha256": "F19ADC5EF0DB6C0BEBBD3E95D560E7A7496F62ECE2C60E94FDA4D7466F43EACC"
+      },
+      {
+        "path": "apps/admin-web/src/views/danmaku/AGENTS.md",
+        "sha256": "F7038858938A8D243655B8DFF887BAAD129978C6FC82A49CB9B0BD02AAAC6DF5"
+      },
+      {
+        "path": "apps/admin-web/src/views/danmaku/index.vue",
+        "sha256": "31B3421BAF94401A3DC77C6B624A41C9C7912331A055E70607C666CF69913D81"
+      },
+      {
+        "path": "apps/backend/AGENTS.md",
+        "sha256": "7BA0C8F4C8AD5F768F0755B48F4076123D8EF4DB61E1988BC2787BDF79F7752D"
+      },
+      {
+        "path": "apps/backend/app/api/router.py",
+        "sha256": "219106EDDB5E12B3C7C7F54C4A383912C9636E7ED5382718BEB80B56882A7BFB"
+      },
+      {
+        "path": "apps/backend/app/core/config.py",
+        "sha256": "5A166B447A67A4E70B2FA821CD5422F4C21FC4570D864A548A9A6C2D165FFC5B"
+      },
+      {
+        "path": "apps/backend/app/core/database.py",
+        "sha256": "4ABDB8F991F6B54DF1A1A8833CBE02EE71F50330D216F71019B10EFD39E373D1"
+      },
+      {
+        "path": "apps/backend/app/main.py",
+        "sha256": "A698C31DF502D261996E22E0507DD8C55637035D8A32C7F44C65C2820CE2A327"
+      },
+      {
+        "path": "apps/backend/app/modules/chat/AGENTS.md",
+        "sha256": "09B94CCE97A615DD87BD12997796F802B2DAD4E2384F18D907D3A36673108CB9"
+      },
+      {
+        "path": "apps/backend/app/modules/chat/router.py",
+        "sha256": "87618C2A55F4EC6DDC52BD527CAEA57064FD19B9581DFB441D82F8CB1C1EE62E"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/__init__.py",
+        "sha256": "632A4F49198D9EFAF673F9212DDB8B7691E3E5131B2AF58D950113245B181C22"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/AGENTS.md",
+        "sha256": "5A736A9E70929A66DE92907391462EAFC794DE6999514E0A5F896EE1BE99B6A2"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/manager.py",
+        "sha256": "9550A28DE388A48FEC659863A1531E44C107350400C58D0DBB994EF63E8D5C32"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/router.py",
+        "sha256": "B6BB5DF75B931B2A4742905D41747E3D58553214149513E315C8A860A549218A"
+      },
+      {
+        "path": "apps/backend/app/modules/danmaku/service.py",
+        "sha256": "03670CA69469FE48D47592015E5CF9AE884D41D6927797DE6450F85A60BC3726"
+      },
+      {
+        "path": "apps/backend/tests/test_danmaku.py",
+        "sha256": "7FB82E9996C0EDB6ACD845CA0F97CEA2FD0DC37F33F0E7DCB8251B538D0C3FA7"
+      },
+      {
+        "path": "apps/danmaku-desktop/AGENTS.md",
+        "sha256": "69502A5560006BC84EF71C43BFE151386553EF85B1D27DF1ADA3CF17CB699CDE"
+      },
+      {
+        "path": "apps/danmaku-desktop/launcher/index.html",
+        "sha256": "A658C11C470EC3FF4B7D0EB0EAA7C71A33241BCD881536D049064E02FA26D609"
+      },
+      {
+        "path": "apps/danmaku-desktop/launcher/launcher.js",
+        "sha256": "C1679252AE7E1B60ADF841AF4AE17C12F0F2F33E138AF7F438E0335B3DA02B49"
+      },
+      {
+        "path": "apps/danmaku-desktop/launcher/styles.css",
+        "sha256": "2443707D378EE75BBFDED6304CCE6A6AAD6FAB0E504515B9966FDFA852DEA7BB"
+      },
+      {
+        "path": "apps/danmaku-desktop/package.json",
+        "sha256": "318922CE7E7C1344E518D47E7B870748F953C32BDFD74B0262C93E2C6622EBC1"
+      },
+      {
+        "path": "apps/danmaku-desktop/src/main.ts",
+        "sha256": "0A3AED047D06274F12CE338F478686C71E86FF41370B7EA08DAF0DD6BA239129"
+      },
+      {
+        "path": "apps/danmaku-desktop/src/preload.cts",
+        "sha256": "95BC2B33D39C527FBE317F3ECBC8215B134064159B463F79BF26A254B451A1DA"
+      },
+      {
+        "path": "apps/danmaku-desktop/tsconfig.json",
+        "sha256": "382EA9E9C9B8EBDBE87F8DCAF69A59C023E795B9DDD9A18A1F3072BDC93739C4"
+      },
+      {
+        "path": "apps/screen-web/AGENTS.md",
+        "sha256": "5DE5CC1412DCAD62BA281DE5FBE392DE5AA4E667DDD6AF45F42698D92547936B"
+      },
+      {
+        "path": "apps/screen-web/src/api/client.ts",
+        "sha256": "8CFB1D90E2996C2D2C3F2F6F9C49375244F16679323FBB92C64C3FDE39E1390A"
+      },
+      {
+        "path": "apps/screen-web/src/App.vue",
+        "sha256": "D59A74BBC770DADDB4E9FB71C1EDB60FE79BE431BF03D7E9829A6846F98F0509"
+      },
+      {
+        "path": "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+        "sha256": "256AEFDF1C42DC0B7176F770DD36AF72C14E41D63ED15F38BDBC3E3AFAF3865A"
+      },
+      {
+        "path": "apps/screen-web/src/styles/index.css",
+        "sha256": "C75165FD823F83CFE24F1A8FE440EA792D4E1CBDAE2EC74F4FB5A84950DE0046"
+      },
+      {
+        "path": "apps/screen-web/src/types.d.ts",
+        "sha256": "C576648ACED2087D78B3AFE7F22B19C6922C8EF20073F075883E28A5775CC3E1"
+      },
+      {
+        "path": "apps/screen-web/vite.config.ts",
+        "sha256": "183AC8437825696A01356FDC59906D7DCD2AEDDBBA5695C72FE653548B44C1A4"
+      },
+      {
+        "path": "MEMORY.md",
+        "sha256": "33C5F2908051CEF50CE52F9B0723B132403624837C85136929BB228EA04F77FA"
+      },
+      {
+        "path": "package.json",
+        "sha256": "81D3B5DEBBA9DDFCA232477EDACF1A79BF46D9E5B8175C112335AF2D45A8ED61"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "sha256": "E3D98A2AE7F9B5751293E6760F3696B62D3A8714D907CDAE80C9CE0E7303AE25"
+      },
+      {
+        "path": "pnpm-workspace.yaml",
+        "sha256": "0D814AB912EE8DF9C430AEE7BC660340FDE37634510AD799559F65EAC7143219"
+      },
+      {
+        "path": "README.md",
+        "sha256": "6431DD0518EA8E03A7E01F1260B2FC3336472D7658B80185E6E921F76B819595"
+      },
+      {
+        "path": "WIKI.md",
+        "sha256": "7562BB9ED61F1C99FC3393F2601BA3B628290F3811085F5A5C5572C3A998BDA3"
+      }
+    ],
+    "actual_file_manifest": [],
+    "patch_digest": null,
+    "qualification": "NOT_APPLICABLE",
+    "status": "READY"
+  }
+}

@@ -251,18 +251,12 @@ button, input, textarea { font: inherit; }
 }
 #app .activity-management .app-sidebar .brand-lockup { padding: 0 8px 20px; }
 #app .activity-management .back-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
   margin: 2px 0 18px;
-  padding: 10px 8px;
-  color: #64716b;
-  border-radius: 5px;
-  text-align: left;
 }
-#app .activity-management .back-button:hover { color: #0f6652; background: #edf7f4; }
-#app .activity-management .back-icon { font-size: 17px; }
+#app .activity-management .back-button:hover {
+  color: #0f6652;
+  background: #edf7f4;
+}
 #app .activity-management .sidebar-context {
   display: flex;
   flex-direction: column;
@@ -272,10 +266,47 @@ button, input, textarea { font: inherit; }
   border-bottom: 1px solid #e4e9e6;
 }
 #app .activity-management .sidebar-label { color: #147d64; font-size: 10px; font-weight: 750; letter-spacing: 1px; }
-#app .activity-management .sidebar-context strong { overflow: hidden; color: #17211e; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+#app .activity-management .sidebar-context strong {
+  overflow: hidden;
+  color: #17211e;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 #app .activity-management .sidebar-context span:last-child { color: #9aa59f; font: 10px Consolas, monospace; }
 #app .activity-management .app-sidebar nav { display: grid; gap: 4px; padding-top: 16px; }
-#app .activity-management .nav-item { min-height: 42px; padding: 10px; }
+#app .activity-management .back-button,
+#app .activity-management .nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 11px 10px;
+  color: #53615a;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+}
+#app .activity-management .nav-item--active {
+  color: #0f6652;
+  background: #e4f3ee;
+  font-weight: 650;
+}
+#app .activity-management .nav-item--disabled {
+  color: #a5aea9;
+  cursor: not-allowed;
+}
+#app .activity-management .back-icon,
+#app .activity-management .nav-icon {
+  width: 18px;
+  color: currentColor;
+  font-size: 17px;
+  text-align: center;
+}
 #app .activity-management .sidebar-footer {
   display: flex;
   align-items: center;
@@ -285,7 +316,11 @@ button, input, textarea { font: inherit; }
   border-top: 1px solid #e4e9e6;
 }
 #app .activity-management .sidebar-footer .account-copy { min-width: 0; flex: 1; }
-#app .activity-management .sidebar-footer .account-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#app .activity-management .sidebar-footer .account-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 #app .activity-management .sidebar-footer .logout-button { padding: 8px 4px; }
 #app .activity-management .workspace { min-width: 0; }
 #app .activity-management .workspace-topbar {
@@ -299,10 +334,22 @@ button, input, textarea { font: inherit; }
   border-radius: 10px;
   box-shadow: 0 4px 18px rgb(31 48 41 / 4%);
 }
-#app .activity-management .breadcrumb { display: flex; align-items: center; gap: 10px; color: #849089; font-size: 13px; }
+#app .activity-management .breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #849089;
+  font-size: 13px;
+}
 #app .activity-management .breadcrumb b { color: #c2cbc6; font-weight: 400; }
 #app .activity-management .breadcrumb strong { color: #17211e; font-weight: 650; }
-#app .activity-management .workspace-status { display: inline-flex; align-items: center; gap: 7px; color: #718078; font-size: 12px; }
+#app .activity-management .workspace-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #718078;
+  font-size: 12px;
+}
 #app .activity-management .workspace-status i { width: 7px; height: 7px; background: #a5aea9; border-radius: 50%; }
 #app .activity-management .workspace-status--open { color: #0f7656; }
 #app .activity-management .workspace-status--open i { background: #159a70; }

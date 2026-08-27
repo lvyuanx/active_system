@@ -25,6 +25,7 @@
 - `app/modules/participants/router.py`：活动公开详情和活动用户注册、登录、token 校验接口。
 - `app/modules/participants/avatar.py`：活动用户头像范围校验、安全随机分配和空值惰性补齐。
 - `app/modules/chat/`：活动聊天室历史消息、游标查询、WebSocket 认证和广播。
+- `app/modules/danmaku/`：活动弹幕配置、版本化 HMAC token、只读会话和独立实时广播。
 
 ## 活动状态
 
@@ -36,4 +37,5 @@
 
 ## 配置
 
-通过 `DATABASE_PATH`、`JWT_SECRET`、`JWT_EXPIRE_MINUTES`、`SUPERUSER_USERNAME` 和 `SUPERUSER_PASSWORD` 配置数据库、令牌和初始超级用户。启动时会创建表，并在密码变量非空时初始化或更新超级用户。
+通过 `DATABASE_PATH`、`JWT_SECRET`、`JWT_EXPIRE_MINUTES`、`DANMAKU_TOKEN_SECRET`、`SUPERUSER_USERNAME` 和
+`SUPERUSER_PASSWORD` 配置数据库、令牌和初始超级用户。`DANMAKU_TOKEN_SECRET` 为空时回退使用 `JWT_SECRET`；启动时会创建表，并在密码变量非空时初始化或更新超级用户。

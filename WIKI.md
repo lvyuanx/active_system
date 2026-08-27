@@ -2,7 +2,8 @@
 
 ## 架构概览
 
-项目采用 Monorepo，包含一个 FastAPI 模块化单体后端和三个 Vue 3 前端应用：Element Plus 管理端、ECharts 大屏端、Vant 4 用户端。
+项目采用 Monorepo，包含一个 FastAPI 模块化单体、三个 Vue 3 前端应用和一个 Electron Windows 弹幕工具：
+Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层）、Vant 4 用户端和 `danmaku-desktop`。
 
 ## 数据隔离
 
@@ -33,6 +34,22 @@
 提供游标查询。活动用户 JWT 额外携带稳定的 `activity_user_id`；缺少该 claim 的旧令牌仅在同活动用户名唯一时兼容。
 用户端活动壳下包含 `/activity/{activity_id}`、`/chat`、`/me` 三个入口，WebSocket 首帧需发送 `auth`。
 
+## 活动弹幕
+
+`activity_danmaku_settings` 以 `activity_id` 为主键保存轨道、字体、不透明度、飞行时长、显示区域、文字颜色、
+token 版本和更新时间。管理员读取或写入时以默认值懒创建。当前 token 为
+`dm1.{activity_id}.{token_version}.{HMAC}`，HMAC 使用 `DANMAKU_TOKEN_SECRET`，为空时使用 `JWT_SECRET`；数据库不保存明文。
+轮换 token 会递增版本并断开该活动所有弹幕 WebSocket。
+
+弹幕 HTTP/WS 只接受该只读 token，聊天发言成功后向弹幕通道发送 `message_id`、`activity_id`、`body` 和
+`created_at`，不发送用户名或活动用户身份。设置保存会通过 `danmaku.settings.updated` 实时生效。现有聊天室协议保持不变。
+
+Electron 主进程在内存保留 token 和 session，预加载层通过受限 IPC 把它提供给 `screen-web` 渲染器；覆盖窗口透明、
+置顶、不可聚焦并鼠标穿透。启动控制窗口默认 680×720，页面默认隐藏滚动条。
+首次连接不回放历史，重连按最后消息 ID 补齐；队列最多保留 200 条，溢出时丢弃最旧消息。
+普通 `screen-web` 入口继续显示活动数据大屏，只有 `?danmaku-overlay=1` 才进入 Electron 的透明弹幕渲染层。
+实时 WebSocket 消息仅作为同步信号，渲染器始终从当前游标通过 HTTP 拉取并按消息 ID 有序合并，避免并发广播乱序导致遗漏。
+
 ## 用户端移动端视觉
 
 - 用户端活动入口采用 Vue 3 + Vant 4，认证页保留圆环 A 标识和哑金主操作；登录后壳不显示顶部 Header，
@@ -58,6 +75,8 @@
 
 - Windows 双击 `start.cmd`，或执行 `powershell -ExecutionPolicy Bypass -File .\start.ps1`，会分别打开后端和前端窗口。
 - 执行 `powershell -ExecutionPolicy Bypass -File .\start.ps1 -Docker` 会通过 Compose 构建并启动全部容器。
+- 开发弹幕桌面工具时先运行 `pnpm dev:screen`，再运行 `pnpm dev:danmaku`；Windows x64 NSIS 安装包命令为
+  `pnpm dist:danmaku:win`。
 
 ## Codex 子 Agent 配置
 

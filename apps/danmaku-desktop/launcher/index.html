@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <title>ACTIVE 弹幕工具</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="launcher-shell">
+      <header class="launcher-header">
+        <span class="brand-mark">A</span>
+        <div><strong>ACTIVE</strong><small>弹幕工具</small></div>
+      </header>
+      <form id="launch-form" class="launch-form">
+        <label for="api-base-url">API 地址</label>
+        <input id="api-base-url" name="api-base-url" type="url" value="http://localhost:8000/api/v1" required />
+        <label for="token">弹幕 token</label>
+        <textarea id="token" name="token" rows="3" required spellcheck="false"></textarea>
+        <label for="display-id">投屏显示器</label>
+        <select id="display-id" name="display-id" required></select>
+        <p id="status" class="status" role="status"></p>
+        <button id="start-button" type="submit">启动弹幕</button>
+      </form>
+      <div class="runtime-actions">
+        <button id="resume-button" type="button" class="secondary">恢复弹幕</button>
+        <button id="stop-button" type="button" class="secondary">停止弹幕</button>
+      </div>
+    </main>
+    <script src="./launcher.js"></script>
+  </body>
+</html>

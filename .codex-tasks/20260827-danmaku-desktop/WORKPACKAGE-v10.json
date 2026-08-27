@@ -1,0 +1,329 @@
+{
+  "work_package_id": "main-final-regression-v10",
+  "workflow_id": "activity-danmaku-desktop",
+  "task_version": "TASK-v1",
+  "target": "D:\\projects\\active_system",
+  "read_scope": [
+    "AGENTS.md",
+    "PROJECT_AGENTS.md",
+    "apps/backend/**",
+    "apps/admin-web/**",
+    "apps/screen-web/**",
+    "apps/danmaku-desktop/**",
+    "package.json",
+    "pnpm-workspace.yaml",
+    "pnpm-lock.yaml",
+    "README.md",
+    "WIKI.md",
+    "MEMORY.md",
+    ".codex-tasks/20260827-danmaku-desktop/**"
+  ],
+  "write_scope": [
+    "apps/backend/tests/**",
+    "apps/*/dist/**",
+    "apps/danmaku-desktop/release/**",
+    "apps/screen-web/dist-test/**",
+    "data/danmaku-browser-test.db"
+  ],
+  "ephemeral_scope": [
+    "apps/*/dist/**",
+    "apps/danmaku-desktop/release/**",
+    "apps/screen-web/dist-test/**",
+    "data/danmaku-browser-test.db",
+    "node_modules/**"
+  ],
+  "acceptance_refs": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006",
+    "AC-007",
+    "AC-008",
+    "AC-009",
+    "AC-010"
+  ],
+  "upstream_dependencies": [
+    "WORKPACKAGE-v9.json",
+    "DEVELOPMENT-HANDOFF-v7.md",
+    "REVIEW-HANDOFF-v2.md"
+  ],
+  "downstream_dependencies": [
+    "acceptance"
+  ],
+  "handoff_ref": "TESTING-HANDOFF-v7.md",
+  "input_snapshot": "final implementation after review repairs and documentation path correction",
+  "input_snapshot_id": "HEAD:4e35b3da19742aff672cdd58910bbf60b8935f59:manifest:ADF85AC263E60DD4212DCECB8AF1379F33A4954C2B5029339481A82B79DE1D85",
+  "input_manifest_sha256": "ADF85AC263E60DD4212DCECB8AF1379F33A4954C2B5029339481A82B79DE1D85",
+  "input_tree_oid": "0b0d3e4ed5a85a37eebe3aadf45782feaa8d0fb4",
+  "head_snapshot": "HEAD:4e35b3da19742aff672cdd58910bbf60b8935f59",
+  "head_sha": "4e35b3da19742aff672cdd58910bbf60b8935f59",
+  "branch_ref": "master",
+  "worktree_path": "D:\\projects\\active_system",
+  "upstream_patch_shas": [],
+  "output_patch_path": null,
+  "output_patch_sha256": null,
+  "resource_claims": [
+    "repository-main-worktree",
+    "test-database",
+    "node-build-cache"
+  ],
+  "file_manifest": [
+    {
+      "path": ".env.example",
+      "sha256": "63866C1A84E0CCFACE0531A4539AC00A12B0325EF4A9AFBCE223ECC8B72E9127"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "D342B268C14223849E474B14D33938D99CB0677DAA12EDBD3A0C0125BE6CB39D"
+    },
+    {
+      "path": "apps/admin-web/AGENTS.md",
+      "sha256": "2DF277E0634280FBCECBF8FA0D5E80521BF8425AC28F6F6574604F26332C2866"
+    },
+    {
+      "path": "apps/admin-web/package.json",
+      "sha256": "18BA8185542ADF7718F391A8CA2C7F181590E4AD3EAF5EE33C935DD3713722FC"
+    },
+    {
+      "path": "apps/admin-web/src/api/client.ts",
+      "sha256": "11732B9B203B9B6D2930FED8858333F62B9C0E9C047A95EA3C5367FD2F1CED52"
+    },
+    {
+      "path": "apps/admin-web/src/router/index.ts",
+      "sha256": "F6AED44BDB6FE92D8B9FED92193ACB36622E484A35D4DA22324C2710DDCF0C97"
+    },
+    {
+      "path": "apps/admin-web/src/views/activity/index.vue",
+      "sha256": "F19ADC5EF0DB6C0BEBBD3E95D560E7A7496F62ECE2C60E94FDA4D7466F43EACC"
+    },
+    {
+      "path": "apps/admin-web/src/views/danmaku/AGENTS.md",
+      "sha256": "F7038858938A8D243655B8DFF887BAAD129978C6FC82A49CB9B0BD02AAAC6DF5"
+    },
+    {
+      "path": "apps/admin-web/src/views/danmaku/index.vue",
+      "sha256": "56F6B6DC702C3CD6B635C828BDDE85C06A463F45FB34C588D3DA8F29BD99225C"
+    },
+    {
+      "path": "apps/backend/AGENTS.md",
+      "sha256": "7BA0C8F4C8AD5F768F0755B48F4076123D8EF4DB61E1988BC2787BDF79F7752D"
+    },
+    {
+      "path": "apps/backend/app/api/router.py",
+      "sha256": "219106EDDB5E12B3C7C7F54C4A383912C9636E7ED5382718BEB80B56882A7BFB"
+    },
+    {
+      "path": "apps/backend/app/core/config.py",
+      "sha256": "5A166B447A67A4E70B2FA821CD5422F4C21FC4570D864A548A9A6C2D165FFC5B"
+    },
+    {
+      "path": "apps/backend/app/core/database.py",
+      "sha256": "4ABDB8F991F6B54DF1A1A8833CBE02EE71F50330D216F71019B10EFD39E373D1"
+    },
+    {
+      "path": "apps/backend/app/main.py",
+      "sha256": "A698C31DF502D261996E22E0507DD8C55637035D8A32C7F44C65C2820CE2A327"
+    },
+    {
+      "path": "apps/backend/app/modules/chat/AGENTS.md",
+      "sha256": "09B94CCE97A615DD87BD12997796F802B2DAD4E2384F18D907D3A36673108CB9"
+    },
+    {
+      "path": "apps/backend/app/modules/chat/router.py",
+      "sha256": "87618C2A55F4EC6DDC52BD527CAEA57064FD19B9581DFB441D82F8CB1C1EE62E"
+    },
+    {
+      "path": "apps/backend/app/modules/danmaku/__init__.py",
+      "sha256": "632A4F49198D9EFAF673F9212DDB8B7691E3E5131B2AF58D950113245B181C22"
+    },
+    {
+      "path": "apps/backend/app/modules/danmaku/AGENTS.md",
+      "sha256": "08D2EF525314A03A0F0514D03BA57F62B9F5F862E6A5862F9AFF945501371B92"
+    },
+    {
+      "path": "apps/backend/app/modules/danmaku/manager.py",
+      "sha256": "ED41DA970E72E89969F706956F4F3079EAE2FC959B66FF8FBB1BE662C7439065"
+    },
+    {
+      "path": "apps/backend/app/modules/danmaku/router.py",
+      "sha256": "980DE96325F6A2BBCC0FFE83C5199B6922FBD9150A0C4E094F233BF32306C637"
+    },
+    {
+      "path": "apps/backend/app/modules/danmaku/service.py",
+      "sha256": "F6433856C5FBC7945676A8F2724CCBCEF2D3241C77C07A6976E65A1520BDA14E"
+    },
+    {
+      "path": "apps/backend/tests/test_danmaku.py",
+      "sha256": "5999E098934D5634087E2348F4F817070DDD1AD88D15D2AB6506CB697CF0C5A0"
+    },
+    {
+      "path": "apps/danmaku-desktop/AGENTS.md",
+      "sha256": "719FACE8531F914B57B572205EE8E1FAD20FDC1A9F1021498A459D424B2B7E01"
+    },
+    {
+      "path": "apps/danmaku-desktop/launcher/index.html",
+      "sha256": "1E70CC704511DC7B26D699D28CAFC7E67501404C60F7B7EDDFA5FE8F54FF853E"
+    },
+    {
+      "path": "apps/danmaku-desktop/launcher/launcher.js",
+      "sha256": "C1679252AE7E1B60ADF841AF4AE17C12F0F2F33E138AF7F438E0335B3DA02B49"
+    },
+    {
+      "path": "apps/danmaku-desktop/launcher/styles.css",
+      "sha256": "3077CB73407AA9A8F107FE9DE98D89711D36DE56A6D18AEAFEFC766BE69E7CC5"
+    },
+    {
+      "path": "apps/danmaku-desktop/package.json",
+      "sha256": "318922CE7E7C1344E518D47E7B870748F953C32BDFD74B0262C93E2C6622EBC1"
+    },
+    {
+      "path": "apps/danmaku-desktop/src/main.ts",
+      "sha256": "2E8DEDA849FCA317C1017312F99FCE0CB9FB22BEDFFAC05DB15DB971E13AE8F2"
+    },
+    {
+      "path": "apps/danmaku-desktop/src/preload.cts",
+      "sha256": "95BC2B33D39C527FBE317F3ECBC8215B134064159B463F79BF26A254B451A1DA"
+    },
+    {
+      "path": "apps/danmaku-desktop/tsconfig.json",
+      "sha256": "382EA9E9C9B8EBDBE87F8DCAF69A59C023E795B9DDD9A18A1F3072BDC93739C4"
+    },
+    {
+      "path": "apps/screen-web/AGENTS.md",
+      "sha256": "4BBC2C96CED2D565936EDBB094A7465FFF26768D80D48F49A4EA2F3EF9D018CF"
+    },
+    {
+      "path": "apps/screen-web/package.json",
+      "sha256": "FF50286AD665FD1683E4F631E3CB9951E93E89B48E6BB038DCE6ACB2D4A750DE"
+    },
+    {
+      "path": "apps/screen-web/scripts/test-message-order.mjs",
+      "sha256": "FD1A7B41211735F085349769B4BA4D129AB6D5EBAD6CDFE0C2DDE974D2BF2410"
+    },
+    {
+      "path": "apps/screen-web/src/api/client.ts",
+      "sha256": "8CFB1D90E2996C2D2C3F2F6F9C49375244F16679323FBB92C64C3FDE39E1390A"
+    },
+    {
+      "path": "apps/screen-web/src/App.vue",
+      "sha256": "E025BFDD7B773B1D3960D281FE94943676E31A476D31180DBFCFD2691E9BEE48"
+    },
+    {
+      "path": "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+      "sha256": "308F4B5B80D2E35A61C8F81F5FF4D744813F2F673531C81D3AA1618EBBA53DA0"
+    },
+    {
+      "path": "apps/screen-web/src/components/realtime/message-order.ts",
+      "sha256": "3E3A66CB86D389A212A2FE2842FD7AAA28DCF9FD217D9C63C9EE97FB5448A47A"
+    },
+    {
+      "path": "apps/screen-web/src/styles/index.css",
+      "sha256": "A05EC78E8B52010181048883CD24D9F59154E552F138C2CD84639CD2A8D84305"
+    },
+    {
+      "path": "apps/screen-web/src/types.d.ts",
+      "sha256": "C576648ACED2087D78B3AFE7F22B19C6922C8EF20073F075883E28A5775CC3E1"
+    },
+    {
+      "path": "apps/screen-web/vite.config.ts",
+      "sha256": "183AC8437825696A01356FDC59906D7DCD2AEDDBBA5695C72FE653548B44C1A4"
+    },
+    {
+      "path": "MEMORY.md",
+      "sha256": "014E591101327A7C4E1B0EF70A83A8670EFA8974F87EC06D9DA8889F5A5EB55E"
+    },
+    {
+      "path": "package.json",
+      "sha256": "81D3B5DEBBA9DDFCA232477EDACF1A79BF46D9E5B8175C112335AF2D45A8ED61"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "sha256": "E3D98A2AE7F9B5751293E6760F3696B62D3A8714D907CDAE80C9CE0E7303AE25"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "sha256": "0D814AB912EE8DF9C430AEE7BC660340FDE37634510AD799559F65EAC7143219"
+    },
+    {
+      "path": "README.md",
+      "sha256": "24298059C85DF322DD0E25FA45703C5B991FFE0EC7AB3E3E4C93E723D2E4EC4F"
+    },
+    {
+      "path": "WIKI.md",
+      "sha256": "CB2E5A711294D0681FDDAEA44BF21660B0CD5E9334EBAFB3DA9A967B1F3240DD"
+    }
+  ],
+  "actual_file_manifest": [],
+  "patch_digest": null,
+  "qualification": "NOT_APPLICABLE",
+  "status": "SUCCEEDED",
+  "authorization": {
+    "mode": "SERIAL_SHARED_WRITE",
+    "main_worktree_authorized": true,
+    "reason": "The full regression shares the main workspace test database, build caches and Electron release output; it is the single testing writer after review repair."
+  },
+  "notes": "最终回归工作包未修改实施源文件；actual_file_manifest 为空。仅将已完成的模块文档路径修正纳入最终输入快照，构建产物属于 ephemeral_scope。",
+  "outcome": "最终文档快照下的完整回归通过，所有必需命令退出 0，NSIS x64 重跑成功，46 项输入清单匹配且无越界受跟踪写入。",
+  "test_results": {
+    "screen_web_test": {
+      "command": "pnpm --filter @active/screen-web test",
+      "exit_code": 0
+    },
+    "screen_web_typecheck": {
+      "command": "pnpm --filter @active/screen-web typecheck",
+      "exit_code": 0
+    },
+    "backend_pytest": {
+      "command": "python -m pytest -q apps/backend",
+      "exit_code": 0,
+      "summary": "26 passed, 1 warning"
+    },
+    "workspace_build": {
+      "command": "pnpm build",
+      "exit_code": 0,
+      "summary": "4 workspace applications built"
+    },
+    "desktop_typecheck": {
+      "command": "pnpm --filter @active/danmaku-desktop typecheck",
+      "exit_code": 0
+    },
+    "windows_nsis": {
+      "command": "pnpm dist:danmaku:win",
+      "exit_code": 0,
+      "environment": {
+        "CSC_IDENTITY_AUTO_DISCOVERY": "false",
+        "ELECTRON_MIRROR": "https://npmmirror.com/mirrors/electron/"
+      }
+    }
+  },
+  "artifacts": [
+    {
+      "path": "apps/danmaku-desktop/release/ACTIVE 弹幕工具 Setup 0.1.0.exe",
+      "bytes": 119665599,
+      "sha256": "C013804732C796F43C7D3E50098ADE969C55A31C7A844C1EA57461EA523A58CF"
+    },
+    {
+      "path": "apps/danmaku-desktop/release/win-unpacked/resources/app.asar",
+      "bytes": 17699,
+      "sha256": "43B876DEF2D5228F7B4169476B2A79E43ACCFE516BF4D5C2C6DE83E142DF25DA"
+    },
+    {
+      "path": "apps/danmaku-desktop/release/win-unpacked/resources/screen-web/index.html",
+      "bytes": 169,
+      "sha256": "E20D9A7399BAA58327502C5CBA807CA7275D6BBEC8C67505564210BBEFFA1638"
+    }
+  ],
+  "static_checks": {
+    "file_manifest_matches": true,
+    "implementation_file_count": 46,
+    "outside_expected_manifest": [],
+    "actual_test_tracked_writes": [],
+    "packaged_screen_web_files": 3,
+    "packaged_screen_web_matches_source_dist": true,
+    "code_line_and_file_size_check": "27 implementation code/template/style files passed <=120 characters per line and <=500 lines per file.",
+    "git_diff_check": "passed",
+    "graph_topology": "Kahn processed 11 of 11 nodes; duplicate, missing and self dependencies absent."
+  }
+}

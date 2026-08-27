@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "pnpm --parallel --filter @active/admin-web --filter @active/screen-web --filter @active/user-web dev",
     "dev:admin": "pnpm --filter @active/admin-web dev",
+    "dev:danmaku": "pnpm --filter @active/danmaku-desktop dev",
     "dev:screen": "pnpm --filter @active/screen-web dev",
     "dev:user": "pnpm --filter @active/user-web dev",
+    "dist:danmaku:win": "pnpm --filter @active/danmaku-desktop dist:win",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "generate:api": "powershell -ExecutionPolicy Bypass -File scripts/generate-api.ps1"

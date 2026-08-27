@@ -1,0 +1,140 @@
+{
+  "work_package_id": "main-integration-repair-review",
+  "workflow_id": "activity-danmaku-desktop",
+  "task_version": "TASK-v1",
+  "target": "D:\\projects\\active_system",
+  "read_scope": [
+    "AGENTS.md",
+    "PROJECT_AGENTS.md",
+    "apps/screen-web/AGENTS.md",
+    "apps/screen-web/src/App.vue",
+    "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+    "apps/screen-web/src/components/realtime/message-order.ts",
+    "apps/screen-web/scripts/test-message-order.mjs",
+    "apps/danmaku-desktop/AGENTS.md",
+    "apps/danmaku-desktop/src/main.ts",
+    "README.md",
+    "WIKI.md",
+    ".codex-tasks/20260827-danmaku-desktop/TASK-v1.md",
+    ".codex-tasks/20260827-danmaku-desktop/REVIEW-HANDOFF-v1.md",
+    ".codex-tasks/20260827-danmaku-desktop/WORKPACKAGE-v7.json",
+    ".codex-tasks/20260827-danmaku-desktop/TESTING-HANDOFF-v5.md",
+    ".codex-tasks/20260827-danmaku-desktop/TASKGRAPH-v1.json"
+  ],
+  "write_scope": [
+    "apps/screen-web/src/App.vue",
+    "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+    "apps/screen-web/src/components/realtime/message-order.ts",
+    "apps/screen-web/scripts/test-message-order.mjs",
+    "apps/screen-web/AGENTS.md",
+    "apps/danmaku-desktop/src/main.ts",
+    "apps/danmaku-desktop/AGENTS.md",
+    ".codex-tasks/20260827-danmaku-desktop/DEVELOPMENT-HANDOFF-v7.md"
+  ],
+  "ephemeral_scope": [
+    "apps/screen-web/dist-test/**",
+    "apps/screen-web/dist/**",
+    "apps/danmaku-desktop/dist/**",
+    "node_modules/**"
+  ],
+  "acceptance_refs": ["AC-006", "AC-007", "AC-008", "AC-010"],
+  "upstream_dependencies": [
+    "REVIEW-HANDOFF-v1.md",
+    "WORKPACKAGE-v7.json",
+    "TESTING-HANDOFF-v5.md"
+  ],
+  "downstream_dependencies": ["main-retests-review-repair", "review", "acceptance"],
+  "handoff_ref": "REVIEW-HANDOFF-v1.md",
+  "input_snapshot": "review changes required: bounded realtime signal queue, before-quit handling, strict overlay entry",
+  "input_snapshot_id": "HEAD:4e35b3da19742aff672cdd58910bbf60b8935f59:manifest:BCD60D1CBFB4655B5850E5261386FFB639714AE8CE4BCC8C06741A4D84F374E6",
+  "input_manifest_sha256": "BCD60D1CBFB4655B5850E5261386FFB639714AE8CE4BCC8C06741A4D84F374E6",
+  "input_tree_oid": "0b0d3e4ed5a85a37eebe3aadf45782feaa8d0fb4",
+  "head_snapshot": "HEAD:4e35b3da19742aff672cdd58910bbf60b8935f59",
+  "head_sha": "4e35b3da19742aff672cdd58910bbf60b8935f59",
+  "branch_ref": "master",
+  "worktree_path": "D:\\projects\\active_system",
+  "upstream_patch_shas": [],
+  "output_patch_path": null,
+  "output_patch_sha256": null,
+  "resource_claims": [
+    "repository-main-worktree",
+    "node-build-cache"
+  ],
+  "file_manifest": [
+    {
+      "path": "apps/screen-web/src/App.vue",
+      "sha256": "32915A1B66E62AF26F2D62ED569A261EF67050DCB2DF332F59AB5965205AF8A2"
+    },
+    {
+      "path": "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+      "sha256": "4123F51480F2DAF371A65D35F9356A2DA309EAAC05BEDB7326AB36DC800A3181"
+    },
+    {
+      "path": "apps/screen-web/src/components/realtime/message-order.ts",
+      "sha256": "FC1E40E7CED9AC858AD3906C9D25BAAA0E660776478A78A562452FCB4AD316AD"
+    },
+    {
+      "path": "apps/screen-web/scripts/test-message-order.mjs",
+      "sha256": "0F207071373C96EE13D25F031221833F66C047FA5C789B4E596CE7A693DCC204"
+    },
+    {
+      "path": "apps/screen-web/AGENTS.md",
+      "sha256": "0DDC6D7C9D2D37351538F3C20332C7B0ABC9194F60872076A6349A5D1AFFBDCE"
+    },
+    {
+      "path": "apps/danmaku-desktop/src/main.ts",
+      "sha256": "5AF146174A3A9FE4B08B257516E96DB3A557DA7E601F6B4183A8C9E36600B11E"
+    },
+    {
+      "path": "apps/danmaku-desktop/AGENTS.md",
+      "sha256": "69502A5560006BC84EF71C43BFE151386553EF85B1D27DF1ADA3CF17CB699CDE"
+    }
+  ],
+  "actual_file_manifest": [
+    {
+      "path": "apps/screen-web/src/App.vue",
+      "sha256": "E025BFDD7B773B1D3960D281FE94943676E31A476D31180DBFCFD2691E9BEE48"
+    },
+    {
+      "path": "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+      "sha256": "308F4B5B80D2E35A61C8F81F5FF4D744813F2F673531C81D3AA1618EBBA53DA0"
+    },
+    {
+      "path": "apps/screen-web/src/components/realtime/message-order.ts",
+      "sha256": "3E3A66CB86D389A212A2FE2842FD7AAA28DCF9FD217D9C63C9EE97FB5448A47A"
+    },
+    {
+      "path": "apps/screen-web/scripts/test-message-order.mjs",
+      "sha256": "FD1A7B41211735F085349769B4BA4D129AB6D5EBAD6CDFE0C2DDE974D2BF2410"
+    },
+    {
+      "path": "apps/screen-web/AGENTS.md",
+      "sha256": "4BBC2C96CED2D565936EDBB094A7465FFF26768D80D48F49A4EA2F3EF9D018CF"
+    },
+    {
+      "path": "apps/danmaku-desktop/src/main.ts",
+      "sha256": "2E8DEDA849FCA317C1017312F99FCE0CB9FB22BEDFFAC05DB15DB971E13AE8F2"
+    },
+    {
+      "path": "apps/danmaku-desktop/AGENTS.md",
+      "sha256": "B0611B80F6F68BC103005C68B0FE707B631E1734AFAA6D6028A0EB9F62CE188A"
+    },
+    {
+      "path": ".codex-tasks/20260827-danmaku-desktop/DEVELOPMENT-HANDOFF-v7.md",
+      "sha256": "F52CB9352DD37854DB8C1ADF566E400AA62A7C69A78A9CC2294C88728068867C"
+    }
+  ],
+  "patch_digest": {
+    "algorithm": "SHA-256",
+    "manifest_sha256": "4EC009A950A71D7A828297BED02E45280E77ACA73F566BF7BA41ADC9078ACD40",
+    "note": "Serial shared-worktree repair for bounded realtime signals, strict overlay entry and before-quit lifecycle."
+  },
+  "qualification": "NOT_APPLICABLE",
+  "status": "SUCCEEDED",
+  "authorization": {
+    "mode": "SERIAL_SHARED_WRITE",
+    "main_worktree_authorized": true,
+    "reason": "The review repairs share screen and Electron runtime behavior and build caches; one main-worktree writer is used."
+  },
+  "outcome": "三项审核问题均已修复，指定局部测试、范围和 SHA-256 核对通过；全量测试和打包留给后续工作包。"
+}

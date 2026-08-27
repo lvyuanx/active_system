@@ -1,0 +1,149 @@
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+:root {
+  color: #17211e;
+  background: #f3f5f4;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.launcher-shell {
+  display: grid;
+  gap: 28px;
+  width: min(100% - 64px, 560px);
+  margin: 0 auto;
+  min-height: 100%;
+  padding: 48px 0;
+}
+
+.launcher-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: #fff;
+  background: #17211e;
+  border-radius: 6px;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.launcher-header div {
+  display: grid;
+  gap: 2px;
+}
+
+.launcher-header strong {
+  letter-spacing: 1px;
+}
+
+.launcher-header small {
+  color: #718078;
+  font-size: 11px;
+}
+
+.launch-form {
+  display: grid;
+  gap: 9px;
+}
+
+.launch-form label {
+  margin-top: 7px;
+  color: #53615a;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.launch-form input,
+.launch-form textarea,
+.launch-form select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  color: #17211e;
+  background: #fff;
+  border: 1px solid #cfd8d3;
+  border-radius: 5px;
+  font: inherit;
+  outline: 0;
+}
+
+.launch-form textarea {
+  resize: vertical;
+}
+
+.launch-form input:focus,
+.launch-form textarea:focus,
+.launch-form select:focus {
+  border-color: #147d64;
+  box-shadow: 0 0 0 3px rgb(20 125 100 / 12%);
+}
+
+button {
+  min-height: 42px;
+  color: #fff;
+  background: #147d64;
+  border: 0;
+  border-radius: 5px;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #0f6652;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.secondary {
+  color: #53615a;
+  background: #e4e9e6;
+}
+
+.secondary:hover {
+  color: #17211e;
+  background: #d7dfdb;
+}
+
+.runtime-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.status {
+  min-height: 20px;
+  margin: 6px 0 0;
+  color: #718078;
+  font-size: 12px;
+}
+
+.status[data-type="error"] {
+  color: #b53d37;
+}
+
+.status[data-type="success"] {
+  color: #0f7656;
+}

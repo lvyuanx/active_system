@@ -9,6 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from app.core.config import Settings, get_settings
 from app.modules.chat.manager import chat_manager
 from app.modules.chat.service import ChatMessagePage, ChatReadOnlyError, create_message, list_messages
+from app.modules.danmaku.manager import danmaku_manager
 from app.modules.participants.router import ActivityPrincipal, bearer, get_activity_principal
 
 
@@ -109,6 +110,7 @@ async def chat_websocket(activity_id: str, websocket: WebSocket, settings: Setti
                 continue
             payload = {"type": "message.created", "message": created.model_dump(mode="json")}
             await chat_manager.broadcast(activity_id, payload)
+            await danmaku_manager.broadcast_message(activity_id, created.model_dump(mode="json"))
     finally:
         if principal is not None:
             await chat_manager.disconnect(activity_id, websocket)

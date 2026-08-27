@@ -1,35 +1,11 @@
 <template>
   <div class="activity-management">
-    <aside class="app-sidebar">
-      <div class="brand-lockup">
-        <span class="brand-mark">A</span>
-        <div><strong>ACTIVE</strong><small>活动管理中心</small></div>
-      </div>
-      <button class="back-button" type="button" @click="router.push('/')">
-        <span class="back-icon">←</span>活动列表
-      </button>
-      <div v-if="activity" class="sidebar-context">
-        <span class="sidebar-label">当前活动</span>
-        <strong>{{ activity.name }}</strong>
-        <span>ID {{ activity.activity_id.slice(0, 8).toUpperCase() }}</span>
-      </div>
-      <nav aria-label="活动管理导航">
-        <button class="nav-item nav-item--active" type="button">
-          <span class="nav-icon">⌂</span>首页
-        </button>
-        <button class="nav-item nav-item--disabled" type="button" disabled>
-          <span class="nav-icon">◌</span>参与者
-        </button>
-        <button class="nav-item nav-item--disabled" type="button" disabled>
-          <span class="nav-icon">▥</span>数据概览
-        </button>
-      </nav>
-      <div class="sidebar-footer">
-        <span class="account-avatar">{{ username.slice(0, 1).toUpperCase() }}</span>
-        <div class="account-copy"><strong>{{ username }}</strong><small>超级管理员</small></div>
-        <el-button text class="logout-button" @click="logout">退出</el-button>
-      </div>
-    </aside>
+    <ActivitySidebar
+      :activity="activity"
+      :activity-id="activityId"
+      active="home"
+      :username="username"
+    />
 
     <section class="workspace">
       <header class="workspace-topbar">
@@ -93,12 +69,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import QRCode from "qrcode";
-import { clearToken, getActivity, type Activity } from "../../api/client";
+import { getActivity, type Activity } from "../../api/client";
+import ActivitySidebar from "../../components/ActivitySidebar.vue";
 
 const route = useRoute();
-const router = useRouter();
 const activity = ref<Activity>();
 const loading = ref(true);
 const error = ref("");
@@ -135,10 +111,6 @@ const downloadQr = () => {
   link.download = `${activity.value?.name || "活动"}-二维码.png`;
   link.click();
 };
-const logout = () => {
-  clearToken();
-  router.push("/login");
-};
 const statusLabel = (status: Activity["status"]) =>
   ({ closed: "已关闭", open: "进行中", ended: "已结束" })[status];
 const formatDate = (value: string) =>
@@ -155,10 +127,6 @@ onMounted(load);
   width: min(100% - 48px, 1280px);
   margin: 0 auto;
   padding: 24px 0 72px;
-}
-.back-button {
-  padding-left: 0;
-  color: #64716b;
 }
 .activity-titlebar {
   display: flex;
@@ -247,35 +215,6 @@ onMounted(load);
   display: grid;
   gap: 4px;
   padding-top: 18px;
-}
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 11px 10px;
-  color: #53615a;
-  background: transparent;
-  border: 0;
-  border-radius: 4px;
-  text-align: left;
-  font-size: 13px;
-  cursor: pointer;
-}
-.nav-item--active {
-  color: #0f6652;
-  background: #e4f3ee;
-  font-weight: 650;
-}
-.nav-item--disabled {
-  color: #a5aea9;
-  cursor: not-allowed;
-}
-.nav-icon {
-  width: 18px;
-  color: currentColor;
-  font-size: 17px;
-  text-align: center;
 }
 .management-content {
   padding: 30px 34px;
@@ -422,9 +361,6 @@ onMounted(load);
   }
   .management-sidebar nav {
     grid-template-columns: 1fr;
-  }
-  .nav-item {
-    min-height: 44px;
   }
 }
 </style>

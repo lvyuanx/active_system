@@ -4,8 +4,9 @@
 
 - `apps/backend`：FastAPI 模块化单体后端。
 - `apps/admin-web`：Vue 3 + Element Plus 管理端。
-- `apps/screen-web`：Vue 3 + ECharts 活动大屏端。
+- `apps/screen-web`：Vue 3 + ECharts 活动大屏，以及 Electron 弹幕渲染层。
 - `apps/user-web`：Vue 3 + Vant 4 用户端。
+- `apps/danmaku-desktop`：Electron Windows 弹幕悬浮工具。
 
 ## 本地开发
 
@@ -18,6 +19,7 @@ uvicorn app.main:app --app-dir apps/backend --reload --port 8000
 pnpm dev:admin
 pnpm dev:screen
 pnpm dev:user
+pnpm dev:danmaku
 ```
 
 本地地址：
@@ -27,9 +29,13 @@ pnpm dev:user
 - 用户端：http://localhost:5175
 - API 文档：http://localhost:8000/docs
 
+`pnpm dev:danmaku` 需要先运行 `pnpm dev:screen`，桌面工具会加载该本地渲染服务。直接访问大屏端仍显示普通活动大屏；
+Electron 仅通过 `?danmaku-overlay=1` 加载透明弹幕渲染层。
+
 ## 管理员活动管理
 
-启动后端前复制 `.env.example` 为 `.env`，设置 `SUPERUSER_USERNAME`、`SUPERUSER_PASSWORD` 和随机的 `JWT_SECRET`。后端首次启动会初始化 SQLite 数据库和超级用户；只有该超级用户可以登录管理端。
+启动后端前复制 `.env.example` 为 `.env`，设置 `SUPERUSER_USERNAME`、`SUPERUSER_PASSWORD` 和随机的 `JWT_SECRET`。
+可选设置独立的 `DANMAKU_TOKEN_SECRET`；为空时弹幕 token 使用 `JWT_SECRET` 派生。后端首次启动会初始化 SQLite 数据库和超级用户；只有该超级用户可以登录管理端。
 
 登录后默认进入活动选择页。活动状态为“已关闭”“进行中”“已结束”：新建活动默认为已关闭，可在已关闭和进行中之间反复切换；管理员手动结束后不可再次开启或关闭。活动名称必填，描述、开始时间和结束时间可选，若同时填写时间则结束时间必须晚于开始时间。
 
@@ -43,11 +49,31 @@ pnpm dev:user
 历史用户在成功登录或调用 `/me` 时惰性补齐。聊天页采用微信式消息行：头像、真实用户名、时间和气泡按发送者左右对齐展示；
 消息行头像使用稳定的活动用户 ID 做本地映射，不进入聊天消息或 WebSocket 协议。
 
+## 弹幕桌面工具
+
+在某个活动的管理页打开“弹幕工具”，可设置轨道数量、字体大小、不透明度、飞行时长、显示区域和文字颜色。
+保存后会立即推送给已运行的投屏器。页面会显示该活动的当前 token；重新生成 token 会使旧 token 和已连接的投屏器立即失效。
+
+打开桌面工具后，粘贴 token、填写 API 地址并选择投屏显示器。弹幕窗口只显示聊天正文，使用透明、置顶和鼠标穿透窗口，
+启动控制窗口默认尺寸为 680×720，页面默认不显示滚动条；弹幕覆盖层仍按目标显示器全屏显示。
+不会接管底层应用的鼠标操作。首次启动不会回放旧聊天；断线后会按消息 ID 补齐工具运行期间漏掉的新消息。
+
+开发时先运行 `pnpm dev:screen`，再运行 `pnpm dev:danmaku`。Windows x64 NSIS 安装包使用以下命令生成：
+
+```powershell
+pnpm dist:danmaku:win
+```
+
+输出位于 `apps/danmaku-desktop/release/`。桌面工具不把 token 写入本地存储、文件或安装包配置。
+
 ## 验证
 
 ```powershell
 pnpm build
 python -m pytest -q apps/backend
+pnpm --filter @active/screen-web test
+pnpm --filter @active/danmaku-desktop typecheck
+pnpm dist:danmaku:win
 ```
 
 ## API 类型生成

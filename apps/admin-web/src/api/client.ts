@@ -39,6 +39,22 @@ export interface Activity {
   created_at: string;
   updated_at: string;
 }
+export interface DanmakuSettings {
+  track_count: number;
+  font_size: number;
+  opacity: number;
+  duration_seconds: number;
+  display_top: number;
+  display_bottom: number;
+  text_color: string;
+}
+export interface DanmakuAdminResponse {
+  activity_id: string;
+  settings: DanmakuSettings;
+  token: string;
+  token_created_at: string;
+  updated_at: string;
+}
 
 export const login = (username: string, password: string) => request<LoginResponse>("/auth/login", {
   method: "POST", body: JSON.stringify({ username, password }),
@@ -59,3 +75,14 @@ export const createActivity = (payload: Pick<Activity, "name" | "description" | 
   request<Activity>("/admin/activities", { method: "POST", body: JSON.stringify(payload) });
 export const changeActivityStatus = (id: string, action: "open" | "close" | "end") =>
   request<Activity>(`/admin/activities/${id}/${action}`, { method: "POST" });
+export const getDanmaku = (activityId: string) =>
+  request<DanmakuAdminResponse>(`/admin/activities/${activityId}/danmaku`);
+export const updateDanmaku = (activityId: string, settings: DanmakuSettings) =>
+  request<DanmakuAdminResponse>(`/admin/activities/${activityId}/danmaku`, {
+    method: "PUT",
+    body: JSON.stringify(settings),
+  });
+export const regenerateDanmakuToken = (activityId: string) =>
+  request<DanmakuAdminResponse>(`/admin/activities/${activityId}/danmaku/token`, {
+    method: "POST",
+  });
