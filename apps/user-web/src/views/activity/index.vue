@@ -1,12 +1,5 @@
 <template>
   <main class="activity-page">
-    <VanNavBar
-      v-if="!loading && user"
-      class="activity-nav"
-      :title="activity?.name || '活动入口'"
-      safe-area-inset-top
-    />
-
     <section v-if="loading" class="page-state" aria-live="polite">
       <div class="state-symbol state-symbol--loading"><VanLoading size="24px" color="var(--activity-gold)" /></div>
       <p class="state-kicker">活动入口</p>
@@ -22,16 +15,22 @@
       <VanButton type="primary" class="retry-button" @click="load">重新加载</VanButton>
     </section>
 
-    <template v-else-if="activity && user">
+    <div v-else-if="activity && user" class="activity-shell">
       <RouterView v-slot="{ Component }">
         <component :is="Component" :activity="activity" :user="user" />
       </RouterView>
-      <VanTabbar v-model="activeTab" route safe-area-inset-bottom class="activity-tabbar">
-        <VanTabbarItem :to="basePath" icon="home-o">首页</VanTabbarItem>
-        <VanTabbarItem :to="`${basePath}/chat`" icon="chat-o">聊天</VanTabbarItem>
-        <VanTabbarItem :to="`${basePath}/me`" icon="contact-o">我的</VanTabbarItem>
+      <VanTabbar :model-value="activeTab" route safe-area-inset-bottom class="activity-tabbar">
+        <VanTabbarItem :to="{ name: 'activity-home', params: { activityId } }" icon="home-o">
+          首页
+        </VanTabbarItem>
+        <VanTabbarItem :to="{ name: 'activity-chat', params: { activityId } }" icon="chat-o">
+          聊天
+        </VanTabbarItem>
+        <VanTabbarItem :to="{ name: 'activity-me', params: { activityId } }" icon="contact-o">
+          我的
+        </VanTabbarItem>
       </VanTabbar>
-    </template>
+    </div>
 
     <section v-else class="auth-section">
       <div class="auth-shell">
@@ -46,13 +45,36 @@
           <section class="field-stack">
             <div class="field-item">
               <label for="activity-username">用户名</label>
-              <VanField id="activity-username" v-model="form.username" name="username" center left-icon="contact-o" placeholder="请输入用户名" autocomplete="username" clearable :rules="[{ required: true, message: '请输入用户名' }]" />
+              <VanField
+                id="activity-username"
+                v-model="form.username"
+                name="username"
+                center
+                left-icon="contact-o"
+                placeholder="请输入用户名"
+                autocomplete="username"
+                clearable
+                :rules="[{ required: true, message: '请输入用户名' }]"
+              />
             </div>
             <div class="field-item">
               <label for="activity-phone">手机号</label>
-              <VanField id="activity-phone" v-model="form.phone" name="phone" center left-icon="phone-o" type="tel" placeholder="请输入手机号" autocomplete="tel" clearable :rules="[{ required: true, message: '请输入手机号' }]" />
+              <VanField
+                id="activity-phone"
+                v-model="form.phone"
+                name="phone"
+                center
+                left-icon="phone-o"
+                type="tel"
+                placeholder="请输入手机号"
+                autocomplete="tel"
+                clearable
+                :rules="[{ required: true, message: '请输入手机号' }]"
+              />
             </div>
-            <VanButton block type="primary" native-type="submit" :loading="submitting" class="login-submit">登录并进入</VanButton>
+            <VanButton block type="primary" native-type="submit" :loading="submitting" class="login-submit">
+              登录并进入
+            </VanButton>
           </section>
         </VanForm>
         <p class="auto-register-note"><VanIcon name="info-o" aria-hidden="true" /><span>未注册用户会自动注册</span></p>
@@ -70,7 +92,6 @@ import {
   Form as VanForm,
   Icon as VanIcon,
   Loading as VanLoading,
-  NavBar as VanNavBar,
   Tabbar as VanTabbar,
   TabbarItem as VanTabbarItem,
   showToast,
@@ -101,8 +122,12 @@ const user = ref<ActivityUserResponse>();
 const loading = ref(true);
 const submitting = ref(false);
 const error = ref("");
-const activeTab = ref(0);
 const form = reactive({ username: "", phone: "" });
+const activeTab = computed(() => {
+  if (route.path === `${basePath}/chat`) return 1;
+  if (route.path === `${basePath}/me`) return 2;
+  return 0;
+});
 
 const logout = () => {
   clearActivityToken(activityId);
@@ -154,10 +179,4 @@ const submit = async () => {
 };
 
 onMounted(load);
-const currentTab = computed(() => {
-  if (route.path.endsWith("/chat")) return 1;
-  if (route.path.endsWith("/me")) return 2;
-  return 0;
-});
-activeTab.value = currentTab.value;
 </script>

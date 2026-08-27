@@ -1,0 +1,594 @@
+diff --git a/.codex-tasks/20260826-activity-chat-ui/TASK-v5.md b/.codex-tasks/20260826-activity-chat-ui/TASK-v5.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..6d57f99b47455cbf9a5dbc6ce9e5176961ad6603
+--- /dev/null
++++ b/.codex-tasks/20260826-activity-chat-ui/TASK-v5.md
+@@ -0,0 +1,135 @@
++# TASK-v5：活动聊天室输入框默认高度校准
++
++## 状态
++
++- 等级：T2
++- 状态：已冻结
++- 产品门禁：completed（用户需求明确；产品角色线程两次未返回可用交接，主 Agent 依据已验证的 TASK-v4 和最新用户要求代拟）
++- 输入版本：TASK-v4、DEVELOPMENT-HANDOFF-v4、用户最新明确要求
++- 旧版本处理：TASK-v4 的测试、审核和验收结论对本版本输入框高度行为失效，其他行为纳入本版本回归
++- 待确认项：无
++
++## 目标与用户场景
++
++用户进入活动聊天室后，输入框默认只占一行，并且默认状态的输入框外框与发送按钮等高；输入较长内容时输入框可自然增至最多三行，超过三行仍可继续编辑且在输入框内部滚动。输入区始终位于底部 Tabbar 上方，不影响既有聊天消息、头像、自动滚动和历史浏览行为。
++
++## 范围
++
++- 调整聊天输入框外层 Vant Field 的垂直内边距和内容对齐方式，使空输入/一行输入状态与发送按钮同高。
++- 移除会在默认状态额外占用垂直空间的可见字数提示布局；保留 `maxlength=500` 限制。
++- 保留 textarea 1–3 行自适应，超过三行后继续编辑并在控件内部滚动。
++- 回归输入区沉底、条件自动滚底、微信式消息行、指定附属区域移除、父级导航和底部 Tabbar。
++
++## 非目标
++
++- 不修改 HTTP API、WebSocket URL、首帧 `auth`、发送/接收消息 payload 或消息字段。
++- 不修改头像资源、头像安全映射、活动隔离、发送条件、重连和历史加载锚点逻辑。
++- 不恢复聊天子页活动标题、连接状态或当前用户身份提示区域。
++- 不进行与输入框高度无关的页面重构或视觉主题调整。
++
++## 约束、风险与依赖
++
++- 输入框和发送按钮均使用稳定触控高度；默认状态要求实际渲染外框高度相等，而非仅内容高度相等。
++- textarea 单行内容高度为 24px，最大可视内容高度为 72px（三行）；外层边框可计入自身 1px 边框，不得因此遮挡发送按钮。
++- 390×450 短屏和常规移动尺寸均需验证；输入区不能被底部 Tabbar 遮挡或推出视口。
++- 移除字数提示只影响展示，不得移除 500 字输入限制。
++- 项目使用 Vue 3 + Vant 4，聊天样式继续集中在 `chat.css`。
++
++## 验收标准
++
++### AC-001：默认一行输入框与发送按钮同高
++
++**Given** 用户进入聊天页，输入区和底部 Tabbar 已渲染
++
++**When** 输入框为空或仅包含一行文本
++
++**Then** 输入框外框与发送按钮的实际渲染高度相等，内容垂直居中，二者整体位于 Tabbar 上方且无额外空白行。
++
++### AC-002：输入框最多三行且超过三行仍可编辑
++
++**Given** 用户在输入框中编辑文本
++
++**When** 文本从一行增长到两行、三行及超过三行
++
++**Then** 输入框随内容增长但最大可视内容高度为三行；超过三行后仍可编辑，文本在输入框内部滚动，发送按钮不被遮挡。
++
++### AC-003：输入区沉底
++
++**Given** 浏览器处于常规移动尺寸或 390×450 短屏
++
++**When** 页面渲染或输入框增长
++
++**Then** 输入框和发送按钮始终位于底部 Tabbar 上方，消息列表承担剩余可滚动空间，页面不发生整体溢出。
++
++### AC-004：条件自动滚动
++
++**Given** 消息列表可滚动且用户距底部不超过可视高度三分之一
++
++**When** 实时追加消息
++
++**Then** 列表滚动到底部并显示最新消息；用户远离底部时保持当前阅读位置。
++
++### AC-005：指定附属区域不可见且无空白
++
++**Given** 用户进入聊天页，活动状态和连接状态处于任意现有状态
++
++**When** 页面渲染
++
++**Then** `chat-header`、`chat-connection`、`chat-composer-identity` 均不可见，消息区与输入区布局连续；父级 `activity-nav` 仍存在。
++
++### AC-006：微信式消息行
++
++**Given** 列表中存在其他用户消息和当前用户消息
++
++**When** 消息行渲染
++
++**Then** 每条消息显示头像、真实用户名、时间和气泡；其他用户左对齐，本人右对齐，用户名不得替换为“我”。
++
++### AC-007：头像安全映射
++
++**Given** 消息发送者存在有效或无效头像标识
++
++**When** 消息行渲染
++
++**Then** 使用稳定的本地 SVG 头像或固定本地兜底头像，不加载外部资源、不解析路径或 HTML。
++
++### AC-008：聊天协议不变
++
++**Given** 用户执行历史加载、实时接收、断线重连或发送消息
++
++**When** 现有 HTTP/WebSocket 流程执行
++
++**Then** API 路径、`before_id`、`after_id`、`auth`、`message.send`、`chat.ready`、`message.created`、`chat.error` 及消息 payload 均保持不变。
++
++### AC-009：历史加载锚点保持
++
++**Given** 用户位于消息列表任意阅读位置且存在更早消息
++
++**When** 加载更早消息
++
++**Then** 更早消息出现在列表前部，原视口消息保持相对位置，不滚到底部，也不触发实时新增消息滚动。
++
++### AC-010：父级导航和底部 Tabbar 保留
++
++**Given** 用户位于活动聊天路由
++
++**When** 页面渲染或切换 Tab
++
++**Then** `activity-nav` 和底部 Tabbar 均保持可见、可用及安全区适配。
++
++### AC-011：输入限制保留
++
++**Given** 用户编辑消息
++
++**When** 输入内容达到 500 个字符
++
++**Then** 仍受 `maxlength=500` 限制；移除可见字数提示不得改变发送条件或消息 payload。
++
++## 变更文件范围
++
++- `apps/user-web/src/views/activity/chat.vue`
++- `apps/user-web/src/views/activity/chat.css`
++- `.codex-tasks/20260826-activity-chat-ui/TASK-v5.md`
++- `.codex-tasks/20260826-activity-chat-ui/TASKGRAPH-v5.json`
++- `.codex-tasks/20260826-activity-chat-ui/*-v5.md`（开发、测试、审核、验收和集成证据）
++- `apps/user-web/AGENTS.md`、`MEMORY.md`、`LEARNING.md`、`WIKI.md`（行为或进度发生变化时同步）
+diff --git a/LEARNING.md b/LEARNING.md
+index 7846bd55a83ad220d354d0a3b73902213fe9d65a..30b193754edce26db0eabb6c7a4e45ba17509c6a 100644
+--- a/LEARNING.md
++++ b/LEARNING.md
+@@ -21,6 +21,14 @@
+ - 活动用户表已有自增主键，可直接作为稳定活动身份写入 JWT 和消息表；兼容旧令牌时必须检查同活动用户名是否唯一，避免重名消息错归属。
+ - SQLite 开启 `PRAGMA foreign_keys = ON` 后，活动和活动用户删除能够正确级联清理聊天消息；消息写入前仍需以后端实时活动状态校验只读规则。
+ 
++## 2026-08-26 活动聊天室界面
++
++- 聊天内容区只设置 `min-height` 时，短屏会被消息内容撑高并把输入区推到视口外；要让输入区稳定贴近 Tabbar，聊天壳需使用明确的 `height`，消息列表用 flex 承担剩余滚动空间。
++- 实时消息滚动应在追加前记录列表是否可滚动及距底部的距离；仅在距底部不超过可视高度三分之一时滚底，历史加载则用高度差恢复视口锚点。
++- 当消息协议不携带发送者头像字段时，前端可用稳定活动用户 ID映射到固定本地头像展示，但不能把该展示映射误当成后端分配的真实 `avatar_id`，也不能加载外部资源。
++- 聊天专属样式提取到 `chat.css` 后，活动公共样式文件和聊天样式文件都保持在 500 行以内，且无需改变聊天协议。
++- Vant `show-word-limit` 会在 Field 内容区追加字数提示行，使空输入外框高于 44px 发送按钮；移除该展示属性、保留 `maxlength`，再将 Field 垂直内边距设为 0，可让默认外框与按钮严格等高，同时保留 1–3 行 autosize。
++
+ ## 2026-08-25
+ 
+ - Codex 桌面端将 `[agents]` 解析为线程设置和角色映射；旧式 `enabled = true`、
+diff --git a/MEMORY.md b/MEMORY.md
+index a12702f0080a961a9a782efdc7b1061479d00cd0..8a5ae01918ff1ddfad92b45f554c7edf18a62626 100644
+--- a/MEMORY.md
++++ b/MEMORY.md
+@@ -17,11 +17,11 @@
+ - 将 1–20 号 SVG 头像全部统一为卡通角色风格，保留既有用户头像编号和活动隔离规则；资源替换后的静态扫描、后端测试、前端类型检查和生产构建均已通过。
+ - 新增 `start.ps1` 和 `start.cmd`，支持一键启动开发环境，以及 `start.ps1 -Docker` 启动 Compose 环境。
+ - 修复 Codex 项目级 Agent 配置，迁移到当前桌面端支持的 `[agents] max_threads` 格式，并清理角色文件中的嵌套 `[agents]` 表。
++- 完成活动聊天室 TASK-v5 输入框高度校准：默认一行时 Field 与发送按钮均为 44px，最多可视三行，超过三行仍可编辑；`maxlength=500` 保留。
+ 
+ ## 进行中
+ 
+ - 活动首页已预留参与者与数据概览导航，业务内容尚未实现。
+-- 活动聊天室与移动端三栏导航已完成开发，等待测试、审核和验收门禁。
+ 
+ ## 后续计划
+ 
+diff --git a/WIKI.md b/WIKI.md
+index 48899d84ee79b76f3172f9a2764a7d4f956af51c..52ed61cbbb5f284d2b643046a063b8f6ac2d9990 100644
+--- a/WIKI.md
++++ b/WIKI.md
+@@ -18,7 +18,9 @@
+ 
+ `activity_users.avatar_id` 按 `(activity_id, id)` 独立保存，取值为 1–20。新用户注册时在插入事务中使用安全随机数分配头像；旧表初始化只添加可空列，不批量填充，并用 SQLite `BEGIN IMMEDIATE` 串行化字段迁移。登录和 `/me` 对空值用户执行带 `avatar_id IS NULL` 的条件更新，已有头像不会替换，竞争失败时读取胜者值，仍为空才返回错误。
+ 
+-用户端头像由 `ActivityAvatar.vue` 将 1–20 固定映射到本地卡通 SVG，当前只在活动首页和“我的”页展示；聊天接口、消息模型和 WebSocket 协议不携带头像字段。
++用户端头像由 `ActivityAvatar.vue` 将 1–20 固定映射到本地卡通 SVG。活动首页和“我的”页使用用户已分配的 `avatar_id`；
++聊天消息行在协议不携带发送者头像字段的前提下，当前用户使用自身 `avatar_id`，其他发送者使用稳定活动用户 ID 的本地确定性映射，
++不加载外部资源、不解析路径或 HTML。
+ 
+ 活动聊天室消息存储在 `activity_chat_messages`，通过 `activity_user_id` 关联发送者，并按 `(activity_id, message_id)`
+ 提供游标查询。活动用户 JWT 额外携带稳定的 `activity_user_id`；缺少该 claim 的旧令牌仅在同活动用户名唯一时兼容。
+@@ -27,7 +29,8 @@
+ ## 用户端移动端视觉
+ 
+ - 用户端活动入口采用 Vue 3 + Vant 4，认证页保留圆环 A 标识和哑金主操作，登录后页展示活动状态、用户摘要和已有服务入口。
+-- 活动页视觉规则集中在 apps/user-web/src/views/activity/activity.css 与 activity-auth.css，所有选择器使用活动页命名空间；炭黑和深灰用于层次承载，哑金用于品牌强调，成功和结束状态使用独立状态色。
++- 活动页视觉规则集中在 apps/user-web/src/views/activity/activity.css、chat.css 与 activity-auth.css，所有选择器使用活动页命名空间；炭黑和深灰用于层次承载，哑金用于品牌强调，成功和结束状态使用独立状态色。
++- 聊天页子区域保留父级活动导航和底部 Tabbar；消息区采用头像、用户名、时间和左右圆角气泡的微信式排列，输入框固定在 Tabbar 上方，默认一行与 44px 发送按钮等高并支持 1–3 行自适应，超过三行在控件内滚动。
+ - 活动入口需要适配 320px 起的移动宽度、短屏和 safe-area inset，动态活动名称、描述和用户名必须允许换行，不得造成横向溢出。
+ 
+ ## 本地端口
+diff --git a/apps/user-web/AGENTS.md b/apps/user-web/AGENTS.md
+index 71445cb04fa656bd1a70465f0e9bf03d30a0fc1d..dea8d8474b4b1fd65eb5f202af6da97fdf1c2170 100644
+--- a/apps/user-web/AGENTS.md
++++ b/apps/user-web/AGENTS.md
+@@ -5,12 +5,13 @@
+ ## 当前已实现功能
+ 
+ - src/views/activity/：活动级入口页，按活动 ID读取公开信息、注册/登录并展示活动首页。
+-- src/views/activity/activity.css、activity-auth.css：活动入口专属视觉样式，分别负责页面公共/登录后状态和认证页的黑金主题、Vant 覆盖、移动断点与安全区适配。
++- src/views/activity/activity.css、chat.css、activity-auth.css：活动入口专属视觉样式，分别负责页面公共、聊天页和认证页的黑金主题、Vant 覆盖、移动断点与安全区适配。
+ - src/api/client.ts：活动公开详情、活动用户注册/登录、缓存 token 校验接口。
+ - src/components/ActivityAvatar.vue 与 src/assets/avatars/：受信任的二十款本地卡通静态 SVG 头像映射和展示封装。
+ - 活动用户 token 使用 active_user_token:{activity_id} 本地存储键，活动之间相互隔离。
+ - 登录后的活动壳提供首页、聊天、我的三个嵌套路由；聊天页使用 HTTP 历史游标和首帧认证 WebSocket，
+-  断线按指数退避重连并以 after_id 补齐消息。
++  断线按指数退避重连并以 after_id 补齐消息；聊天输入区位于底部导航上方，消息行以发送者用户名、头像和左右气泡展示，
++  消息列表仅在追加前位于底部阈值内时自动滚动；输入框默认一行且与发送按钮同高，最多可视三行，超过三行后在控件内部滚动。
+ - `views/activity/home.vue` 和 `views/activity/me.vue` 展示当前活动用户头像；`views/activity/me.vue` 仍仅清除当前活动 token，展示活动用户稳定 ID 与加入时间。
+ 
+ 活动入口只提供“登录并进入”活动按钮：先使用用户名和手机号登录，接口返回未认证时自动注册新用户；手机号已被其他用户名使用时显示后端冲突提示。
+@@ -19,7 +20,10 @@
+ 
+ 页面通过活动页命名空间样式统一控制炭黑/深灰表面、哑金品牌色以及成功和结束状态色。页面按手机宽度流式布局，并使用固定触控尺寸、长文本换行、聚焦反馈和 reduced-motion 规则；顶部和底部保留 safe-area inset，桌面预览限制在 600px 内。
+ 
+-头像组件只从二十个静态 SVG 导入中按 `avatar_id` 映射资源，不接受路径或 HTML；头像只显示在首页和“我的”页，不进入聊天消息或 WebSocket 协议。
++头像组件只从二十个静态 SVG 导入中按 `avatar_id` 映射资源，不接受路径或 HTML；头像显示在首页、“我的”页和消息行中，
++消息行头像使用稳定的活动用户 ID 本地映射，不进入聊天消息或 WebSocket 协议。
++
++聊天输入框保留 `maxlength=500` 限制，但不显示会撑高默认输入框的字数提示；Vant Field 使用零垂直内边距和内容居中对齐。
+ 
+ index.html 必须保留 width=device-width、initial-scale=1 和 viewport-fit=cover，避免设备模拟器使用桌面布局视口缩放页面。
+ 
+diff --git a/apps/user-web/src/views/activity/chat.css b/apps/user-web/src/views/activity/chat.css
+new file mode 100644
+index 0000000000000000000000000000000000000000..3995daa49efbc0e66afb8b6686c84873688451e2
+--- /dev/null
++++ b/apps/user-web/src/views/activity/chat.css
+@@ -0,0 +1,162 @@
++.activity-page .chat-content {
++  box-sizing: border-box;
++  display: flex;
++  flex-direction: column;
++  height: calc(100dvh - 112px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
++  min-height: 0;
++  overflow: hidden;
++  padding: 20px 16px 0;
++}
++
++.activity-page .chat-messages {
++  flex: 1 1 auto;
++  min-height: 0;
++  max-height: none;
++  overflow-y: auto;
++  overscroll-behavior: contain;
++  padding: 4px 2px 14px;
++}
++
++.activity-page .chat-loading {
++  display: grid;
++  place-items: center;
++  min-height: 200px;
++}
++
++.activity-page .chat-load-more {
++  display: block;
++  margin: 0 auto 12px;
++  border: 0;
++  color: var(--activity-gold);
++  background: transparent;
++  font-size: 12px;
++}
++
++.activity-page .chat-empty {
++  margin: 24px 0;
++  color: var(--activity-text-muted);
++  text-align: center;
++}
++
++.activity-page .chat-message {
++  display: flex;
++  align-items: flex-start;
++  gap: 8px;
++  width: 100%;
++  margin: 0 0 12px;
++  padding: 0;
++  background: transparent;
++}
++
++.activity-page .chat-message .activity-avatar {
++  width: 36px;
++  height: 36px;
++  margin-top: 18px;
++}
++
++.activity-page .chat-message--self {
++  flex-direction: row-reverse;
++}
++
++.activity-page .chat-message-content {
++  display: flex;
++  flex: 0 1 auto;
++  flex-direction: column;
++  min-width: 0;
++  max-width: min(78%, 520px);
++}
++
++.activity-page .chat-message--self .chat-message-content { align-items: flex-end; }
++
++.activity-page .chat-message-meta {
++  display: flex;
++  align-items: baseline;
++  justify-content: space-between;
++  gap: 12px;
++  max-width: 100%;
++  margin: 0 4px 4px;
++  color: var(--activity-gold-strong);
++  font-size: 12px;
++}
++
++.activity-page .chat-message-meta strong {
++  min-width: 0;
++  overflow-wrap: anywhere;
++}
++
++.activity-page .chat-message-meta time {
++  color: var(--activity-text-muted);
++  flex: 0 0 auto;
++}
++
++.activity-page .chat-message-bubble {
++  max-width: 100%;
++  margin: 0;
++  padding: 10px 12px;
++  border: 1px solid var(--activity-line);
++  border-radius: 4px 12px 12px 12px;
++  color: var(--activity-text);
++  background: var(--activity-surface);
++  font-size: 14px;
++  line-height: 1.55;
++  overflow-wrap: anywhere;
++  white-space: pre-wrap;
++}
++
++.activity-page .chat-message--self .chat-message-bubble {
++  border-color: rgb(213 179 107 / 38%);
++  border-radius: 12px 4px 12px 12px;
++  background: var(--activity-surface-strong);
++}
++
++.activity-page .chat-composer {
++  display: flex;
++  flex: 0 0 auto;
++  flex-direction: column;
++  align-items: stretch;
++  gap: 8px;
++  position: relative;
++  z-index: 1;
++  padding: 8px 0;
++  background: var(--activity-bg);
++}
++
++.activity-page .chat-composer-controls {
++  display: flex;
++  align-items: flex-end;
++  gap: 8px;
++  min-width: 0;
++}
++
++.activity-page .chat-composer .van-cell {
++  box-sizing: border-box;
++  flex: 1;
++  align-items: center;
++  min-width: 0;
++  min-height: 44px;
++  padding: 0 10px;
++  border: 1px solid var(--activity-line);
++  border-radius: 10px;
++  background: var(--activity-surface);
++}
++
++.activity-page .chat-composer .van-cell__value {
++  min-width: 0;
++}
++
++.activity-page .chat-composer .van-field__control {
++  min-height: 24px;
++  max-height: 72px;
++  line-height: 24px;
++  overflow-y: auto;
++}
++
++.activity-page .chat-composer .van-button {
++  flex: 0 0 auto;
++  height: 44px;
++  border-radius: 10px;
++}
++
++@media (min-width: 601px) {
++  .activity-page .chat-content { max-width: 600px; margin: 0 auto; }
++}
+diff --git a/apps/user-web/src/views/activity/chat.vue b/apps/user-web/src/views/activity/chat.vue
+index a7869499a671e28346325c28c11f1cfecb62db81..7bc8b242cf949c41b3a028066d143b2c315dcaea 100644
+--- a/apps/user-web/src/views/activity/chat.vue
++++ b/apps/user-web/src/views/activity/chat.vue
+@@ -1,30 +1,60 @@
+ <template>
+   <section class="chat-content">
+-    <header class="chat-header">
+-      <div><p class="section-kicker">活动聊天室</p><h1 class="chat-title">{{ activity.name }}</h1></div>
+-      <VanTag round :type="activity.status === 'open' ? 'success' : 'primary'">{{ activity.status === 'open' ? '可发言' : '仅查看' }}</VanTag>
+-    </header>
+-    <div ref="messageList" class="chat-messages" @scroll="handleScroll">
++    <div ref="messageList" class="chat-messages">
+       <VanLoading v-if="loading" class="chat-loading" size="24px" color="var(--activity-gold)" />
+       <button v-else-if="hasMore" class="chat-load-more" type="button" @click="loadOlder">加载更早消息</button>
+       <p v-if="!loading && messages.length === 0" class="chat-empty">还没有消息，来打个招呼吧。</p>
+-      <article v-for="message in messages" :key="message.message_id" class="chat-message" :class="{ 'chat-message--self': message.sender_activity_user_id === user.activity_user_id }">
+-        <div class="chat-message-meta"><strong>{{ message.sender_activity_user_id === user.activity_user_id ? '我' : message.sender_username }}</strong><time>{{ formatTime(message.created_at) }}</time></div>
+-        <p>{{ message.body }}</p>
++      <article
++        v-for="message in messages"
++        :key="message.message_id"
++        class="chat-message"
++        :class="{ 'chat-message--self': message.sender_activity_user_id === user.activity_user_id }"
++      >
++        <ActivityAvatar
++          :avatar-id="messageAvatarId(message)"
++          variant="small"
++          :alt="`${message.sender_username}的活动头像`"
++        />
++        <div class="chat-message-content">
++          <div class="chat-message-meta">
++            <strong>{{ message.sender_username }}</strong>
++            <time :datetime="message.created_at">{{ formatTime(message.created_at) }}</time>
++          </div>
++          <p class="chat-message-bubble">{{ message.body }}</p>
++        </div>
+       </article>
+     </div>
+-    <p class="chat-connection" :class="`chat-connection--${connectionState}`">{{ connectionLabel }}</p>
+     <form class="chat-composer" @submit.prevent="sendMessage">
+-      <VanField v-model="draft" :disabled="activity.status !== 'open' || sending" maxlength="500" show-word-limit rows="1" autosize type="textarea" placeholder="输入消息" />
+-      <VanButton native-type="submit" type="primary" :disabled="!canSend" :loading="sending">发送</VanButton>
++      <div class="chat-composer-controls">
++        <VanField
++          v-model="draft"
++          :disabled="activity.status !== 'open' || sending"
++          maxlength="500"
++          rows="1"
++          :autosize="{ minHeight: 24, maxHeight: 72 }"
++          type="textarea"
++          placeholder="输入消息"
++        />
++        <VanButton native-type="submit" type="primary" :disabled="!canSend" :loading="sending">发送</VanButton>
++      </div>
+     </form>
+   </section>
+ </template>
+ 
+ <script setup lang="ts">
+ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+-import { Button as VanButton, Field as VanField, Loading as VanLoading, Tag as VanTag, showToast } from "vant";
+-import { getActivityToken, getChatMessages, chatWebSocketURL, type Activity, type ActivityUserResponse, type ChatMessage } from "../../api/client";
++import { Button as VanButton, Field as VanField, Loading as VanLoading, showToast } from "vant";
++import "./chat.css";
++import {
++  getActivityToken,
++  getChatMessages,
++  chatWebSocketURL,
++  type Activity,
++  type ActivityAvatarId,
++  type ActivityUserResponse,
++  type ChatMessage,
++} from "../../api/client";
++import ActivityAvatar from "../../components/ActivityAvatar.vue";
+ 
+ const props = defineProps<{ activity: Activity; user: ActivityUserResponse }>();
+ const messages = ref<ChatMessage[]>([]);
+@@ -38,27 +68,71 @@ const socket = ref<WebSocket>();
+ const stopped = ref(false);
+ let reconnectTimer: number | undefined;
+ let reconnectAttempt = 0;
++const ACTIVITY_AVATAR_COUNT = 20;
++const FALLBACK_AVATAR_ID: ActivityAvatarId = 1;
++
++const messageAvatarId = (message: ChatMessage): ActivityAvatarId => {
++  if (message.sender_activity_user_id === props.user.activity_user_id) return props.user.avatar_id;
++  const senderId = message.sender_activity_user_id;
++  if (!Number.isSafeInteger(senderId) || senderId < 1) return FALLBACK_AVATAR_ID;
++  return ((senderId - 1) % ACTIVITY_AVATAR_COUNT + 1) as ActivityAvatarId;
++};
++
++type ChatScrollSnapshot = { scrollable: boolean; nearBottom: boolean };
+ 
+ const appendMessages = (incoming: ChatMessage[]) => {
++  const previousIds = new Set(messages.value.map((message) => message.message_id));
+   const byId = new Map(messages.value.map((message) => [message.message_id, message]));
+   incoming.forEach((message) => byId.set(message.message_id, message));
+   messages.value = [...byId.values()].sort((a, b) => a.message_id - b.message_id);
++  return messages.value.filter((message) => !previousIds.has(message.message_id)).length;
++};
++const captureScrollSnapshot = (): ChatScrollSnapshot => {
++  const element = messageList.value;
++  if (!element) return { scrollable: false, nearBottom: false };
++  const scrollable = element.scrollHeight > element.clientHeight;
++  const distanceFromBottom = element.scrollHeight - element.clientHeight - element.scrollTop;
++  return {
++    scrollable,
++    nearBottom: scrollable && distanceFromBottom <= element.clientHeight / 3,
++  };
++};
++const scrollToLatest = (behavior: ScrollBehavior = "smooth") => {
++  const element = messageList.value;
++  if (!element) return;
++  element.scrollTo({ top: element.scrollHeight, behavior });
++};
++const revealNewMessages = async (previous: ChatScrollSnapshot) => {
++  await nextTick();
++  const element = messageList.value;
++  if (!element) return;
++  const scrollable = element.scrollHeight > element.clientHeight;
++  const shouldScroll = (previous.scrollable && previous.nearBottom) || (!previous.scrollable && scrollable);
++  if (shouldScroll) scrollToLatest();
++};
++const appendRealtimeMessages = async (incoming: ChatMessage[]) => {
++  const previous = captureScrollSnapshot();
++  if (appendMessages(incoming) === 0) return;
++  await revealNewMessages(previous);
+ };
+ const fetchMessages = async (
+   params: { before_id?: number; after_id?: number } = {},
+   updateHistoryState = true,
++  autoScrollNewMessages = false,
+ ) => {
+   const token = getActivityToken(props.activity.activity_id);
+   if (!token) return;
+   const page = await getChatMessages(props.activity.activity_id, token, params);
+-  appendMessages(page.items);
++  const previous = autoScrollNewMessages ? captureScrollSnapshot() : undefined;
++  const addedCount = appendMessages(page.items);
+   if (updateHistoryState) hasMore.value = page.has_more;
++  if (autoScrollNewMessages && previous && addedCount > 0) await revealNewMessages(previous);
+   return page;
+ };
+ const fetchReconnectMessages = async () => {
+   let cursor = messages.value.at(-1)?.message_id;
+   while (!stopped.value) {
+-    const page = await fetchMessages(cursor ? { after_id: cursor } : {}, false);
++    const page = await fetchMessages(cursor ? { after_id: cursor } : {}, false, true);
+     if (!page || page.items.length === 0 || !page.has_more) return;
+     const latest = messages.value.at(-1)?.message_id;
+     if (!latest || latest === cursor) return;
+@@ -68,7 +142,12 @@ const fetchReconnectMessages = async () => {
+ const loadOlder = async () => {
+   const oldest = messages.value[0]?.message_id;
+   if (!oldest) return;
++  const list = messageList.value;
++  const previousScrollHeight = list?.scrollHeight ?? 0;
++  const previousScrollTop = list?.scrollTop ?? 0;
+   try { await fetchMessages({ before_id: oldest }); } catch { showToast("历史消息加载失败"); }
++  await nextTick();
++  if (list) list.scrollTop = previousScrollTop + list.scrollHeight - previousScrollHeight;
+ };
+ const connect = () => {
+   if (stopped.value) return;
+@@ -87,9 +166,7 @@ const connect = () => {
+       connectionState.value = "connected";
+       try { await fetchReconnectMessages(); } catch { /* 下一次重连时重试 */ }
+     } else if (data.type === "message.created" && data.message) {
+-      appendMessages([data.message]);
+-      await nextTick();
+-      messageList.value?.scrollTo({ top: messageList.value.scrollHeight, behavior: "smooth" });
++      await appendRealtimeMessages([data.message]);
+     } else if (data.type === "chat.error" && data.detail) showToast(data.detail);
+   };
+   ws.onclose = () => {
+@@ -108,13 +185,13 @@ const sendMessage = () => {
+   draft.value = "";
+   window.setTimeout(() => { sending.value = false; }, 300);
+ };
+-const handleScroll = () => { /* 保留滚动容器供后续触底加载扩展 */ };
+ const formatTime = (value: string) => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+ const canSend = computed(() => props.activity.status === "open" && draft.value.trim().length > 0 && connectionState.value === "connected");
+-const connectionLabel = computed(() => ({ connecting: "正在连接聊天室…", connected: "已连接", offline: "连接中断，正在重连…" })[connectionState.value]);
+ 
+ onMounted(async () => {
+   try { await fetchMessages(); } catch { showToast("消息加载失败"); } finally { loading.value = false; }
++  await nextTick();
++  scrollToLatest("auto");
+   connect();
+ });
+ onBeforeUnmount(() => {
