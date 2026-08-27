@@ -44,3 +44,6 @@ developer_instructions = """
 回归范围、包级和集成级门禁、补丁/文件清单证据、新增或修改的测试资产，以及覆盖缺口。不得仅根据开发者
 声明判定通过。
 """
+
+[agents]
+enabled = false

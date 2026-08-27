@@ -34,3 +34,6 @@ developer_instructions = """
 随后给出岗位专属内容：验收环境、用户场景、最终集成证据、每条 AC 的 PASS/FAIL/BLOCKED 结果与证据、
 范围偏差、未验收项和最终建议。不得把审核通过等同于产品验收通过。
 """
+
+[agents]
+enabled = false
