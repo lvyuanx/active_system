@@ -19,6 +19,10 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 用户 JWT 携带活动 ID，用户端按 `active_user_token:{activity_id}` 缓存 token。
 管理端二维码目标地址使用 `VITE_USER_WEB_BASE_URL` 拼接 `/activity/{activity_id}`。
 
+参与者管理由超级管理员通过 `/admin/activities/{activity_id}/participants` 访问，列表和状态操作始终带活动条件。
+`activity_users.is_muted` 为持久禁言标记，禁言只禁止聊天室发言；`is_active` 为可恢复的停用标记，停用会递增
+`session_version`，使已有活动用户 token 失效，恢复后必须重新登录。用户名、手机号、加入时间和两个状态字段由管理端展示。
+
 ### 活动用户头像
 
 `activity_users.avatar_id` 按 `(activity_id, id)` 独立保存，取值为 1–20。
@@ -33,6 +37,8 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 活动聊天室消息存储在 `activity_chat_messages`，通过 `activity_user_id` 关联发送者，并按 `(activity_id, message_id)`
 提供游标查询。活动用户 JWT 额外携带稳定的 `activity_user_id`；缺少该 claim 的旧令牌仅在同活动用户名唯一时兼容。
 用户端活动壳下包含 `/activity/{activity_id}`、`/chat`、`/me` 三个入口，WebSocket 首帧需发送 `auth`。
+聊天室每次发送都会重新检查参与用户的 active/muted 状态；禁言返回 `chat.error`/`muted`，停用后的现有连接返回未授权并关闭，
+聊天历史不会因管理操作删除。用户端收到未授权聊天错误后会清除当前活动 token 并停止重连，回到活动入口。
 
 ## 活动弹幕
 
@@ -55,6 +61,8 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 
 管理端弹幕播放设置的文字颜色选择器关闭透明度并固定 `hex` v-model 格式；保存请求因此只提交 `#` 加六位十六进制
 颜色，后端仍负责最终格式和值域校验并将成功回包规范化为大写十六进制。
+
+管理端活动管理壳复用 `ActivitySidebar`。桌面端侧栏通过 `align-self: start`、视口高度和 `position: sticky` 与右侧内容解耦，右侧长页面不会撑高菜单；侧栏自身允许纵向滚动，移动端在 800px 断点以下恢复单列普通流和自然高度。
 
 Electron 主进程在内存保留 token、session 和 `displayIds`，预加载层通过受限 IPC 把它提供给 `screen-web` 渲染器；
 为每个选中显示器创建透明、置顶、不可聚焦并鼠标穿透的覆盖窗口。启动控制窗口默认 680×720，页面默认隐藏滚动条。

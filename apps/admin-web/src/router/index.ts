@@ -16,6 +16,11 @@ const router = createRouter({
       component: () => import("../views/danmaku/index.vue"),
       meta: { requiresAuth: true },
     },
+    {
+      path: "/activities/:activityId/participants",
+      component: () => import("../views/participants/index.vue"),
+      meta: { requiresAuth: true },
+    },
     { path: "/:pathMatch(.*)*", redirect: "/" },
   ],
 });

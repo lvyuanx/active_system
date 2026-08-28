@@ -31,6 +31,14 @@ class ChatReadOnlyError(Exception):
     pass
 
 
+class ChatMutedError(Exception):
+    pass
+
+
+class ChatParticipantInactiveError(Exception):
+    pass
+
+
 def _message_from_row(row: sqlite3.Row) -> ChatMessage:
     return ChatMessage(
         message_id=int(row["message_id"]),
@@ -97,14 +105,24 @@ def create_message(
     body = body.strip()
     if not 1 <= len(body) <= 500:
         raise ValueError("消息长度必须为 1 至 500 个字符")
+    if principal.activity_id != activity_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="不能访问其他活动")
     with transaction(settings) as connection:
         activity = connection.execute(
             "SELECT status FROM activities WHERE activity_id = ?", (activity_id,)
         ).fetchone()
         if not activity:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="活动不存在")
+        participant = connection.execute(
+            "SELECT is_active, is_muted FROM activity_users WHERE activity_id = ? AND id = ?",
+            (activity_id, principal.activity_user_id),
+        ).fetchone()
+        if not participant or not bool(participant["is_active"]):
+            raise ChatParticipantInactiveError
         if activity["status"] != "open":
             raise ChatReadOnlyError
+        if bool(participant["is_muted"]):
+            raise ChatMutedError
         now = datetime.now(timezone.utc).isoformat()
         cursor = connection.execute(
             "INSERT INTO activity_chat_messages(activity_id, activity_user_id, body, created_at) "

@@ -55,6 +55,20 @@ class ActivityPrincipal:
     joined_at: datetime
 
 
+def _token_session_version(payload: dict[str, object]) -> int | None:
+    if "activity_user_session_version" not in payload:
+        return None
+    value = payload["activity_user_session_version"]
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请重新登录活动")
+    return value
+
+
+def _session_version_matches(payload: dict[str, object], database_version: int) -> bool:
+    token_version = _token_session_version(payload)
+    return token_version == database_version if token_version is not None else database_version == 0
+
+
 @router.get("/{activity_id}", response_model=ActivityPublicResponse)
 def get_public_activity(activity_id: str, settings: Settings = Depends(get_settings)) -> ActivityPublicResponse:
     activity = get_activity(activity_id, settings)
@@ -87,7 +101,7 @@ def get_activity_principal(
             if isinstance(activity_user_id, bool) or not isinstance(activity_user_id, int):
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请重新登录活动")
             user = connection.execute(
-                "SELECT id, username, created_at FROM activity_users "
+                "SELECT id, username, created_at, is_active, session_version FROM activity_users "
                 "WHERE activity_id = ? AND id = ?",
                 (activity_id, activity_user_id),
             ).fetchone()
@@ -97,12 +111,16 @@ def get_activity_principal(
             # Old tokens did not contain the stable ID. They remain valid only when
             # the username identifies exactly one participant in this activity.
             matches = connection.execute(
-                "SELECT id, username, created_at FROM activity_users "
+                "SELECT id, username, created_at, is_active, session_version FROM activity_users "
                 "WHERE activity_id = ? AND username = ? ORDER BY id",
                 (activity_id, username),
             ).fetchall()
             user = matches[0] if len(matches) == 1 else None
-    if not user:
+    if (
+        not user
+        or not bool(user["is_active"])
+        or not _session_version_matches(payload, int(user["session_version"]))
+    ):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请重新登录活动")
     return ActivityPrincipal(
         activity_id=activity_id,
@@ -131,13 +149,13 @@ def make_user_response(
     with transaction(settings) as connection:
         if activity_user_id is None:
             row = connection.execute(
-                "SELECT id, username, created_at, avatar_id FROM activity_users "
+                "SELECT id, username, created_at, avatar_id, session_version FROM activity_users "
                 "WHERE activity_id = ? AND username = ? ORDER BY id DESC LIMIT 1",
                 (activity_id, username),
             ).fetchone()
         else:
             row = connection.execute(
-                "SELECT id, username, created_at, avatar_id FROM activity_users "
+                "SELECT id, username, created_at, avatar_id, session_version FROM activity_users "
                 "WHERE activity_id = ? AND id = ?",
                 (activity_id, activity_user_id),
             ).fetchone()
@@ -153,7 +171,11 @@ def make_user_response(
         return ActivityUserResponse(
             access_token=access_token
             or create_access_token(
-                str(row["username"]), settings, activity_id=activity_id, activity_user_id=int(row["id"])
+                str(row["username"]),
+                settings,
+                activity_id=activity_id,
+                activity_user_id=int(row["id"]),
+                activity_user_session_version=int(row["session_version"]),
             ),
             activity_id=activity_id,
             activity_user_id=int(row["id"]),
@@ -180,7 +202,7 @@ def register_activity_user(
                 (activity_id, payload.username, payload.phone, now, avatar_id),
             )
             row = connection.execute(
-                "SELECT id, username, created_at, avatar_id FROM activity_users "
+                "SELECT id, username, created_at, avatar_id, session_version FROM activity_users "
                 "WHERE activity_id = ? AND id = ?",
                 (activity_id, cursor.lastrowid),
             ).fetchone()
@@ -188,7 +210,11 @@ def register_activity_user(
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="活动用户创建失败")
             return ActivityUserResponse(
                 access_token=create_access_token(
-                    str(row["username"]), settings, activity_id=activity_id, activity_user_id=int(row["id"])
+                    str(row["username"]),
+                    settings,
+                    activity_id=activity_id,
+                    activity_user_id=int(row["id"]),
+                    activity_user_session_version=int(row["session_version"]),
                 ),
                 activity_id=activity_id,
                 activity_user_id=int(row["id"]),
@@ -209,11 +235,14 @@ def login_activity_user(
     get_activity(activity_id, settings)
     with transaction(settings) as connection:
         user = connection.execute(
-            "SELECT id, username FROM activity_users WHERE activity_id = ? AND username = ? AND phone = ?",
+            "SELECT id, username, is_active FROM activity_users "
+            "WHERE activity_id = ? AND username = ? AND phone = ?",
             (activity_id, payload.username, payload.phone),
         ).fetchone()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或手机号不匹配")
+    if not bool(user["is_active"]):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="该活动用户已停用")
     return make_user_response(activity_id, payload.username, settings, activity_user_id=int(user["id"]))
 
 

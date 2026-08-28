@@ -14,6 +14,7 @@
 - 聊天页使用 HTTP 历史游标和首帧认证 WebSocket，
   断线按指数退避重连并以 after_id 补齐消息；聊天输入区位于底部导航上方，消息行以发送者用户名、头像和左右气泡展示，
   消息列表仅在追加前位于底部阈值内时自动滚动；输入框默认一行且与发送按钮同高，最多可视三行，超过三行后在控件内部滚动。
+- 聊天 WebSocket 收到停用用户的 `unauthorized` 错误后会清除当前活动 token、停止重连并返回活动入口；`muted` 错误只提示用户，不清除会话。
 - `views/activity/home.vue` 和 `views/activity/me.vue` 展示当前活动用户头像；
   `views/activity/me.vue` 仍仅清除当前活动 token，展示活动用户稳定 ID 与加入时间。
 

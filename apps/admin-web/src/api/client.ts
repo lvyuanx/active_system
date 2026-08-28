@@ -39,6 +39,16 @@ export interface Activity {
   created_at: string;
   updated_at: string;
 }
+export interface ActivityParticipant {
+  activity_id: string;
+  activity_user_id: number;
+  username: string;
+  phone: string;
+  joined_at: string;
+  is_active: boolean;
+  is_muted: boolean;
+}
+export type ParticipantAction = "mute" | "unmute" | "deactivate" | "activate";
 export interface DanmakuSettings {
   track_count: number;
   font_size: number;
@@ -86,6 +96,16 @@ export const createActivity = (payload: Pick<Activity, "name" | "description" | 
   request<Activity>("/admin/activities", { method: "POST", body: JSON.stringify(payload) });
 export const changeActivityStatus = (id: string, action: "open" | "close" | "end") =>
   request<Activity>(`/admin/activities/${id}/${action}`, { method: "POST" });
+export const listActivityParticipants = (activityId: string) =>
+  request<ActivityParticipant[]>(`/admin/activities/${activityId}/participants`);
+export const changeActivityParticipant = (
+  activityId: string,
+  activityUserId: number,
+  action: ParticipantAction,
+) => request<ActivityParticipant>(
+  `/admin/activities/${activityId}/participants/${activityUserId}/${action}`,
+  { method: "POST" },
+);
 export const getDanmaku = (activityId: string) =>
   request<DanmakuAdminResponse>(`/admin/activities/${activityId}/danmaku`);
 export const updateDanmaku = (activityId: string, settings: DanmakuSettings) =>

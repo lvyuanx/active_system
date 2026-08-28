@@ -9,7 +9,12 @@ from pydantic import BaseModel, Field, model_validator
 from app.core.config import Settings
 from app.core.database import transaction
 from app.modules.chat.manager import chat_manager
-from app.modules.chat.service import ChatReadOnlyError, create_message
+from app.modules.chat.service import (
+    ChatMutedError,
+    ChatParticipantInactiveError,
+    ChatReadOnlyError,
+    create_message,
+)
 from app.modules.danmaku.manager import danmaku_manager
 from app.modules.participants.router import ActivityPrincipal
 
@@ -211,7 +216,7 @@ class DanmakuTestManager:
                         activity_id, {"type": "message.created", "message": message}
                     )
                     await danmaku_manager.broadcast_message(activity_id, message)
-            except (ChatReadOnlyError, HTTPException, ValueError):
+            except (ChatReadOnlyError, ChatMutedError, ChatParticipantInactiveError, HTTPException, ValueError):
                 return
             message_index += user_count
             await asyncio.sleep(random.uniform(config.min_delay_seconds, config.max_delay_seconds))

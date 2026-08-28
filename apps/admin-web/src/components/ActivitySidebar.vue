@@ -29,7 +29,12 @@
       >
         <span class="nav-icon">◌</span>弹幕工具
       </button>
-      <button class="nav-item nav-item--disabled" type="button" disabled>
+      <button
+        class="nav-item"
+        :class="{ 'nav-item--active': active === 'participants' }"
+        type="button"
+        @click="goParticipants"
+      >
         <span class="nav-icon">◌</span>参与者
       </button>
       <button class="nav-item nav-item--disabled" type="button" disabled>
@@ -51,7 +56,7 @@ import { clearToken, type Activity } from "../api/client";
 const props = defineProps<{
   activity?: Activity;
   activityId: string;
-  active: "home" | "danmaku";
+  active: "home" | "danmaku" | "participants";
   username: string;
 }>();
 const router = useRouter();
@@ -59,9 +64,9 @@ const router = useRouter();
 const goActivityList = () => router.push("/");
 const goHome = () => router.push(`/activities/${props.activityId}`);
 const goDanmaku = () => router.push(`/activities/${props.activityId}/danmaku`);
+const goParticipants = () => router.push(`/activities/${props.activityId}/participants`);
 const logout = () => {
   clearToken();
   router.push("/login");
 };
 </script>
-

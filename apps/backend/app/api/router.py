@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from app.modules.activities import router as activities_router
 from app.modules.auth import router as auth_router
-from app.modules.participants import router as participants_router
+from app.modules.participants import admin_router as participants_admin_router, router as participants_router
 from app.modules.chat import router as chat_router
 from app.modules.danmaku import admin_router as danmaku_admin_router
 from app.modules.danmaku import router as danmaku_router
@@ -11,6 +11,7 @@ api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_router)
 api_router.include_router(activities_router)
 api_router.include_router(participants_router)
+api_router.include_router(participants_admin_router)
 api_router.include_router(chat_router)
 api_router.include_router(danmaku_admin_router)
 api_router.include_router(danmaku_router)

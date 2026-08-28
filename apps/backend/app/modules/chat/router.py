@@ -8,7 +8,14 @@ from fastapi.security import HTTPAuthorizationCredentials
 
 from app.core.config import Settings, get_settings
 from app.modules.chat.manager import chat_manager
-from app.modules.chat.service import ChatMessagePage, ChatReadOnlyError, create_message, list_messages
+from app.modules.chat.service import (
+    ChatMessagePage,
+    ChatMutedError,
+    ChatParticipantInactiveError,
+    ChatReadOnlyError,
+    create_message,
+    list_messages,
+)
 from app.modules.danmaku.manager import danmaku_manager
 from app.modules.participants.router import ActivityPrincipal, bearer, get_activity_principal
 
@@ -105,6 +112,13 @@ async def chat_websocket(activity_id: str, websocket: WebSocket, settings: Setti
             except ChatReadOnlyError:
                 await _send_error(websocket, "read_only", "当前活动暂不可发言")
                 continue
+            except ChatMutedError:
+                await _send_error(websocket, "muted", "你已被禁言")
+                continue
+            except ChatParticipantInactiveError:
+                await _send_error(websocket, "unauthorized", "活动登录已失效")
+                await websocket.close(code=1008)
+                return
             except ValueError as error:
                 await _send_error(websocket, "invalid_body", str(error))
                 continue

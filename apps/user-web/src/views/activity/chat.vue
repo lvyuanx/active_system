@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { Button as VanButton, Field as VanField, Loading as VanLoading, showToast } from "vant";
 import "./chat.css";
 import {
@@ -55,6 +55,7 @@ import {
   type ChatMessage,
 } from "../../api/client";
 import ActivityAvatar from "../../components/ActivityAvatar.vue";
+import { activitySessionKey, type ActivitySession } from "./session";
 
 const props = defineProps<{ activity: Activity; user: ActivityUserResponse }>();
 const messages = ref<ChatMessage[]>([]);
@@ -66,6 +67,7 @@ const messageList = ref<HTMLElement>();
 const connectionState = ref<"connecting" | "connected" | "offline">("connecting");
 const socket = ref<WebSocket>();
 const stopped = ref(false);
+const session = inject<ActivitySession>(activitySessionKey);
 let reconnectTimer: number | undefined;
 let reconnectAttempt = 0;
 const ACTIVITY_AVATAR_COUNT = 20;
@@ -161,13 +163,25 @@ const connect = () => {
     let payload: unknown;
     try { payload = JSON.parse(event.data); } catch { return; }
     if (!payload || typeof payload !== "object") return;
-    const data = payload as { type?: string; message?: ChatMessage; detail?: string };
+    const data = payload as {
+      type?: string;
+      code?: string;
+      message?: ChatMessage;
+      detail?: string;
+    };
     if (data.type === "chat.ready") {
       connectionState.value = "connected";
       try { await fetchReconnectMessages(); } catch { /* 下一次重连时重试 */ }
     } else if (data.type === "message.created" && data.message) {
       await appendRealtimeMessages([data.message]);
-    } else if (data.type === "chat.error" && data.detail) showToast(data.detail);
+    } else if (data.type === "chat.error" && data.detail) {
+      showToast(data.detail);
+      if (data.code === "unauthorized") {
+        stopped.value = true;
+        if (reconnectTimer) window.clearTimeout(reconnectTimer);
+        session?.logout();
+      }
+    }
   };
   ws.onclose = () => {
     if (stopped.value) return;
@@ -186,7 +200,11 @@ const sendMessage = () => {
   window.setTimeout(() => { sending.value = false; }, 300);
 };
 const formatTime = (value: string) => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-const canSend = computed(() => props.activity.status === "open" && draft.value.trim().length > 0 && connectionState.value === "connected");
+const canSend = computed(() =>
+  props.activity.status === "open"
+  && draft.value.trim().length > 0
+  && connectionState.value === "connected"
+);
 
 onMounted(async () => {
   try { await fetchMessages(); } catch { showToast("消息加载失败"); } finally { loading.value = false; }

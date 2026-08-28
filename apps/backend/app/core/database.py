@@ -31,6 +31,9 @@ CREATE TABLE IF NOT EXISTS activity_users (
     phone TEXT NOT NULL,
     created_at TEXT NOT NULL,
     avatar_id INTEGER,
+    is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
+    is_muted INTEGER NOT NULL DEFAULT 0 CHECK(is_muted IN (0, 1)),
+    session_version INTEGER NOT NULL DEFAULT 0 CHECK(session_version >= 0),
     UNIQUE(activity_id, phone)
 );
 CREATE TABLE IF NOT EXISTS activity_chat_messages (
@@ -97,6 +100,21 @@ def init_database(settings: Settings) -> None:
         }
         if "avatar_id" not in columns:
             connection.execute("ALTER TABLE activity_users ADD COLUMN avatar_id INTEGER")
+        if "is_active" not in columns:
+            connection.execute(
+                "ALTER TABLE activity_users ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1 "
+                "CHECK(is_active IN (0, 1))"
+            )
+        if "is_muted" not in columns:
+            connection.execute(
+                "ALTER TABLE activity_users ADD COLUMN is_muted INTEGER NOT NULL DEFAULT 0 "
+                "CHECK(is_muted IN (0, 1))"
+            )
+        if "session_version" not in columns:
+            connection.execute(
+                "ALTER TABLE activity_users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0 "
+                "CHECK(session_version >= 0)"
+            )
         danmaku_columns = {
             row["name"] for row in connection.execute("PRAGMA table_info(activity_danmaku_settings)").fetchall()
         }

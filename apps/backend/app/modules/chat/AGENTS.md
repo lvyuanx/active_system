@@ -6,7 +6,7 @@
 
 ## 主要职责
 
-- `service.py` 负责活动用户授权后的消息游标查询、状态校验和 SQLite 持久化。
+- `service.py` 负责活动用户授权后的消息游标查询、活动状态/参与者状态校验和 SQLite 持久化。
 - `router.py` 提供历史消息 HTTP 接口和首帧认证的 WebSocket 协议。
 - `manager.py` 维护单进程活动房间连接并广播新消息。
 
@@ -14,8 +14,9 @@
 
 消息写入 `activity_chat_messages`，通过 `activity_user_id` 关联参与用户；HTTP 读取支持 `before_id` 和
 `after_id` 游标，WebSocket 在持久化成功后广播 `message.created`。同一时刻还会向 `danmaku` 模块广播仅包含
-消息 ID、活动 ID、正文和创建时间的摘要，聊天协议本身不变。弹幕测试也调用同一持久化与广播链路，只是使用
-带“弹幕测试用户”标记的活动用户身份。只有 `open` 活动可发言，`closed`/`ended` 活动保持只读。
+消息 ID、活动 ID、正文和创建时间的摘要。弹幕测试也调用同一持久化与广播链路，只是使用带“弹幕测试用户”标记的活动用户身份。
+只有 `open` 活动且参与用户处于 active、未 muted 状态时可发言；禁言发送返回 `chat.error` 的 `muted`，停用后的现有连接
+返回 `unauthorized` 并关闭。
 
 ## 注意事项
 

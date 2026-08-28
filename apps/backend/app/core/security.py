@@ -34,6 +34,7 @@ def create_access_token(
     *,
     activity_id: str | None = None,
     activity_user_id: int | None = None,
+    activity_user_session_version: int | None = None,
 ) -> str:
     expires = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
     payload: dict[str, object] = {"sub": username, "exp": expires}
@@ -41,6 +42,8 @@ def create_access_token(
         payload["activity_id"] = activity_id
     if activity_user_id is not None:
         payload["activity_user_id"] = activity_user_id
+    if activity_user_session_version is not None:
+        payload["activity_user_session_version"] = activity_user_session_version
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
