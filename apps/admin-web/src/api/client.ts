@@ -44,6 +44,8 @@ export interface DanmakuSettings {
   font_size: number;
   opacity: number;
   duration_seconds: number;
+  entry_interval_seconds: number;
+  max_wait_seconds: number;
   display_top: number;
   display_bottom: number;
   text_color: string;
@@ -55,7 +57,12 @@ export interface DanmakuAdminResponse {
   token_created_at: string;
   updated_at: string;
 }
-export interface DanmakuTestStatus {
+export interface DanmakuTestConfig {
+  user_count: number;
+  min_delay_seconds: number;
+  max_delay_seconds: number;
+}
+export interface DanmakuTestStatus extends DanmakuTestConfig {
   running: boolean;
   detail: string;
 }
@@ -92,7 +99,10 @@ export const regenerateDanmakuToken = (activityId: string) =>
   });
 export const getDanmakuTestStatus = (activityId: string) =>
   request<DanmakuTestStatus>(`/admin/activities/${activityId}/danmaku/test`);
-export const startDanmakuTest = (activityId: string) =>
-  request<DanmakuTestStatus>(`/admin/activities/${activityId}/danmaku/test/start`, { method: "POST" });
+export const startDanmakuTest = (activityId: string, config?: DanmakuTestConfig) =>
+  request<DanmakuTestStatus>(`/admin/activities/${activityId}/danmaku/test/start`, {
+    method: "POST",
+    body: config ? JSON.stringify(config) : undefined,
+  });
 export const stopDanmakuTest = (activityId: string) =>
   request<DanmakuTestStatus>(`/admin/activities/${activityId}/danmaku/test/stop`, { method: "POST" });

@@ -50,6 +50,8 @@ CREATE TABLE IF NOT EXISTS activity_danmaku_settings (
     font_size INTEGER NOT NULL CHECK(font_size BETWEEN 16 AND 96),
     opacity REAL NOT NULL CHECK(opacity BETWEEN 0.1 AND 1.0),
     duration_seconds INTEGER NOT NULL CHECK(duration_seconds BETWEEN 5 AND 30),
+    entry_interval_seconds REAL NOT NULL DEFAULT 1.0 CHECK(entry_interval_seconds BETWEEN 0.1 AND 5.0),
+    max_wait_seconds REAL NOT NULL DEFAULT 1.5 CHECK(max_wait_seconds BETWEEN 0.5 AND 5.0),
     display_top INTEGER NOT NULL CHECK(display_top BETWEEN 0 AND 80),
     display_bottom INTEGER NOT NULL CHECK(display_bottom BETWEEN 20 AND 100),
     text_color TEXT NOT NULL,
@@ -95,3 +97,18 @@ def init_database(settings: Settings) -> None:
         }
         if "avatar_id" not in columns:
             connection.execute("ALTER TABLE activity_users ADD COLUMN avatar_id INTEGER")
+        danmaku_columns = {
+            row["name"] for row in connection.execute("PRAGMA table_info(activity_danmaku_settings)").fetchall()
+        }
+        if "max_wait_seconds" not in danmaku_columns:
+            connection.execute(
+                "ALTER TABLE activity_danmaku_settings "
+                "ADD COLUMN max_wait_seconds REAL NOT NULL DEFAULT 1.5 "
+                "CHECK(max_wait_seconds BETWEEN 0.5 AND 5.0)"
+            )
+        if "entry_interval_seconds" not in danmaku_columns:
+            connection.execute(
+                "ALTER TABLE activity_danmaku_settings "
+                "ADD COLUMN entry_interval_seconds REAL NOT NULL DEFAULT 1.0 "
+                "CHECK(entry_interval_seconds BETWEEN 0.1 AND 5.0)"
+            )

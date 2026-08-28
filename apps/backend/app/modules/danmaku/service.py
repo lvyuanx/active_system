@@ -17,6 +17,8 @@ DEFAULT_DANMAKU_SETTINGS = {
     "font_size": 36,
     "opacity": 0.9,
     "duration_seconds": 12,
+    "entry_interval_seconds": 1.0,
+    "max_wait_seconds": 1.5,
     "display_top": 10,
     "display_bottom": 90,
     "text_color": "#FFFFFF",
@@ -30,6 +32,8 @@ class DanmakuSettingsInput(BaseModel):
     font_size: int = Field(ge=16, le=96)
     opacity: float = Field(ge=0.1, le=1.0)
     duration_seconds: int = Field(ge=5, le=30)
+    entry_interval_seconds: float = Field(default=1.0, ge=0.1, le=5.0)
+    max_wait_seconds: float = Field(default=1.5, ge=0.5, le=5.0)
     display_top: int = Field(ge=0, le=80)
     display_bottom: int = Field(ge=20, le=100)
     text_color: str
@@ -119,15 +123,19 @@ def _ensure_record(connection: sqlite3.Connection, activity_id: str) -> sqlite3.
     now = _now()
     connection.execute(
         """INSERT OR IGNORE INTO activity_danmaku_settings(
-            activity_id, track_count, font_size, opacity, duration_seconds, display_top, display_bottom,
+            activity_id, track_count, font_size, opacity, duration_seconds, entry_interval_seconds,
+            max_wait_seconds,
+            display_top, display_bottom,
             text_color, token_version, token_created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)""",
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)""",
         (
             activity_id,
             DEFAULT_DANMAKU_SETTINGS["track_count"],
             DEFAULT_DANMAKU_SETTINGS["font_size"],
             DEFAULT_DANMAKU_SETTINGS["opacity"],
             DEFAULT_DANMAKU_SETTINGS["duration_seconds"],
+            DEFAULT_DANMAKU_SETTINGS["entry_interval_seconds"],
+            DEFAULT_DANMAKU_SETTINGS["max_wait_seconds"],
             DEFAULT_DANMAKU_SETTINGS["display_top"],
             DEFAULT_DANMAKU_SETTINGS["display_bottom"],
             DEFAULT_DANMAKU_SETTINGS["text_color"],
@@ -152,6 +160,8 @@ def _record_from_row(row: sqlite3.Row) -> DanmakuRecord:
             font_size=int(row["font_size"]),
             opacity=float(row["opacity"]),
             duration_seconds=int(row["duration_seconds"]),
+            entry_interval_seconds=float(row["entry_interval_seconds"]),
+            max_wait_seconds=float(row["max_wait_seconds"]),
             display_top=int(row["display_top"]),
             display_bottom=int(row["display_bottom"]),
             text_color=str(row["text_color"]),
@@ -178,7 +188,9 @@ def update_danmaku_settings(
         _ensure_record(connection, activity_id)
         connection.execute(
             """UPDATE activity_danmaku_settings SET
-                track_count = ?, font_size = ?, opacity = ?, duration_seconds = ?, display_top = ?,
+                track_count = ?, font_size = ?, opacity = ?, duration_seconds = ?, entry_interval_seconds = ?,
+                max_wait_seconds = ?,
+                display_top = ?,
                 display_bottom = ?, text_color = ?, updated_at = ?
             WHERE activity_id = ?""",
             (
@@ -186,6 +198,8 @@ def update_danmaku_settings(
                 payload.font_size,
                 payload.opacity,
                 payload.duration_seconds,
+                payload.entry_interval_seconds,
+                payload.max_wait_seconds,
                 payload.display_top,
                 payload.display_bottom,
                 payload.text_color,

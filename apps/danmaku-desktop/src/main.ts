@@ -16,6 +16,8 @@ type DanmakuSettings = {
   font_size: number;
   opacity: number;
   duration_seconds: number;
+  entry_interval_seconds: number;
+  max_wait_seconds: number;
   display_top: number;
   display_bottom: number;
   text_color: string;
@@ -174,6 +176,7 @@ function createOverlayWindow(displayId: number): void {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      backgroundThrottling: false,
     },
   });
   overlayWindows.set(displayId, window);

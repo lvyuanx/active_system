@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+import sqlite3
 import time
 
 from fastapi.testclient import TestClient
@@ -7,10 +8,12 @@ from starlette.websockets import WebSocketDisconnect
 
 import app.main as main_module
 from app.core.config import Settings, get_settings
-from app.core.database import init_database
+from app.core.database import init_database, transaction
 from app.main import app
+from app.modules.danmaku import testing as danmaku_testing
 from app.modules.danmaku.manager import DanmakuConnectionManager
-from app.modules.danmaku.testing import TEST_USER_COUNT, danmaku_test_manager
+from app.modules.danmaku.service import get_danmaku_record
+from app.modules.danmaku.testing import danmaku_test_manager
 
 
 def make_client(tmp_path: Path) -> tuple[TestClient, Settings]:
@@ -89,6 +92,8 @@ def test_danmaku_settings_are_validated_isolated_and_token_rotation_revokes_old_
             "font_size": 36,
             "opacity": 0.9,
             "duration_seconds": 12,
+            "entry_interval_seconds": 1.0,
+            "max_wait_seconds": 1.5,
             "display_top": 10,
             "display_bottom": 90,
             "text_color": "#FFFFFF",
@@ -111,6 +116,8 @@ def test_danmaku_settings_are_validated_isolated_and_token_rotation_revokes_old_
         )
         assert updated.status_code == 200
         assert updated.json()["settings"]["text_color"] == "#12AB34"
+        assert updated.json()["settings"]["entry_interval_seconds"] == 1.0
+        assert updated.json()["settings"]["max_wait_seconds"] == 1.5
         second = client.get(f"/api/v1/admin/activities/{second_id}/danmaku", headers=headers)
         assert second.json()["settings"]["track_count"] == 6
 
@@ -164,6 +171,109 @@ def test_danmaku_settings_are_validated_isolated_and_token_rotation_revokes_old_
         app.dependency_overrides.clear()
 
 
+def test_danmaku_timing_settings_range_and_legacy_database_migration(tmp_path: Path) -> None:
+    client, settings = make_client(tmp_path)
+    try:
+        headers = admin_headers(client)
+        activity_id = create_activity(client, headers, "等待时间配置活动")
+        payload = {
+            "track_count": 6,
+            "font_size": 36,
+            "opacity": 0.9,
+            "duration_seconds": 12,
+            "display_top": 10,
+            "display_bottom": 90,
+            "text_color": "#FFFFFF",
+        }
+        for value in (0.5, 1.5, 5.0):
+            response = client.put(
+                f"/api/v1/admin/activities/{activity_id}/danmaku",
+                headers=headers,
+                json={**payload, "max_wait_seconds": value},
+            )
+            assert response.status_code == 200
+            assert response.json()["settings"]["max_wait_seconds"] == value
+        for value in (0.4, 5.1):
+            response = client.put(
+                f"/api/v1/admin/activities/{activity_id}/danmaku",
+                headers=headers,
+                json={**payload, "max_wait_seconds": value},
+            )
+            assert response.status_code == 422
+        for value in (0.1, 1.0, 5.0):
+            response = client.put(
+                f"/api/v1/admin/activities/{activity_id}/danmaku",
+                headers=headers,
+                json={**payload, "entry_interval_seconds": value},
+            )
+            assert response.status_code == 200
+            assert response.json()["settings"]["entry_interval_seconds"] == value
+        for value in (0.0, 5.1):
+            response = client.put(
+                f"/api/v1/admin/activities/{activity_id}/danmaku",
+                headers=headers,
+                json={**payload, "entry_interval_seconds": value},
+            )
+            assert response.status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+
+    legacy_path = tmp_path / "legacy-danmaku.db"
+    connection = sqlite3.connect(legacy_path)
+    try:
+        connection.executescript(
+            """
+            CREATE TABLE activities (
+                activity_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                start_time TEXT,
+                end_time TEXT,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE activity_danmaku_settings (
+                activity_id TEXT PRIMARY KEY,
+                track_count INTEGER NOT NULL,
+                font_size INTEGER NOT NULL,
+                opacity REAL NOT NULL,
+                duration_seconds INTEGER NOT NULL,
+                display_top INTEGER NOT NULL,
+                display_bottom INTEGER NOT NULL,
+                text_color TEXT NOT NULL,
+                token_version INTEGER NOT NULL,
+                token_created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            INSERT INTO activities(activity_id, name, status, created_at, updated_at)
+            VALUES ('legacy-activity', '旧活动', 'closed', '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00');
+            INSERT INTO activity_danmaku_settings(
+                activity_id, track_count, font_size, opacity, duration_seconds,
+                display_top, display_bottom, text_color, token_version, token_created_at, updated_at
+            ) VALUES (
+                'legacy-activity', 6, 36, 0.9, 12, 10, 90, '#FFFFFF', 1,
+                '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00'
+            );
+            """
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    legacy_settings = settings.model_copy(update={"database_path": str(legacy_path)})
+    init_database(legacy_settings)
+    migrated = get_danmaku_record("legacy-activity", legacy_settings)
+    assert migrated.settings.entry_interval_seconds == 1.0
+    assert migrated.settings.max_wait_seconds == 1.5
+    with transaction(legacy_settings) as migrated_connection:
+        column_names = {
+            row["name"] for row in migrated_connection.execute("PRAGMA table_info(activity_danmaku_settings)")
+        }
+    assert "max_wait_seconds" in column_names
+    assert "entry_interval_seconds" in column_names
+
+
 def test_danmaku_websocket_broadcasts_message_summary_and_live_settings(tmp_path: Path) -> None:
     client, _ = make_client(tmp_path)
     try:
@@ -178,6 +288,7 @@ def test_danmaku_websocket_broadcasts_message_summary_and_live_settings(tmp_path
             ready = danmaku_ws.receive_json()
             assert ready["type"] == "danmaku.ready"
             assert ready["session"]["latest_message_id"] == 0
+            assert ready["session"]["settings"]["entry_interval_seconds"] == 1.0
 
             opened = client.post(f"/api/v1/admin/activities/{activity_id}/open", headers=headers)
             assert opened.status_code == 200
@@ -202,6 +313,8 @@ def test_danmaku_websocket_broadcasts_message_summary_and_live_settings(tmp_path
                         "font_size": 52,
                         "opacity": 0.7,
                         "duration_seconds": 10,
+                        "entry_interval_seconds": 1.8,
+                        "max_wait_seconds": 2.4,
                         "display_top": 20,
                         "display_bottom": 80,
                         "text_color": "#FFCC00",
@@ -248,13 +361,23 @@ def test_danmaku_websocket_broadcasts_message_summary_and_live_settings(tmp_path
         app.dependency_overrides.clear()
 
 
-def test_admin_danmaku_test_sends_real_chat_messages_to_chat_and_overlay(tmp_path: Path) -> None:
+def test_admin_danmaku_test_sends_real_chat_messages_to_chat_and_overlay(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
     client, settings = make_client(tmp_path)
     activity_id = ""
     headers: dict[str, str] = {}
     original_interval = danmaku_test_manager.interval_seconds
     original_main_settings = main_module.settings
     danmaku_test_manager.interval_seconds = 0.01
+    delay_calls: list[tuple[float, float]] = []
+
+    def capture_delay(minimum: float, maximum: float) -> float:
+        delay_calls.append((minimum, maximum))
+        return minimum
+
+    monkeypatch.setattr(danmaku_testing.random, "uniform", capture_delay)
     main_module.settings = settings
     client.__enter__()
     try:
@@ -283,46 +406,82 @@ def test_admin_danmaku_test_sends_real_chat_messages_to_chat_and_overlay(tmp_pat
                 started = client.post(
                     f"/api/v1/admin/activities/{activity_id}/danmaku/test/start",
                     headers=headers,
+                    json={
+                        "user_count": 2,
+                        "min_delay_seconds": 0.01,
+                        "max_delay_seconds": 0.02,
+                    },
                 )
                 assert started.status_code == 200
-                assert started.json() == {"running": True, "detail": "弹幕测试已开启"}
+                assert started.json() == {
+                    "running": True,
+                    "detail": "弹幕测试已开启",
+                    "user_count": 2,
+                    "min_delay_seconds": 0.01,
+                    "max_delay_seconds": 0.02,
+                }
 
                 first_chat = chat_ws.receive_json()
                 first_danmaku = danmaku_ws.receive_json()
                 assert first_chat["type"] == "message.created"
-                assert first_chat["message"]["sender_username"] == "弹幕测试用户1"
                 assert first_chat["message"]["activity_id"] == activity_id
                 assert first_danmaku["type"] == "danmaku.message.created"
                 assert first_danmaku["message"]["message_id"] == first_chat["message"]["message_id"]
                 assert first_danmaku["message"]["body"].startswith("【弹幕测试】")
+                assert delay_calls[0] == (0.01, 0.02)
 
                 second_chat = chat_ws.receive_json()
                 second_danmaku = danmaku_ws.receive_json()
                 assert second_chat["type"] == "message.created"
-                assert second_chat["message"]["sender_username"] == "弹幕测试用户2"
                 assert second_danmaku["message"]["message_id"] == second_chat["message"]["message_id"]
+                assert {
+                    first_chat["message"]["sender_username"],
+                    second_chat["message"]["sender_username"],
+                } == {"弹幕测试用户1", "弹幕测试用户2"}
 
                 already_running = client.post(
                     f"/api/v1/admin/activities/{activity_id}/danmaku/test/start",
                     headers=headers,
+                    json={
+                        "user_count": 1,
+                        "min_delay_seconds": 0.5,
+                        "max_delay_seconds": 0.5,
+                    },
                 )
                 assert already_running.status_code == 200
-                assert already_running.json() == {"running": True, "detail": "弹幕测试已经在运行"}
+                assert already_running.json() == {
+                    "running": True,
+                    "detail": "弹幕测试已经在运行",
+                    "user_count": 2,
+                    "min_delay_seconds": 0.01,
+                    "max_delay_seconds": 0.02,
+                }
 
                 stopped = client.post(
                     f"/api/v1/admin/activities/{activity_id}/danmaku/test/stop",
                     headers=headers,
                 )
                 assert stopped.status_code == 200
-                assert stopped.json() == {"running": False, "detail": "弹幕测试已关闭"}
+                assert stopped.json() == {
+                    "running": False,
+                    "detail": "弹幕测试已关闭",
+                    "user_count": 2,
+                    "min_delay_seconds": 0.01,
+                    "max_delay_seconds": 0.02,
+                }
 
                 restarted = client.post(
                     f"/api/v1/admin/activities/{activity_id}/danmaku/test/start",
                     headers=headers,
+                    json={
+                        "user_count": 2,
+                        "min_delay_seconds": 0.01,
+                        "max_delay_seconds": 0.02,
+                    },
                 )
                 assert restarted.status_code == 200
                 restarted_chat = None
-                for _ in range(TEST_USER_COUNT + 2):
+                for _ in range(2 + 2):
                     candidate_chat = chat_ws.receive_json()
                     candidate_danmaku = danmaku_ws.receive_json()
                     if candidate_chat["message"]["sender_activity_user_id"] == first_chat["message"][

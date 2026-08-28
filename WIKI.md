@@ -36,17 +36,22 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 
 ## 活动弹幕
 
-`activity_danmaku_settings` 以 `activity_id` 为主键保存轨道、字体、不透明度、飞行时长、显示区域、文字颜色、
-token 版本和更新时间。管理员读取或写入时以默认值懒创建。当前 token 为
+`activity_danmaku_settings` 以 `activity_id` 为主键保存轨道、字体、不透明度、飞行时长、同轨道入场间隔、碰撞避让队列最大等待时间、
+显示区域、文字颜色、token 版本和更新时间。`entry_interval_seconds` 默认 1.0 秒、范围为 0.1–5.0 秒；`max_wait_seconds`
+默认 1.5 秒、范围为 0.5–5.0 秒；旧数据库启动时只增量增加缺失列。
+管理员读取或写入时以默认值懒创建。当前 token 为
 `dm1.{activity_id}.{token_version}.{HMAC}`，HMAC 使用 `DANMAKU_TOKEN_SECRET`，为空时使用 `JWT_SECRET`；数据库不保存明文。
 轮换 token 会递增版本并断开该活动所有弹幕 WebSocket。
 
 弹幕 HTTP/WS 只接受该只读 token，聊天发言成功后向弹幕通道发送 `message_id`、`activity_id`、`body` 和
 `created_at`，不发送用户名或活动用户身份。设置保存会通过 `danmaku.settings.updated` 实时生效。现有聊天室协议保持不变。
 
-管理端弹幕页的真实测试开关由后端 `DanmakuTestManager` 驱动。任务为活动创建或复用多个带“弹幕测试用户”标识的
-活动用户，调用聊天 service 将测试正文写入 `activity_chat_messages`，再广播标准聊天室事件和弹幕摘要；因此测试
-消息可被聊天室、弹幕 WebSocket 和弹幕历史接口共同观察。任务仅允许在 `open` 活动运行，停止测试后不再产生新消息。
+管理端弹幕页的真实测试开关由后端 `DanmakuTestManager` 驱动。任务按启动请求配置的人员数量，为活动创建或复用带
+“弹幕测试用户”标识的活动用户，并为每个用户启动独立发送循环；每个循环调用聊天 service 将测试正文写入
+`activity_chat_messages`，再广播标准聊天室事件和弹幕摘要，每条消息之后按配置的最小和最大延迟做均匀随机等待。因此测试消息可被聊天室、
+弹幕 WebSocket 和弹幕历史接口共同观察。
+人员数量至少为 1 且不设应用层上限，测试用户头像编号在现有 20 个资源中循环复用；延迟限制为 0 至 60 秒且最大延迟不能小于最小延迟；
+任务仅允许在 `open` 活动运行，停止测试后不再产生新消息。
 
 管理端弹幕播放设置的文字颜色选择器关闭透明度并固定 `hex` v-model 格式；保存请求因此只提交 `#` 加六位十六进制
 颜色，后端仍负责最终格式和值域校验并将成功回包规范化为大写十六进制。
@@ -56,6 +61,13 @@ Electron 主进程在内存保留 token、session 和 `displayIds`，预加载�
 首次连接不回放历史，重连按最后消息 ID 补齐；队列最多保留 200 条，溢出时丢弃最旧消息。
 普通 `screen-web` 入口继续显示活动数据大屏，只有 `?danmaku-overlay=1` 才进入 Electron 的透明弹幕渲染层。
 实时 WebSocket 消息仅作为同步信号，渲染器始终从当前游标通过 HTTP 拉取并按消息 ID 有序合并，避免并发广播乱序导致遗漏。
+
+弹幕渲染器使用 `danmaku-layout.ts` 根据 Canvas 文本宽度、视口宽度、飞行时长和 8px 间距预测运动矩形；同轨道必须等上一条
+完整进入视口后再经过 `entry_interval_seconds` 才能尝试入场，随后继续检查全轨迹碰撞；不同轨道不受该间隔限制，并从轮询游标开始选择。
+所有轨道暂不可用时，消息从本地入队时间开始计时，超过 `max_wait_seconds` 后丢弃。`task-scheduler.ts` 使用单个 `requestAnimationFrame` 主循环和 `performance.now()`
+派发入场刷新、节点回收、WebSocket 重连和 HTTP 重试任务；消息队列仍最多保留 200 条，弹幕横向位移由 CSS `transform`
+动画完成，不通过 Vue 响应式状态逐帧重渲染。Electron 覆盖窗口关闭 `backgroundThrottling`，避免透明非聚焦窗口的动画
+与调度被后台节流。
 
 ## 用户端移动端视觉
 

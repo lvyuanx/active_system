@@ -30,3 +30,5 @@
 - 启动页支持勾选多个显示器，默认勾选主屏；同一会话在所有选中显示器上同步显示弹幕。
 - 停止、恢复、快捷键和显示器移除流程保持原有行为；桌面模块使用 `pnpm --filter @active/danmaku-desktop typecheck`
   验证主进程类型。
+- 弹幕覆盖窗口关闭 `backgroundThrottling`，保证非聚焦透明窗口中的 CSS 弹幕动画和统一调度循环不被后台节流；
+  会话设置透传 `entry_interval_seconds` 和 `max_wait_seconds`，实际入场与碰撞调度由 screen-web 渲染器负责。

@@ -88,6 +88,30 @@
                     <template #suffix>秒</template>
                   </el-input-number>
                 </el-form-item>
+                <el-form-item label="入场间隔">
+                  <el-input-number
+                    v-model="form.entry_interval_seconds"
+                    :min="0.1"
+                    :max="5"
+                    :step="0.1"
+                    :precision="1"
+                    controls-position="right"
+                  >
+                    <template #suffix>秒</template>
+                  </el-input-number>
+                </el-form-item>
+                <el-form-item label="队列最大等待时间">
+                  <el-input-number
+                    v-model="form.max_wait_seconds"
+                    :min="0.5"
+                    :max="5"
+                    :step="0.1"
+                    :precision="1"
+                    controls-position="right"
+                  >
+                    <template #suffix>秒</template>
+                  </el-input-number>
+                </el-form-item>
                 <el-form-item label="显示区域顶部">
                   <div class="range-control">
                     <el-slider v-model="form.display_top" :min="0" :max="80" :step="1" />
@@ -187,6 +211,8 @@ const form = reactive<DanmakuSettings>({
   font_size: 36,
   opacity: 0.9,
   duration_seconds: 12,
+  entry_interval_seconds: 1,
+  max_wait_seconds: 1.5,
   display_top: 10,
   display_bottom: 90,
   text_color: "#FFFFFF",

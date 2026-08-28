@@ -6,6 +6,8 @@ export interface DanmakuSettings {
   font_size: number;
   opacity: number;
   duration_seconds: number;
+  entry_interval_seconds: number;
+  max_wait_seconds: number;
   display_top: number;
   display_bottom: number;
   text_color: string;

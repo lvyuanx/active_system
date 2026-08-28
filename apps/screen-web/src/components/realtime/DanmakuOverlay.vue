@@ -34,11 +34,28 @@ import {
   mergeOrderedMessages,
   removeResolvedRealtimeSignals,
 } from "./message-order";
+import {
+  DANMAKU_GAP_PX,
+  findSafeTrack,
+  isPendingMessageExpired,
+  measureDanmakuText,
+  type DanmakuMotion,
+} from "./danmaku-layout";
+import { createTaskScheduler, type ScheduledTaskId } from "./task-scheduler";
 
 type ActiveItem = {
   key: string;
   body: string;
+  track: number;
+  top: number;
+  width: number;
+  startedAt: number;
+  durationMs: number;
   style: Record<string, string>;
+};
+type PendingMessage = {
+  message: DanmakuMessage;
+  queuedAt: number;
 };
 type DanmakuEvent = {
   type?: string;
@@ -49,101 +66,167 @@ type DanmakuEvent = {
 };
 
 const MAX_PENDING_MESSAGES = 200;
+const DANMAKU_QUEUE_RETRY_MS = 50;
+const DEFAULT_ENTRY_INTERVAL_SECONDS = 1;
+const DEFAULT_MAX_WAIT_SECONDS = 1.5;
+const DANMAKU_FONT_FAMILY = 'Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif';
+const DANMAKU_FONT_WEIGHT = 750;
 const bootstrap = ref<DanmakuOverlayBootstrap>();
 const settings = ref<DanmakuSettings>();
 const activeItems = ref<ActiveItem[]>([]);
-const pendingMessages = ref<DanmakuMessage[]>([]);
+const pendingMessages = ref<PendingMessage[]>([]);
 const lastMessageId = ref(0);
+const scheduler = createTaskScheduler();
 let socket: WebSocket | undefined;
-let reconnectTimer: number | undefined;
-let trackReleaseAt: number[] = [];
 let itemSequence = 0;
+let nextTrackIndex = 0;
 let reconnectAttempt = 0;
 let stopped = false;
 let recovering = false;
 let reconcilingRealtimeMessages = false;
-let realtimeRetryTimer: number | undefined;
 let pendingRealtimeMessageIds: number[] = [];
 let unsubscribeOverlaySession: (() => void) | undefined;
+let flushTaskId: ScheduledTaskId | undefined;
+let reconnectTaskId: ScheduledTaskId | undefined;
+let realtimeRetryTaskId: ScheduledTaskId | undefined;
+let textMeasureContext: CanvasRenderingContext2D | undefined;
+let textMeasureInitialized = false;
 
 const canRender = computed(() => Boolean(bootstrap.value && settings.value));
-
-const resetTracks = () => {
-  trackReleaseAt = Array.from({ length: settings.value?.track_count ?? 0 }, () => 0);
+const normalizeTrack = (top: number, next: DanmakuSettings) => {
+  const displayHeight = Math.max(1, next.display_bottom - next.display_top);
+  const track = Math.round(((top - next.display_top) / displayHeight) * next.track_count - 0.5);
+  return Math.max(0, Math.min(next.track_count - 1, track));
 };
 const setSettings = (next: DanmakuSettings) => {
   settings.value = next;
-  resetTracks();
-  flushQueue();
+  activeItems.value.forEach((item) => {
+    item.track = normalizeTrack(item.top, next);
+  });
+  nextTrackIndex = next.track_count > 0 ? nextTrackIndex % next.track_count : 0;
+  if (pendingMessages.value.length > 0) scheduleFlush();
 };
 const clearRuntime = () => {
   activeItems.value = [];
   pendingMessages.value = [];
-  resetTracks();
+  nextTrackIndex = 0;
+};
+const cancelScheduledTask = (taskId: ScheduledTaskId | undefined) => {
+  if (taskId !== undefined) scheduler.cancel(taskId);
 };
 const stopSocket = () => {
-  if (reconnectTimer) window.clearTimeout(reconnectTimer);
-  if (realtimeRetryTimer) window.clearTimeout(realtimeRetryTimer);
-  reconnectTimer = undefined;
-  realtimeRetryTimer = undefined;
+  cancelScheduledTask(reconnectTaskId);
+  cancelScheduledTask(realtimeRetryTaskId);
+  reconnectTaskId = undefined;
+  realtimeRetryTaskId = undefined;
   socket?.close();
   socket = undefined;
 };
 const resetRuntime = (next: DanmakuOverlayBootstrap) => {
+  stopSocket();
+  scheduler.clear();
+  flushTaskId = undefined;
   stopped = false;
   recovering = false;
   reconcilingRealtimeMessages = false;
   pendingRealtimeMessageIds = [];
   reconnectAttempt = 0;
-  stopSocket();
   bootstrap.value = next;
   lastMessageId.value = next.session.latest_message_id;
-  setSettings(next.session.settings);
   clearRuntime();
+  setSettings(next.session.settings);
   connect();
+};
+const scheduleFlushAfter = (delayMs: number) => {
+  if (flushTaskId !== undefined || stopped) return;
+  flushTaskId = scheduler.scheduleAfter(delayMs, () => {
+    flushTaskId = undefined;
+    flushQueue();
+  });
+};
+const scheduleFlush = () => scheduleFlushAfter(0);
+const getTextMeasureContext = () => {
+  if (!textMeasureInitialized) {
+    textMeasureInitialized = true;
+    textMeasureContext = document.createElement("canvas").getContext("2d") ?? undefined;
+  }
+  return textMeasureContext;
+};
+const measureBodyWidth = (body: string, fontSize: number) => {
+  const context = getTextMeasureContext();
+  if (!context) return measureDanmakuText(body, fontSize, () => Number.NaN);
+  context.font = `${DANMAKU_FONT_WEIGHT} ${fontSize}px ${DANMAKU_FONT_FAMILY}`;
+  return measureDanmakuText(body, fontSize, (text) => context.measureText(text).width);
 };
 const queueMessage = (message: DanmakuMessage) => {
   if (!canRender.value || message.message_id <= lastMessageId.value) return;
   lastMessageId.value = message.message_id;
   if (pendingMessages.value.length >= MAX_PENDING_MESSAGES) pendingMessages.value.shift();
-  pendingMessages.value.push(message);
-  flushQueue();
+  pendingMessages.value.push({ message, queuedAt: performance.now() });
+  scheduleFlush();
 };
-const findAvailableTrack = (now: number) =>
-  trackReleaseAt.findIndex((availableAt) => availableAt <= now);
 const flushQueue = () => {
-  if (!canRender.value || pendingMessages.value.length === 0) return;
-  const now = Date.now();
-  const track = findAvailableTrack(now);
-  if (track < 0) {
-    const nextAvailableAt = Math.min(...trackReleaseAt);
-    window.setTimeout(flushQueue, Math.max(16, nextAvailableAt - now));
-    return;
-  }
-  const message = pendingMessages.value.shift();
-  if (!message || !settings.value) return;
+  if (!canRender.value || pendingMessages.value.length === 0 || !settings.value) return;
+  const now = performance.now();
   const currentSettings = settings.value;
-  const displayHeight = currentSettings.display_bottom - currentSettings.display_top;
-  const top = currentSettings.display_top + ((track + 0.5) / currentSettings.track_count) * displayHeight;
-  const durationMilliseconds = currentSettings.duration_seconds * 1000;
-  const key = `${message.message_id}-${itemSequence++}`;
-  activeItems.value.push({
-    key,
-    body: message.body,
-    style: {
-      "--danmaku-top": `${top}%`,
-      "--danmaku-font-size": `${currentSettings.font_size}px`,
-      "--danmaku-opacity": String(currentSettings.opacity),
-      "--danmaku-duration": `${currentSettings.duration_seconds}s`,
-      "--danmaku-color": currentSettings.text_color,
-    },
-  });
-  trackReleaseAt[track] = now + durationMilliseconds;
-  window.setTimeout(() => {
-    activeItems.value = activeItems.value.filter((item) => item.key !== key);
-    flushQueue();
-  }, durationMilliseconds);
-  flushQueue();
+  const viewportWidth = Math.max(1, document.documentElement.clientWidth || window.innerWidth);
+  const maxWaitSeconds = Number.isFinite(currentSettings.max_wait_seconds)
+    ? currentSettings.max_wait_seconds
+    : DEFAULT_MAX_WAIT_SECONDS;
+  const entryIntervalSeconds = Number.isFinite(currentSettings.entry_interval_seconds)
+    ? currentSettings.entry_interval_seconds
+    : DEFAULT_ENTRY_INTERVAL_SECONDS;
+  const maxWaitMilliseconds = maxWaitSeconds * 1000;
+  const entryIntervalMilliseconds = entryIntervalSeconds * 1000;
+  while (pendingMessages.value.length > 0) {
+    const pending = pendingMessages.value[0];
+    if (isPendingMessageExpired(pending.queuedAt, now, maxWaitMilliseconds)) {
+      pendingMessages.value.shift();
+      continue;
+    }
+    const width = measureBodyWidth(pending.message.body, currentSettings.font_size);
+    const durationMs = currentSettings.duration_seconds * 1000;
+    const candidate: DanmakuMotion = { startedAt: now, durationMs, width };
+    const track = findSafeTrack(
+      activeItems.value,
+      candidate,
+      currentSettings.track_count,
+      viewportWidth,
+      nextTrackIndex,
+      now,
+      entryIntervalMilliseconds,
+      DANMAKU_GAP_PX,
+    );
+    if (track < 0) {
+      scheduleFlushAfter(DANMAKU_QUEUE_RETRY_MS);
+      return;
+    }
+    pendingMessages.value.shift();
+    const displayHeight = currentSettings.display_bottom - currentSettings.display_top;
+    const top = currentSettings.display_top + ((track + 0.5) / currentSettings.track_count) * displayHeight;
+    const key = `${pending.message.message_id}-${itemSequence++}`;
+    activeItems.value.push({
+      key,
+      body: pending.message.body,
+      track,
+      top,
+      width,
+      startedAt: now,
+      durationMs,
+      style: {
+        "--danmaku-top": `${top}%`,
+        "--danmaku-font-size": `${currentSettings.font_size}px`,
+        "--danmaku-opacity": String(currentSettings.opacity),
+        "--danmaku-duration": `${currentSettings.duration_seconds}s`,
+        "--danmaku-color": currentSettings.text_color,
+      },
+    });
+    nextTrackIndex = (track + 1) % currentSettings.track_count;
+    scheduler.scheduleAt(now + durationMs, () => {
+      activeItems.value = activeItems.value.filter((item) => item.key !== key);
+      scheduleFlush();
+    });
+  }
 };
 const fetchMessagesAfter = async (afterId: number): Promise<DanmakuMessage[]> => {
   const activeBootstrap = bootstrap.value;
@@ -164,11 +247,11 @@ const applyOrderedMessages = (messages: DanmakuMessage[]) => {
   mergeOrderedMessages(lastMessageId.value, messages).forEach(queueMessage);
 };
 const scheduleRealtimeRetry = () => {
-  if (realtimeRetryTimer || stopped || recovering || pendingRealtimeMessageIds.length === 0) return;
-  realtimeRetryTimer = window.setTimeout(() => {
-    realtimeRetryTimer = undefined;
+  if (realtimeRetryTaskId !== undefined || stopped || recovering || pendingRealtimeMessageIds.length === 0) return;
+  realtimeRetryTaskId = scheduler.scheduleAfter(500, () => {
+    realtimeRetryTaskId = undefined;
     void reconcileRealtimeMessages();
-  }, 500);
+  });
 };
 const reconcileRealtimeMessages = async () => {
   if (reconcilingRealtimeMessages || recovering || stopped || !bootstrap.value) return;
@@ -246,8 +329,12 @@ const connect = () => {
       return;
     }
     if (stopped || socket !== ws) return;
+    if (reconnectTaskId !== undefined) return;
     const delay = Math.min(10_000, 1_000 * 2 ** reconnectAttempt++);
-    reconnectTimer = window.setTimeout(connect, delay);
+    reconnectTaskId = scheduler.scheduleAfter(delay, () => {
+      reconnectTaskId = undefined;
+      connect();
+    });
   };
   ws.onerror = () => ws.close();
 };
@@ -263,6 +350,8 @@ onBeforeUnmount(() => {
   stopped = true;
   unsubscribeOverlaySession?.();
   stopSocket();
+  scheduler.clear();
+  flushTaskId = undefined;
 });
 </script>
 
@@ -284,12 +373,12 @@ onBeforeUnmount(() => {
 .danmaku-item {
   position: absolute;
   top: var(--danmaku-top);
-  left: 100%;
   margin: 0;
   color: var(--danmaku-color);
   font-size: var(--danmaku-font-size);
   font-weight: 750;
   line-height: 1.2;
+  left: 0;
   opacity: var(--danmaku-opacity);
   text-shadow: 0 2px 4px rgb(0 0 0 / 70%);
   white-space: nowrap;
@@ -338,11 +427,11 @@ onBeforeUnmount(() => {
 
 @keyframes danmaku-fly {
   from {
-    transform: translateX(0);
+    transform: translate3d(100vw, 0, 0);
   }
 
   to {
-    transform: translateX(calc(-100vw - 100%));
+    transform: translate3d(-100%, 0, 0);
   }
 }
 
