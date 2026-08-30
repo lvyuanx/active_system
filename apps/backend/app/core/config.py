@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_port: int = 8000
     app_cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175"
     database_path: str = "./data/active_system.db"
+    media_root: str = "./data/media"
     jwt_secret: str = "development-only-change-this-secret"
     jwt_expire_minutes: int = 60
     danmaku_token_secret: str = ""

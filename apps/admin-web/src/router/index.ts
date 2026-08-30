@@ -17,6 +17,11 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: "/activities/:activityId/lottery",
+      component: () => import("../views/lottery/index.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
       path: "/activities/:activityId/participants",
       component: () => import("../views/participants/index.vue"),
       meta: { requiresAuth: true },

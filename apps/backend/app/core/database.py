@@ -24,6 +24,33 @@ CREATE TABLE IF NOT EXISTS activities (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS lottery_configs (
+    activity_id TEXT PRIMARY KEY REFERENCES activities(activity_id) ON DELETE CASCADE,
+    no_repeat_across_prizes INTEGER NOT NULL DEFAULT 1 CHECK(no_repeat_across_prizes IN (0, 1)),
+    rolling_name_count INTEGER NOT NULL DEFAULT 8 CHECK(rolling_name_count BETWEEN 1 AND 20),
+    updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS lottery_awards (
+    award_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,
+    name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 100),
+    sort_order INTEGER NOT NULL DEFAULT 0 CHECK(sort_order >= 0),
+    UNIQUE(activity_id, name)
+);
+CREATE TABLE IF NOT EXISTS lottery_prizes (
+    prize_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,
+    award_id INTEGER NOT NULL REFERENCES lottery_awards(award_id) ON DELETE CASCADE,
+    name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 200),
+    quantity INTEGER NOT NULL CHECK(quantity BETWEEN 1 AND 100000),
+    sort_order INTEGER NOT NULL DEFAULT 0 CHECK(sort_order >= 0),
+    is_enabled INTEGER NOT NULL DEFAULT 1 CHECK(is_enabled IN (0, 1)),
+    image_id TEXT,
+    image_storage_key TEXT,
+    image_mime TEXT,
+    image_size INTEGER,
+    UNIQUE(activity_id, name)
+);
 CREATE TABLE IF NOT EXISTS activity_users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,
@@ -36,6 +63,36 @@ CREATE TABLE IF NOT EXISTS activity_users (
     session_version INTEGER NOT NULL DEFAULT 0 CHECK(session_version >= 0),
     UNIQUE(activity_id, phone)
 );
+CREATE TABLE IF NOT EXISTS lottery_entries (
+    entry_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,
+    activity_user_id INTEGER NOT NULL REFERENCES activity_users(id) ON DELETE CASCADE,
+    is_blacklisted INTEGER NOT NULL DEFAULT 0 CHECK(is_blacklisted IN (0, 1)),
+    is_whitelisted INTEGER NOT NULL DEFAULT 0 CHECK(is_whitelisted IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(activity_id, activity_user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_lottery_entries_activity
+    ON lottery_entries(activity_id, activity_user_id);
+CREATE INDEX IF NOT EXISTS idx_lottery_entries_activity_flags
+    ON lottery_entries(activity_id, is_blacklisted, is_whitelisted, activity_user_id);
+CREATE TABLE IF NOT EXISTS lottery_draws (
+    draw_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,
+    award_id INTEGER NOT NULL REFERENCES lottery_awards(award_id) ON DELETE RESTRICT,
+    prize_id INTEGER NOT NULL REFERENCES lottery_prizes(prize_id) ON DELETE RESTRICT,
+    activity_user_id INTEGER NOT NULL REFERENCES activity_users(id) ON DELETE RESTRICT,
+    draw_number INTEGER NOT NULL CHECK(draw_number >= 1),
+    request_id TEXT NOT NULL,
+    drawn_at TEXT NOT NULL,
+    UNIQUE(activity_id, request_id),
+    UNIQUE(activity_id, prize_id, draw_number)
+);
+CREATE INDEX IF NOT EXISTS idx_lottery_draws_activity
+    ON lottery_draws(activity_id, draw_id);
+CREATE INDEX IF NOT EXISTS idx_lottery_draws_prize
+    ON lottery_draws(activity_id, prize_id, draw_id);
 CREATE TABLE IF NOT EXISTS activity_chat_messages (
     message_id INTEGER PRIMARY KEY AUTOINCREMENT,
     activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,
@@ -47,6 +104,8 @@ CREATE INDEX IF NOT EXISTS idx_activity_chat_messages_cursor
     ON activity_chat_messages(activity_id, message_id);
 CREATE INDEX IF NOT EXISTS idx_activity_users_username
     ON activity_users(activity_id, username, id);
+CREATE INDEX IF NOT EXISTS idx_activity_users_lottery_phone
+    ON activity_users(activity_id, phone, username, id);
 CREATE TABLE IF NOT EXISTS activity_danmaku_settings (
     activity_id TEXT PRIMARY KEY REFERENCES activities(activity_id) ON DELETE CASCADE,
     track_count INTEGER NOT NULL CHECK(track_count BETWEEN 1 AND 12),
@@ -70,7 +129,7 @@ def connect(settings: Settings) -> sqlite3.Connection:
     path = Path(settings.database_path)
     if str(path) != ":memory:":
         path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(settings.database_path)
+    connection = sqlite3.connect(settings.database_path, timeout=30)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     return connection
@@ -130,3 +189,23 @@ def init_database(settings: Settings) -> None:
                 "ADD COLUMN entry_interval_seconds REAL NOT NULL DEFAULT 1.0 "
                 "CHECK(entry_interval_seconds BETWEEN 0.1 AND 5.0)"
             )
+        lottery_prize_columns = {
+            row["name"] for row in connection.execute("PRAGMA table_info(lottery_prizes)").fetchall()
+        }
+        optional_lottery_prize_columns = {
+            "image_id": "TEXT",
+            "image_storage_key": "TEXT",
+            "image_mime": "TEXT",
+            "image_size": "INTEGER",
+        }
+        for column, definition in optional_lottery_prize_columns.items():
+            if column not in lottery_prize_columns:
+                connection.execute(f"ALTER TABLE lottery_prizes ADD COLUMN {column} {definition}")
+        connection.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_lottery_prizes_image_id "
+            "ON lottery_prizes(image_id) WHERE image_id IS NOT NULL"
+        )
+        connection.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_lottery_prizes_image_storage_key "
+            "ON lottery_prizes(image_storage_key) WHERE image_storage_key IS NOT NULL"
+        )

@@ -36,10 +36,12 @@ Electron 仅通过 `?danmaku-overlay=1` 加载透明弹幕渲染层。
 
 启动后端前复制 `.env.example` 为 `.env`，设置 `SUPERUSER_USERNAME`、`SUPERUSER_PASSWORD` 和随机的 `JWT_SECRET`。
 可选设置独立的 `DANMAKU_TOKEN_SECRET`；为空时弹幕 token 使用 `JWT_SECRET` 派生。后端首次启动会初始化 SQLite 数据库和超级用户；只有该超级用户可以登录管理端。
+奖品图片由管理员通过独立 multipart 接口上传，默认保存到 `MEDIA_ROOT=./data/media`，支持 JPEG、PNG、WebP，单文件上限 5 MiB；
+Docker 部署使用持久化媒体卷，配置 JSON 不承载图片二进制。
 
 登录后默认进入活动选择页。活动状态为“已关闭”“进行中”“已结束”：新建活动默认为已关闭，可在已关闭和进行中之间反复切换；管理员手动结束后不可再次开启或关闭。活动名称必填，描述、开始时间和结束时间可选，若同时填写时间则结束时间必须晚于开始时间。
 
-点击活动卡片进入活动管理页，首页会生成用户端地址和二维码。二维码地址由管理端 `VITE_USER_WEB_BASE_URL` 配置（默认 `http://localhost:5175`）。用户端按活动收集用户名和手机号，手机号在同一活动内唯一；登录 token 按活动 ID 缓存，缓存有效时扫码可直接进入活动首页。
+点击活动卡片进入活动管理页；活动列表卡片底部和活动管理首页的“活动入口”面板都提供“打开抽奖大屏”按钮，会在新标签页打开该活动的实时抽奖大屏。大屏地址由管理端 `VITE_SCREEN_WEB_BASE_URL` 配置（默认 `http://localhost:5174`），并自动附加当前活动的 `activity_id`。活动管理首页会生成用户端地址和二维码。二维码地址由管理端 `VITE_USER_WEB_BASE_URL` 配置（默认 `http://localhost:5175`）。用户端按活动收集用户名和手机号，手机号在同一活动内唯一；登录 token 按活动 ID 缓存，缓存有效时扫码可直接进入活动首页。
 
 登录活动后，用户端底部提供“首页 / 聊天 / 我的”三个入口。每个活动自动拥有聊天室：`open` 活动可发送
 1–500 字符纯文本，`closed` 或 `ended` 活动可查看历史但只读。聊天消息通过 HTTP 游标接口读取，并使用
@@ -48,6 +50,21 @@ Electron 仅通过 `?danmaku-overlay=1` 加载透明弹幕渲染层。
 活动用户注册成功时会从二十款炭黑/哑金卡通 SVG 头像中随机分配一款；头像按活动和活动用户独立保存。
 历史用户在成功登录或调用 `/me` 时惰性补齐。聊天页采用微信式消息行：头像、真实用户名、时间和气泡按发送者左右对齐展示；
 消息行头像使用稳定的活动用户 ID 做本地映射，不进入聊天消息或 WebSocket 协议。
+
+## WebSocket 实时抽奖
+
+活动管理页的“实时抽奖”入口通过管理员连接
+`/api/v1/admin/activities/{activity_id}/lottery/ws` 控制开奖和重置，连接首帧发送管理员 JWT；奖项、奖品和抽奖规则通过
+`GET/PUT /api/v1/admin/activities/{activity_id}/lottery` 配置，名单通过
+`GET/PUT /api/v1/admin/activities/{activity_id}/lottery/entries` 按页搜索和单行即时保存，中奖历史通过
+`GET /api/v1/admin/activities/{activity_id}/lottery/history` 查询。开奖事务提交后才广播，重复的 `request_id` 只返回原结果。
+
+公开大屏连接 `/api/v1/activities/{activity_id}/lottery/ws`，不携带管理员凭证；连接成功通过 `lottery.ready` 恢复快照，
+开奖事件使用 `lottery.drawn`，只包含用户名、奖项、序号和剩余库存，不返回手机号或名单标记。大屏地址可以使用
+`http://localhost:5174/?activity_id={activity_id}`，断线会指数退避重连并按 `draw_id` 去重，重置前管理端要求二次确认。
+
+奖品可绑定图片。管理端先保存奖品配置，再通过独立图片接口上传、替换或移除；公开大屏只收到活动隔离的安全图片引用。
+图片校验真实 MIME、扩展名和大小，旧资源在提交后清理，启动和配置操作会扫描孤儿文件；无图或加载失败时保留文字和库存展示。
 
 ## 弹幕桌面工具
 

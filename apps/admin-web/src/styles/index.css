@@ -391,7 +391,7 @@ button, input, textarea { font: inherit; }
   #app .activity-management .app-sidebar .brand-lockup { padding-bottom: 12px; }
   #app .activity-management .back-button { width: auto; margin: 0 0 10px; }
   #app .activity-management .sidebar-context { display: none; }
-  #app .activity-management .app-sidebar nav { grid-template-columns: repeat(3, 1fr); padding-top: 0; }
+  #app .activity-management .app-sidebar nav { grid-template-columns: repeat(4, 1fr); padding-top: 0; }
   #app .activity-management .sidebar-footer { display: none; }
   #app .activity-management .workspace-topbar { min-height: 56px; padding: 0 16px; }
   #app .activity-management .management-page { padding: 22px 0 32px; }

@@ -27,6 +27,8 @@
 - `app/modules/participants/avatar.py`：活动用户头像范围校验、安全随机分配和空值惰性补齐。
 - `app/modules/chat/`：活动聊天室历史消息、游标查询、WebSocket 认证和广播。
 - `app/modules/danmaku/`：活动弹幕配置、版本化 HMAC token、只读会话和独立实时广播。
+- `app/modules/files/`：奖品图片临时存储、真实 MIME 校验、随机 key、原子落盘和孤儿清理；根目录由 `MEDIA_ROOT` 配置。
+- `app/modules/lottery/`：活动抽奖配置、分页名单和单行规则更新、事务开奖、request_id 幂等、管理员/公开 WebSocket 和安全快照广播；图片变更提交后广播最新安全配置。
 
 ## 活动状态
 

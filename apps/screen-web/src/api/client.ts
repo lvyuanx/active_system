@@ -39,6 +39,55 @@ const withBaseURL = (apiBaseUrl: string, path: string) => `${apiBaseUrl.replace(
 export const danmakuWebSocketURL = (apiBaseUrl: string) =>
   withBaseURL(apiBaseUrl, "/danmaku/ws").replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 
+export interface LotteryDraw {
+  draw_id: number;
+  activity_id: string;
+  award_id: number;
+  prize_id: number;
+  award_name: string;
+  prize_name: string;
+  draw_number: number;
+  remaining_quantity: number;
+  winner: { activity_user_id: number; username: string };
+  drawn_at: string;
+  prize_image_url: string | null;
+}
+export interface LotteryPrizeSnapshot {
+  prize_id: number;
+  award_id: number;
+  name: string;
+  quantity: number;
+  remaining_quantity: number;
+  sort_order: number;
+  is_enabled: boolean;
+  image_url: string | null;
+}
+export interface LotteryAwardSnapshot {
+  award_id: number;
+  name: string;
+  sort_order: number;
+  prizes: LotteryPrizeSnapshot[];
+  draws: LotteryDraw[];
+}
+export interface LotterySnapshot {
+  activity_id: string;
+  activity_name: string;
+  activity_status: "closed" | "open" | "ended";
+  config: { no_repeat_across_prizes: boolean; rolling_name_count: number };
+  awards: LotteryAwardSnapshot[];
+  draws: LotteryDraw[];
+  latest_draw_id: number;
+}
+export interface LotteryDrawnEvent {
+  type: "lottery.drawn";
+  draw: LotteryDraw;
+  roll_names: string[];
+}
+export const lotteryWebSocketURL = (apiBaseUrl: string, activityId: string) =>
+  withBaseURL(apiBaseUrl, `/activities/${encodeURIComponent(activityId)}/lottery/ws`)
+    .replace(/^http:/, "ws:")
+    .replace(/^https:/, "wss:");
+
 export async function getDanmakuMessages(
   apiBaseUrl: string,
   token: string,

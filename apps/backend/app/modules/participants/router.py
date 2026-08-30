@@ -201,6 +201,11 @@ def register_activity_user(
                 "VALUES (?, ?, ?, ?, ?)",
                 (activity_id, payload.username, payload.phone, now, avatar_id),
             )
+            connection.execute(
+                "INSERT INTO lottery_entries(activity_id, activity_user_id, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?)",
+                (activity_id, cursor.lastrowid, now, now),
+            )
             row = connection.execute(
                 "SELECT id, username, created_at, avatar_id, session_version FROM activity_users "
                 "WHERE activity_id = ? AND id = ?",

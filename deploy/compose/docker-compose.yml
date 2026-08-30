@@ -5,6 +5,8 @@ services:
       dockerfile: deploy/docker/backend.Dockerfile
     ports:
       - "8000:8000"
+    volumes:
+      - active-media:/app/data/media
 
   admin-web:
     build:
@@ -39,3 +41,5 @@ services:
     depends_on:
       - backend
 
+volumes:
+  active-media:

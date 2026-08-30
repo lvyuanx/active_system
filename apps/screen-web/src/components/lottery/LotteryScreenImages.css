@@ -1,0 +1,20 @@
+.winner-prize-image {
+  position: relative;
+  z-index: 1;
+  width: 96px;
+  height: 72px;
+  margin-bottom: 10px;
+  object-fit: cover;
+  border: 1px solid rgb(101 229 211 / 45%);
+  border-radius: 10px;
+  box-shadow: 0 0 24px rgb(101 229 211 / 20%);
+}
+
+.prize-image {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border: 1px solid rgb(144 130 255 / 30%);
+  border-radius: 6px;
+}

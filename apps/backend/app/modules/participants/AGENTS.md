@@ -28,6 +28,8 @@
 
 管理员接口统一使用 `/admin/activities/{activity_id}/participants` 前缀，所有读写都要求超级用户权限并带活动条件。
 
+新参与者注册事务会同步创建一条默认可参加的 `lottery_entries` 名单记录；历史参与者没有名单行时由抽奖服务按默认可参加处理。
+
 ## 迁移与注意事项
 
 `core.database.init_database` 为旧 `activity_users` 表增加可空 `avatar_id`，不批量填充历史用户；初始化使用 SQLite `BEGIN IMMEDIATE` 串行化字段迁移。头像只接受后端生成的 1–20 值，用户端通过固定静态 SVG 映射展示，不接受路径或 HTML。

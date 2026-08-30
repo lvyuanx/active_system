@@ -31,6 +31,14 @@
       </button>
       <button
         class="nav-item"
+        :class="{ 'nav-item--active': active === 'lottery' }"
+        type="button"
+        @click="goLottery"
+      >
+        <span class="nav-icon">✦</span>实时抽奖
+      </button>
+      <button
+        class="nav-item"
         :class="{ 'nav-item--active': active === 'participants' }"
         type="button"
         @click="goParticipants"
@@ -56,7 +64,7 @@ import { clearToken, type Activity } from "../api/client";
 const props = defineProps<{
   activity?: Activity;
   activityId: string;
-  active: "home" | "danmaku" | "participants";
+  active: "home" | "danmaku" | "lottery" | "participants";
   username: string;
 }>();
 const router = useRouter();
@@ -64,6 +72,7 @@ const router = useRouter();
 const goActivityList = () => router.push("/");
 const goHome = () => router.push(`/activities/${props.activityId}`);
 const goDanmaku = () => router.push(`/activities/${props.activityId}/danmaku`);
+const goLottery = () => router.push(`/activities/${props.activityId}/lottery`);
 const goParticipants = () => router.push(`/activities/${props.activityId}/participants`);
 const logout = () => {
   clearToken();

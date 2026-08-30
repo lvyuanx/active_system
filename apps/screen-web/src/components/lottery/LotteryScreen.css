@@ -1,0 +1,492 @@
+.lottery-screen {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  color: #f8fbff;
+  background: radial-gradient(circle at 50% 10%, #1b1742 0, #0a0e22 42%, #050711 100%);
+  isolation: isolate;
+}
+
+.aurora {
+  position: absolute;
+  width: 52vw;
+  height: 52vw;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.24;
+  pointer-events: none;
+}
+
+.aurora-one {
+  top: -25vw;
+  left: -12vw;
+  background: #6e43ff;
+}
+
+.aurora-two {
+  right: -18vw;
+  bottom: -32vw;
+  background: #03c9c2;
+}
+
+.particle-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.particle-field i {
+  position: absolute;
+  top: var(--particle-y);
+  left: var(--particle-x);
+  width: 3px;
+  height: 3px;
+  background: #b4a6ff;
+  border-radius: 50%;
+  box-shadow: 0 0 12px 3px #7568ff;
+  opacity: 0.4;
+  animation: float-particle 6s var(--particle-delay) ease-in-out infinite alternate;
+}
+
+.lottery-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 34px 5vw 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #eef0ff;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  color: #0a0e22;
+  background: linear-gradient(135deg, #c3b5ff, #64e2da);
+  border-radius: 11px;
+  font-weight: 900;
+}
+
+.brand strong,
+.brand small {
+  display: block;
+}
+
+.brand strong {
+  letter-spacing: 3px;
+  font-size: 14px;
+}
+
+.brand small {
+  margin-top: 3px;
+  color: #8e91b2;
+  letter-spacing: 2px;
+  font-size: 9px;
+}
+
+.connection-state {
+  color: #a9adc9;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.connection-state i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 8px;
+  background: #e0a34d;
+  border-radius: 50%;
+}
+
+.connection-state--online {
+  color: #7de2d4;
+}
+
+.connection-state--online i {
+  background: #4de0c3;
+  box-shadow: 0 0 11px #4de0c3;
+}
+
+.lottery-content {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, 90vw);
+  margin: 0 auto;
+  padding: 7vh 0 34px;
+}
+
+.title-block {
+  text-align: center;
+}
+
+.kicker,
+.board-kicker,
+.reveal-label {
+  color: #8f84e8;
+  letter-spacing: 4px;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.title-block h1 {
+  margin: 14px 0 9px;
+  color: #fff;
+  font-size: clamp(32px, 5vw, 64px);
+  letter-spacing: 2px;
+  text-shadow: 0 0 30px rgb(140 116 255 / 38%);
+}
+
+.subtitle {
+  margin: 0;
+  color: #9ea3c3;
+  font-size: 14px;
+}
+
+.draw-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  align-items: stretch;
+  gap: 22px;
+  margin-top: 46px;
+}
+
+.reveal-panel,
+.prize-board {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, rgb(27 31 72 / 88%), rgb(10 17 42 / 90%));
+  border: 1px solid rgb(145 133 255 / 35%);
+  border-radius: 24px;
+  box-shadow: 0 20px 80px rgb(0 0 0 / 28%), inset 0 1px rgb(255 255 255 / 8%);
+}
+
+.reveal-panel {
+  display: flex;
+  min-height: 430px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 46px;
+  text-align: center;
+}
+
+.reveal-beam {
+  position: absolute;
+  top: -70px;
+  width: 60%;
+  height: 140px;
+  background: #7c65ff;
+  filter: blur(65px);
+  opacity: 0.24;
+}
+
+.reveal-panel--rolling {
+  border-color: rgb(93 229 212 / 65%);
+  box-shadow: 0 0 60px rgb(93 229 212 / 14%), inset 0 1px rgb(255 255 255 / 10%);
+}
+
+.reveal-panel h2 {
+  position: relative;
+  margin: 13px 0 20px;
+  color: #c9c5ff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.name-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 126px;
+}
+
+.rolling-names {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  max-width: 100%;
+  overflow: hidden;
+  color: #9b9fc2;
+  font-size: clamp(22px, 3vw, 38px);
+  font-weight: 650;
+}
+
+.rolling-names span {
+  animation: roll-in 360ms ease both;
+}
+
+.rolling-names .name-focus {
+  color: #65e5d3;
+  text-shadow: 0 0 25px rgb(101 229 211 / 75%);
+}
+
+.winner-name {
+  color: #fff;
+  font-size: clamp(50px, 8vw, 92px);
+  font-weight: 850;
+  letter-spacing: 5px;
+  text-shadow: 0 0 16px #9c8cff, 0 0 50px rgb(101 229 211 / 58%);
+  animation: winner-pop 700ms cubic-bezier(.2, .9, .3, 1.2) both;
+}
+
+.waiting-mark {
+  color: #8b7cff;
+  font-size: 64px;
+  animation: waiting-pulse 2s ease-in-out infinite;
+}
+
+.winner-meta {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  color: #a5aac8;
+  font-size: 12px;
+}
+
+.winner-meta b {
+  color: #65e5d3;
+  font-weight: 650;
+}
+
+.reveal-tip {
+  margin: 20px 0 0;
+  color: #797e9e;
+  font-size: 12px;
+}
+
+.prize-board {
+  padding: 24px;
+}
+
+.prize-board > header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid rgb(155 150 235 / 18%);
+}
+
+.prize-board header strong {
+  color: #e8e9ff;
+  font-size: 17px;
+}
+
+.board-kicker {
+  color: #6edccd;
+  letter-spacing: 2px;
+  font-size: 9px;
+}
+
+.award-card {
+  padding: 18px 0;
+  border-bottom: 1px solid rgb(155 150 235 / 14%);
+}
+
+.award-heading,
+.prize-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.award-heading span {
+  color: #d5d3ff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.award-heading small,
+.prize-line {
+  color: #8186aa;
+  font-size: 11px;
+}
+
+.prize-line {
+  margin-top: 12px;
+}
+
+.prize-line b {
+  color: #68e0d2;
+  font-size: 19px;
+}
+
+.prize-line b small {
+  color: #747a9c;
+  font-size: 11px;
+}
+
+.winner-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.winner-list span {
+  padding: 4px 8px;
+  color: #bfc3e0;
+  background: rgb(117 103 245 / 18%);
+  border: 1px solid rgb(144 130 255 / 20%);
+  border-radius: 99px;
+  font-size: 11px;
+}
+
+.board-empty {
+  padding: 60px 0;
+  color: #777d9f;
+  text-align: center;
+  font-size: 12px;
+}
+
+.lottery-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 17px;
+  color: #686e91;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+@keyframes float-particle {
+  to {
+    transform: translateY(-28px) scale(1.4);
+    opacity: 0.9;
+  }
+}
+
+@keyframes roll-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes winner-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes waiting-pulse {
+  50% {
+    transform: scale(1.16) rotate(15deg);
+    opacity: 0.55;
+  }
+}
+
+@media (max-width: 840px) {
+  .lottery-header {
+    padding-inline: 24px;
+  }
+
+  .lottery-content {
+    width: min(100% - 32px, 620px);
+    padding-top: 5vh;
+  }
+
+  .draw-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .reveal-panel {
+    min-height: 390px;
+  }
+
+  .prize-board {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 18px;
+  }
+
+  .prize-board > header,
+  .board-empty {
+    grid-column: 1 / -1;
+  }
+
+  .award-card {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .lottery-header {
+    padding: 22px 18px 0;
+  }
+
+  .connection-state {
+    font-size: 10px;
+  }
+
+  .lottery-content {
+    width: calc(100% - 24px);
+    padding-top: 6vh;
+  }
+
+  .draw-layout {
+    margin-top: 30px;
+  }
+
+  .reveal-panel {
+    min-height: 340px;
+    padding: 30px 16px;
+    border-radius: 18px;
+  }
+
+  .rolling-names {
+    gap: 8px;
+    font-size: 18px;
+  }
+
+  .winner-name {
+    font-size: 54px;
+  }
+
+  .prize-board {
+    display: block;
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .award-card:last-child {
+    border-bottom: 0;
+  }
+
+  .lottery-footer {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

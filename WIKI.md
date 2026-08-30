@@ -52,6 +52,36 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 弹幕 HTTP/WS 只接受该只读 token，聊天发言成功后向弹幕通道发送 `message_id`、`activity_id`、`body` 和
 `created_at`，不发送用户名或活动用户身份。设置保存会通过 `danmaku.settings.updated` 实时生效。现有聊天室协议保持不变。
 
+## WebSocket 实时抽奖
+
+`lottery` 模块使用 `lottery_configs`、`lottery_awards`、`lottery_prizes`、`lottery_entries` 和 `lottery_draws` 五张活动隔离表。
+新参与者注册时创建默认名单行，历史参与者没有名单行时按默认可参加处理。配置 HTTP 接口是
+`/admin/activities/{activity_id}/lottery`，名单分页和单行更新接口是其 `/entries`，历史接口是其 `/history`；管理员控制连接是
+`/admin/activities/{activity_id}/lottery/ws`，公开大屏连接是 `/activities/{activity_id}/lottery/ws`。
+
+开奖 service 在 `BEGIN IMMEDIATE` 事务内先按 `(activity_id, request_id)` 查幂等记录，再校验活动为 `open`、奖品库存、启用状态、
+黑名单/白名单、活动用户 `is_active` 和跨奖品不重复规则。剩余库存由奖品数量减中奖记录计数得到；事务提交后才广播管理员完整
+`lottery.draw.result` 和公开脱敏 `lottery.drawn`。管理员连接首帧必须提供超级用户 JWT，带活动上下文的用户 JWT 会被拒绝；大屏
+不能发送控制命令。`lottery.ready`、`lottery.reset` 和 `lottery.config.updated` 在不同权限连接上分别生成安全快照，公开消息不带手机号、
+名单标记、停用状态或管理员字段。
+
+连接管理器为单进程活动房间实现，按 `admin`/`screen` 角色广播并在断开或发送失败时清理连接。管理端和大屏端均使用指数退避重连；
+大屏把 ready 历史作为已揭晓 `draw_id` 基线，后续事件去重后按序播放约 3 秒滚动揭晓。多副本部署仍需引入共享消息总线，不能把当前
+进程内 manager 当作跨实例广播方案。
+
+### 奖品图片媒体
+
+`lottery_prizes` 的 `image_id`、`image_storage_key`、`image_mime` 和 `image_size` 均可为空，旧数据库启动时按列增量迁移。
+媒体根目录由 `MEDIA_ROOT` 配置，奖品图片存于 `lottery-prizes/`，临时上传存于 `.tmp/`；服务端使用随机 key，
+只接受真实 JPEG、PNG、WebP 且单文件不超过 5 MiB。
+
+管理端图片通过独立 multipart 上传、删除和管理员读取接口处理，现有 lottery 配置 PUT 保持纯 JSON。
+公开配置、快照和开奖事件只包含 `/api/v1/activities/{activity_id}/lottery/prizes/{prize_id}/image?v={image_id}` 安全引用，
+公开图片路由不接受管理员凭证；旧版本引用在替换后返回 404。替换/删除提交后清理旧文件，启动和配置操作执行孤儿扫描。
+
+管理端奖品编辑行的左列包含名称输入和图片操作两行，数量、启用和删除控件使用顶部对齐以匹配名称输入首行；奖项头部仍保持居中，
+800px 和 520px 以下继续使用既有网格堆叠规则。
+
 管理端弹幕页的真实测试开关由后端 `DanmakuTestManager` 驱动。任务按启动请求配置的人员数量，为活动创建或复用带
 “弹幕测试用户”标识的活动用户，并为每个用户启动独立发送循环；每个循环调用聊天 service 将测试正文写入
 `activity_chat_messages`，再广播标准聊天室事件和弹幕摘要，每条消息之后按配置的最小和最大延迟做均匀随机等待。因此测试消息可被聊天室、
@@ -63,6 +93,8 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 颜色，后端仍负责最终格式和值域校验并将成功回包规范化为大写十六进制。
 
 管理端活动管理壳复用 `ActivitySidebar`。桌面端侧栏通过 `align-self: start`、视口高度和 `position: sticky` 与右侧内容解耦，右侧长页面不会撑高菜单；侧栏自身允许纵向滚动，移动端在 800px 断点以下恢复单列普通流和自然高度。
+
+管理端活动列表中的每张活动卡片和单活动管理首页的“活动入口”面板都提供“打开抽奖大屏”入口，使用 `VITE_SCREEN_WEB_BASE_URL` 作为大屏基础地址，并附加完整 `activity_id` 查询参数在新标签页打开；卡片主体仍进入活动首页，底部按钮不会触发主体跳转。
 
 Electron 主进程在内存保留 token、session 和 `displayIds`，预加载层通过受限 IPC 把它提供给 `screen-web` 渲染器；
 为每个选中显示器创建透明、置顶、不可聚焦并鼠标穿透的覆盖窗口。启动控制窗口默认 680×720，页面默认隐藏滚动条。

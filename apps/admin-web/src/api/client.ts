@@ -15,7 +15,8 @@ export function clearToken(): void {
 
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
-  headers.set("Content-Type", "application/json");
+  if (options.body instanceof FormData) headers.delete("Content-Type");
+  else headers.set("Content-Type", "application/json");
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
   const response = await fetch(apiURL(path), { ...options, headers });
@@ -76,6 +77,113 @@ export interface DanmakuTestStatus extends DanmakuTestConfig {
   running: boolean;
   detail: string;
 }
+export interface LotteryAward {
+  award_id: number;
+  name: string;
+  sort_order: number;
+}
+export interface LotteryPrize {
+  prize_id: number;
+  award_id: number;
+  name: string;
+  quantity: number;
+  remaining_quantity: number;
+  sort_order: number;
+  is_enabled: boolean;
+  image_url: string | null;
+}
+export interface LotteryPrizeImageResponse {
+  image_url: string | null;
+  image_id?: string | null;
+  mime?: string | null;
+  size?: number | null;
+}
+export interface LotteryEntry {
+  activity_user_id: number;
+  username: string;
+  phone: string;
+  is_active: boolean;
+  is_blacklisted: boolean;
+  is_whitelisted: boolean;
+}
+export interface LotteryEntrySummary {
+  total: number;
+  eligible: number;
+  blacklisted: number;
+  whitelisted: number;
+  inactive: number;
+}
+export type LotteryEntryStatus = "all" | "eligible" | "blacklisted" | "whitelisted" | "inactive";
+export interface LotteryEntryPage {
+  items: LotteryEntry[];
+  page: number;
+  page_size: number;
+  total: number;
+  has_more: boolean;
+  summary: LotteryEntrySummary;
+}
+export interface LotteryEntryUpdateResponse {
+  entry: LotteryEntry;
+  summary: LotteryEntrySummary;
+}
+export interface LotteryConfig {
+  activity_id: string;
+  no_repeat_across_prizes: boolean;
+  rolling_name_count: number;
+  awards: LotteryAward[];
+  prizes: LotteryPrize[];
+  entry_summary: LotteryEntrySummary;
+  updated_at: string;
+}
+export interface LotteryDraw {
+  draw_id: number;
+  activity_id: string;
+  award_id: number;
+  prize_id: number;
+  award_name: string;
+  prize_name: string;
+  prize_image_url?: string | null;
+  draw_number: number;
+  remaining_quantity: number;
+  winner: {
+    activity_user_id: number;
+    username: string;
+    phone: string;
+    joined_at: string;
+  };
+  drawn_at: string;
+}
+export interface LotteryHistoryPage {
+  items: LotteryDraw[];
+  has_more: boolean;
+}
+export interface LotterySnapshotPrize extends LotteryPrize {}
+export interface LotterySnapshotAward {
+  award_id: number;
+  name: string;
+  sort_order: number;
+  prizes: LotterySnapshotPrize[];
+  draws: LotteryDraw[];
+}
+export interface LotterySnapshot {
+  activity_id: string;
+  activity_name: string;
+  activity_status: Activity["status"];
+  config: Pick<LotteryConfig, "no_repeat_across_prizes" | "rolling_name_count">;
+  awards: LotterySnapshotAward[];
+  draws: LotteryDraw[];
+  latest_draw_id: number;
+}
+
+export interface LotteryConfigUpdate {
+  no_repeat_across_prizes?: boolean;
+  rolling_name_count?: number;
+  awards?: Array<Pick<LotteryAward, "name" | "sort_order"> & { award_id?: number | null }>;
+  prizes?: Array<
+    Pick<LotteryPrize, "award_id" | "name" | "quantity" | "sort_order" | "is_enabled">
+    & { prize_id?: number | null }
+  >;
+}
 
 export const login = (username: string, password: string) => request<LoginResponse>("/auth/login", {
   method: "POST", body: JSON.stringify({ username, password }),
@@ -126,3 +234,61 @@ export const startDanmakuTest = (activityId: string, config?: DanmakuTestConfig)
   });
 export const stopDanmakuTest = (activityId: string) =>
   request<DanmakuTestStatus>(`/admin/activities/${activityId}/danmaku/test/stop`, { method: "POST" });
+export const getLottery = (activityId: string) =>
+  request<LotteryConfig>(`/admin/activities/${activityId}/lottery`);
+export const updateLottery = (activityId: string, config: LotteryConfigUpdate) =>
+  request<LotteryConfig>(`/admin/activities/${activityId}/lottery`, {
+    method: "PUT",
+    body: JSON.stringify(config),
+  });
+export const getLotteryEntries = (
+  activityId: string,
+  options: {
+    keyword?: string;
+    status?: LotteryEntryStatus;
+    page?: number;
+    pageSize?: number;
+  } = {},
+) => {
+  const params = new URLSearchParams();
+  if (options.keyword) params.set("keyword", options.keyword);
+  if (options.status) params.set("status", options.status);
+  if (options.page) params.set("page", String(options.page));
+  if (options.pageSize) params.set("page_size", String(options.pageSize));
+  const query = params.toString();
+  return request<LotteryEntryPage>(
+    `/admin/activities/${activityId}/lottery/entries${query ? `?${query}` : ""}`,
+  );
+};
+export const updateLotteryEntry = (
+  activityId: string,
+  activityUserId: number,
+  payload: Pick<LotteryEntry, "is_blacklisted" | "is_whitelisted">,
+) => request<LotteryEntryUpdateResponse>(
+  `/admin/activities/${activityId}/lottery/entries/${activityUserId}`,
+  { method: "PUT", body: JSON.stringify(payload) },
+);
+export const mediaURL = (imageUrl: string | null): string | null => {
+  if (!imageUrl) return null;
+  const origin = baseURL.startsWith("http") ? new URL(baseURL).origin : window.location.origin;
+  return new URL(imageUrl, origin).toString();
+};
+export const uploadLotteryPrizeImage = (activityId: string, prizeId: number, file: File) => {
+  const body = new FormData();
+  body.append("file", file);
+  return request<LotteryPrizeImageResponse>(
+    `/admin/activities/${activityId}/lottery/prizes/${prizeId}/image`,
+    { method: "POST", body },
+  );
+};
+export const deleteLotteryPrizeImage = (activityId: string, prizeId: number) =>
+  request<LotteryPrizeImageResponse>(
+    `/admin/activities/${activityId}/lottery/prizes/${prizeId}/image`,
+    { method: "DELETE" },
+  );
+export const getLotteryHistory = (activityId: string) =>
+  request<LotteryHistoryPage>(`/admin/activities/${activityId}/lottery/history`);
+export const lotteryWebSocketURL = (activityId: string) =>
+  `${baseURL}/admin/activities/${encodeURIComponent(activityId)}/lottery/ws`
+    .replace(/^http:/, "ws:")
+    .replace(/^https:/, "wss:");

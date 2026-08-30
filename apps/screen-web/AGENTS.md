@@ -12,6 +12,17 @@
 `requestAnimationFrame` 循环和 `performance.now()` 派发生命周期、重连、重试和队列刷新任务；位移继续由 CSS
 `transform` 动画完成，不在 JavaScript 中逐帧改写位置。
 
+## 实时抽奖大屏
+
+`src/components/lottery/LotteryScreen.vue` 使用公开 `/api/v1/activities/{activity_id}/lottery/ws`，不发送管理员凭证和
+控制命令。连接成功后以 `lottery.ready` 建立已揭晓 `draw_id` 基线；后续 `lottery.drawn` 通过 `lottery-order.ts` 去重、
+按 ID 排队并播放约 3 秒的滚动候选名单和中奖揭晓。`lottery.reset` 清除队列和名单，`lottery.draw.error` 只显示错误。
+重连采用指数退避，ready 恢复最新库存和中奖名单，不重复播放历史结果。普通大屏通过 `activity_id`/`activityId` 查询参数或
+`/activities/{activity_id}/...` 路径进入抽奖页面，`danmaku-overlay=1` 仍优先进入弹幕渲染器。
+
+奖品配置和开奖事件携带可选安全图片引用；大屏只把相对引用解析到 API 服务，奖品缩略图或中奖奖品图加载失败时
+隐藏图片并保留奖品名称、库存和中奖动画。
+
 ## 本次修复说明
 
 - WS 实时补齐信号仅保留去重的消息 ID，容量上限为 200；超限丢弃最早信号，但保留最新信号以触发恢复。
