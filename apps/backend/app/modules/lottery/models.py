@@ -176,6 +176,23 @@ class LotteryDrawPublic(BaseModel):
     drawn_at: datetime
 
 
+class LotteryRoundParticipant(BaseModel):
+    activity_user_id: int = Field(ge=1)
+    username: str = Field(min_length=1, max_length=100)
+    avatar_id: int = Field(ge=1, le=20)
+
+
+class LotteryRoundPublic(BaseModel):
+    round_id: str = Field(min_length=1, max_length=100)
+    award_id: int = Field(ge=1)
+    award_name: str = Field(min_length=1, max_length=100)
+    prize_id: int = Field(ge=1)
+    prize_name: str = Field(min_length=1, max_length=200)
+    phase: Literal["rolling", "stopping"] = "rolling"
+    participants: list[LotteryRoundParticipant]
+    started_at: datetime
+
+
 class LotteryHistoryPage(BaseModel):
     items: list[LotteryDrawAdmin]
     has_more: bool

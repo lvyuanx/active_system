@@ -165,6 +165,21 @@ export interface LotterySnapshotAward {
   prizes: LotterySnapshotPrize[];
   draws: LotteryDraw[];
 }
+export interface LotteryRoundParticipant {
+  activity_user_id: number;
+  username: string;
+  avatar_id: number;
+}
+export interface LotteryRound {
+  round_id: string;
+  award_id: number;
+  award_name: string;
+  prize_id: number;
+  prize_name: string;
+  phase: "rolling" | "stopping";
+  participants: LotteryRoundParticipant[];
+  started_at: string;
+}
 export interface LotterySnapshot {
   activity_id: string;
   activity_name: string;
@@ -173,6 +188,7 @@ export interface LotterySnapshot {
   awards: LotterySnapshotAward[];
   draws: LotteryDraw[];
   latest_draw_id: number;
+  active_round?: LotteryRound | null;
 }
 
 export interface LotteryConfigUpdate {

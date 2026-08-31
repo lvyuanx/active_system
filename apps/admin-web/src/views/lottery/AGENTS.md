@@ -2,10 +2,10 @@
 
 ## 模块职责
 
-`src/views/lottery/` 提供活动级抽奖配置、按需名单弹窗、管理员 WebSocket 控制、库存/中奖历史展示和重置入口。
+`src/views/lottery/` 提供活动级抽奖配置、按需名单弹窗、管理员 WebSocket 开始/停止控制、库存/中奖历史展示和重置入口。
 
 `index.vue` 维护奖项、奖品和抽奖控制；`LotteryEntriesDialog.vue` 负责名单的服务端搜索、筛选、分页和单行即时保存；
-`useLotterySocket.ts` 负责管理员连接和断线重连。
+`useLotterySocket.ts` 负责管理员连接和断线重连，并在收到鉴权成功后的 `lottery.ready` 首帧时确认连接状态。
 
 奖项和奖品在页面中按父子树形编辑：奖项节点先保存后，才能从该节点添加其子奖品；提交给后端时仍转换为现有的
 `awards` 和 `prizes` 两个数组。
@@ -13,13 +13,15 @@
 ## 主要流程
 
 页面通过 HTTP 读取活动、抽奖配置和历史，然后建立管理员 WebSocket 并在首帧发送管理员 JWT。连接成功后使用
-`lottery.ready` 快照同步库存和历史；开奖、错误、配置更新和重置均由 WebSocket 驱动。断线采用指数退避重连，未
-连接时禁止开奖与重置。抽奖名单只在打开弹窗后通过 HTTP 按页读取，不在主配置页渲染全量参与者。
+`lottery.ready` 快照同步库存、历史和进行中的轮次；开始/停止、停止中、开奖、错误、配置更新和重置均由 WebSocket 驱动。
+断线采用指数退避重连，未连接时禁止开始/停止与重置。抽奖名单只在打开弹窗后通过 HTTP 按页读取，不在主配置页渲染全量参与者；
+抽奖进行中名单黑白名单开关、奖品配置和图片操作均锁定。
 
 ## 页面约定
 
 - 路由为 `/activities/:activityId/lottery`，必须复用 `ActivitySidebar` 并将 `active` 设置为 `lottery`。
-- 抽奖控制发送 `lottery.draw.request`，每次使用新的 `request_id`；结果以 `draw_id` 去重并更新当前奖品库存。
+- 抽奖控制先发送带 `round_id` 的 `lottery.draw.start`，收到 `lottery.draw.started` 后按钮变为“停止抽奖”；停止发送
+  `lottery.draw.stop`，收到 `lottery.draw.stopping` 后同步显示“开奖中”，结果以 `draw_id` 去重并更新当前奖品库存。
 - 重置发送 `lottery.reset.request`，发送前必须由管理员二次确认。
 - 名单弹窗支持用户名/手机号搜索、全部/可抽奖/黑名单/白名单/已停用筛选和 20/50/100 条分页；黑名单与白名单
   单行即时保存，后端返回规范化状态后刷新当前页。

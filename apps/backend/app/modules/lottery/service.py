@@ -1,8 +1,11 @@
+from collections.abc import Collection
+from datetime import datetime
 import secrets
 import sqlite3
 
 from app.core.config import Settings
 from app.core.database import transaction
+from app.modules.participants.avatar import AVATAR_COUNT, AvatarAssignmentError, validate_avatar_id
 from .media_service import cleanup_lottery_media_keys, scan_lottery_media
 from .models import (
     LotteryConfigError,
@@ -16,7 +19,9 @@ from .models import (
     LotteryDrawError,
     LotteryDrawOutcome,
     LotteryHistoryPage,
+    LotteryRoundParticipant,
 )
+from .round_state import LotteryRound
 from .repository import (
     activity_or_raise,
     admin_draw,
@@ -296,11 +301,90 @@ def _eligible_candidates(
     ).fetchall()
 
 
+def _draw_prize_row(
+    connection: sqlite3.Connection,
+    activity_id: str,
+    prize_id: int,
+) -> sqlite3.Row | None:
+    return connection.execute(
+        "SELECT p.prize_id, p.award_id, a.name AS award_name, p.name, p.quantity, p.is_enabled "
+        "FROM lottery_prizes p JOIN lottery_awards a ON a.award_id = p.award_id "
+        "AND a.activity_id = p.activity_id WHERE p.activity_id = ? AND p.prize_id = ?",
+        (activity_id, prize_id),
+    ).fetchone()
+
+
+def _round_avatar_id(activity_user_id: int, value: object) -> int:
+    try:
+        return validate_avatar_id(value)
+    except AvatarAssignmentError:
+        return (activity_user_id - 1) % AVATAR_COUNT + 1
+
+
+def prepare_lottery_round(
+    activity_id: str,
+    prize_id: int,
+    round_id: str,
+    settings: Settings,
+) -> LotteryRound:
+    round_id = round_id.strip()
+    if not round_id or len(round_id) > 100:
+        raise LotteryDrawError("invalid_request", "round_id 必须是 1 至 100 个字符")
+    with transaction(settings) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        activity = activity_or_raise(connection, activity_id)
+        if activity["status"] != "open":
+            raise LotteryDrawError("activity_not_started", "活动尚未开始或已经结束")
+        config = ensure_config(connection, activity_id)
+        prize = _draw_prize_row(connection, activity_id, prize_id)
+        if not prize:
+            raise LotteryDrawError("invalid_prize", "奖品不存在或不属于当前活动")
+        if not bool(prize["is_enabled"]):
+            raise LotteryDrawError("prize_disabled", "该奖品已停用")
+        if draw_count(connection, activity_id, prize_id) >= int(prize["quantity"]):
+            raise LotteryDrawError("inventory_exhausted", "该奖品库存不足")
+        candidates = _eligible_candidates(
+            connection,
+            activity_id,
+            no_repeat=bool(config["no_repeat_across_prizes"]),
+        )
+        if not candidates:
+            raise LotteryDrawError("no_eligible_winner", "当前没有可中奖的用户")
+        participant_rows = connection.execute(
+            "SELECT id, username, avatar_id FROM activity_users "
+            "WHERE activity_id = ? ORDER BY id",
+            (activity_id,),
+        ).fetchall()
+        participants = tuple(
+            LotteryRoundParticipant(
+                activity_user_id=int(row["id"]),
+                username=str(row["username"]),
+                avatar_id=_round_avatar_id(int(row["id"]), row["avatar_id"]),
+            )
+            for row in participant_rows
+        )
+        started_at = datetime.fromisoformat(now())
+        return LotteryRound(
+            activity_id=activity_id,
+            round_id=round_id,
+            award_id=int(prize["award_id"]),
+            award_name=str(prize["award_name"]),
+            prize_id=int(prize["prize_id"]),
+            prize_name=str(prize["name"]),
+            participants=participants,
+            candidate_user_ids=frozenset(int(row["id"]) for row in candidates),
+            started_at=started_at,
+        )
+
+
 def draw_lottery(
     activity_id: str,
     prize_id: int,
     request_id: str,
     settings: Settings,
+    *,
+    candidate_user_ids: Collection[int] | None = None,
+    existing_only: bool = False,
 ) -> LotteryDrawOutcome:
     request_id = request_id.strip()
     if not request_id or len(request_id) > 100:
@@ -313,17 +397,16 @@ def draw_lottery(
         ).fetchone()
         if existing:
             row = draw_row(connection, int(existing["draw_id"]))
+            if int(row["prize_id"]) != prize_id:
+                raise LotteryDrawError("request_conflict", "request_id 已用于其他奖品")
             return LotteryDrawOutcome(admin_draw(row), public_draw(row), [], True)
+        if existing_only:
+            raise LotteryDrawError("round_not_found", "抽奖轮次不存在或已过期")
         activity = activity_or_raise(connection, activity_id)
         if activity["status"] != "open":
             raise LotteryDrawError("activity_not_started", "活动尚未开始或已经结束")
         config = ensure_config(connection, activity_id)
-        prize = connection.execute(
-            "SELECT p.prize_id, p.award_id, p.name, p.quantity, p.is_enabled "
-            "FROM lottery_prizes p JOIN lottery_awards a ON a.award_id = p.award_id "
-            "AND a.activity_id = p.activity_id WHERE p.activity_id = ? AND p.prize_id = ?",
-            (activity_id, prize_id),
-        ).fetchone()
+        prize = _draw_prize_row(connection, activity_id, prize_id)
         if not prize:
             raise LotteryDrawError("invalid_prize", "奖品不存在或不属于当前活动")
         if not bool(prize["is_enabled"]):
@@ -336,6 +419,9 @@ def draw_lottery(
             activity_id,
             no_repeat=bool(config["no_repeat_across_prizes"]),
         )
+        if candidate_user_ids is not None:
+            frozen_ids = {int(user_id) for user_id in candidate_user_ids}
+            candidates = [candidate for candidate in candidates if int(candidate["id"]) in frozen_ids]
         if not candidates:
             raise LotteryDrawError("no_eligible_winner", "当前没有可中奖的用户")
         winner = secrets.choice(candidates)

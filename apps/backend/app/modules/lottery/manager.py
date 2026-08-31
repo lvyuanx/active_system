@@ -1,11 +1,13 @@
 import asyncio
 from collections import defaultdict
+from collections.abc import Awaitable, Callable
 from typing import Any, Literal
 
 from starlette.websockets import WebSocket
 
 
 LotteryRole = Literal["admin", "screen"]
+ReadyPayload = dict[str, Any] | Callable[[], Awaitable[dict[str, Any]]]
 
 
 class LotteryConnectionManager:
@@ -25,13 +27,14 @@ class LotteryConnectionManager:
         activity_id: str,
         websocket: WebSocket,
         role: LotteryRole,
-        payload: dict[str, Any],
+        payload: ReadyPayload,
     ) -> None:
-        """在广播屏障内注册连接并发送首帧，避免事件插入 ready 之前。"""
+        """在广播屏障内生成并发送首帧，避免事件插入 ready 之前。"""
         async with self._broadcast_lock:
             await self.connect(activity_id, websocket, role)
             try:
-                await websocket.send_json(payload)
+                ready_payload = await payload() if callable(payload) else payload
+                await websocket.send_json(ready_payload)
             except Exception:
                 await self._remove_socket(websocket)
                 raise

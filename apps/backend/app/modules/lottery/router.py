@@ -28,24 +28,22 @@ from app.modules.lottery.service import (
     LotteryConfigError,
     LotteryConfigResponse,
     LotteryConfigUpdate,
-    LotteryDrawError,
     LotteryHistoryPage,
-    draw_lottery,
     get_lottery_entries,
     get_lottery_config,
     get_lottery_snapshot,
     list_lottery_history,
     public_config,
-    public_snapshot,
-    reset_lottery,
     update_lottery_entry,
     update_lottery_config,
 )
+from .protocol import handle_admin_lottery_message, send_lottery_error
+from .round_state import lottery_round_store
+from .state import lottery_operation_lock
 
 
 admin_router = APIRouter(prefix="/admin/activities", tags=["lottery-admin"])
 router = APIRouter(prefix="/activities", tags=["lottery"])
-lottery_operation_lock = asyncio.Lock()
 
 
 def _config_http_error(error: LotteryConfigError) -> HTTPException:
@@ -56,7 +54,7 @@ def _config_http_error(error: LotteryConfigError) -> HTTPException:
         "image_not_found",
     }:
         return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error.detail)
-    if error.code in {"config_conflict", "prize_has_draws", "quantity_below_draws"}:
+    if error.code in {"config_conflict", "prize_has_draws", "quantity_below_draws", "draw_in_progress"}:
         return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error.detail)
     return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=error.detail)
 
@@ -82,6 +80,8 @@ async def upload_admin_prize_image(
     settings: Settings = Depends(get_settings),
 ) -> LotteryPrizeImageResponse:
     async with lottery_operation_lock:
+        if lottery_round_store.get(activity_id):
+            raise _config_http_error(LotteryConfigError("draw_in_progress", "抽奖进行中，暂不能修改抽奖配置"))
         try:
             response = await replace_prize_image(activity_id, prize_id, file, settings)
             config = await asyncio.to_thread(get_lottery_config, activity_id, settings)
@@ -107,6 +107,8 @@ async def delete_admin_prize_image(
     settings: Settings = Depends(get_settings),
 ) -> LotteryPrizeImageResponse:
     async with lottery_operation_lock:
+        if lottery_round_store.get(activity_id):
+            raise _config_http_error(LotteryConfigError("draw_in_progress", "抽奖进行中，暂不能修改抽奖配置"))
         try:
             response = await asyncio.to_thread(remove_prize_image, activity_id, prize_id, settings)
             config = await asyncio.to_thread(get_lottery_config, activity_id, settings)
@@ -198,17 +200,26 @@ def get_admin_lottery_entries(
     "/{activity_id}/lottery/entries/{activity_user_id}",
     response_model=LotteryEntryUpdateResponse,
 )
-def save_admin_lottery_entry(
+async def save_admin_lottery_entry(
     activity_id: str,
     activity_user_id: int,
     payload: LotteryEntryUpdate,
     _: str = Depends(require_superuser),
     settings: Settings = Depends(get_settings),
 ) -> LotteryEntryUpdateResponse:
-    try:
-        return update_lottery_entry(activity_id, activity_user_id, payload, settings)
-    except LotteryConfigError as error:
-        raise _config_http_error(error) from error
+    async with lottery_operation_lock:
+        if lottery_round_store.get(activity_id):
+            raise _config_http_error(LotteryConfigError("draw_in_progress", "抽奖进行中，暂不能修改抽奖名单"))
+        try:
+            return await asyncio.to_thread(
+                update_lottery_entry,
+                activity_id,
+                activity_user_id,
+                payload,
+                settings,
+            )
+        except LotteryConfigError as error:
+            raise _config_http_error(error) from error
 
 
 @admin_router.put("/{activity_id}/lottery", response_model=LotteryConfigResponse)
@@ -219,6 +230,8 @@ async def save_admin_lottery(
     settings: Settings = Depends(get_settings),
 ) -> LotteryConfigResponse:
     async with lottery_operation_lock:
+        if lottery_round_store.get(activity_id):
+            raise _config_http_error(LotteryConfigError("draw_in_progress", "抽奖进行中，暂不能修改抽奖配置"))
         try:
             config = await asyncio.to_thread(update_lottery_config, activity_id, payload, settings)
         except LotteryConfigError as error:
@@ -258,21 +271,24 @@ def _authenticate_admin_websocket(
     return require_superuser(credentials, settings)
 
 
-async def _send_error(
-    websocket: WebSocket,
-    code: str,
-    detail: str,
+async def _ready_payload(
+    activity_id: str,
+    settings: Settings,
     *,
-    request_id: str | None = None,
-) -> None:
-    payload: dict[str, object] = {"type": "lottery.draw.error", "code": code, "detail": detail}
-    if request_id:
-        payload["request_id"] = request_id
-    await websocket.send_json(payload)
-
-
-def _ready_payload(snapshot: dict[str, object]) -> dict[str, object]:
-    return {"type": "lottery.ready", **snapshot}
+    include_sensitive: bool,
+) -> dict[str, object]:
+    snapshot = await asyncio.to_thread(
+        get_lottery_snapshot,
+        activity_id,
+        settings,
+        include_sensitive=include_sensitive,
+    )
+    current = lottery_round_store.get(activity_id)
+    return {
+        "type": "lottery.ready",
+        **snapshot,
+        "active_round": current.public_payload() if current else None,
+    }
 
 
 @admin_router.websocket("/{activity_id}/lottery/ws")
@@ -291,13 +307,13 @@ async def admin_lottery_websocket(
             except JSONDecodeError:
                 auth_message = raw_auth_message
         except asyncio.TimeoutError:
-            await _send_error(websocket, "unauthorized", "管理员连接需要首帧 JWT")
+            await send_lottery_error(websocket, "unauthorized", "管理员连接需要首帧 JWT")
             await websocket.close(code=1008)
             return
         except WebSocketDisconnect:
             return
         except (JSONDecodeError, ValueError, TypeError):
-            await _send_error(websocket, "protocol_error", "首帧必须是合法 JSON")
+            await send_lottery_error(websocket, "protocol_error", "首帧必须是合法 JSON")
             await websocket.close(code=1008)
             return
         token: str | None = None
@@ -307,31 +323,25 @@ async def admin_lottery_websocket(
             value = auth_message.get("token")
             token = value if isinstance(value, str) else None
         if not token:
-            await _send_error(websocket, "unauthorized", "管理员连接需要有效 JWT")
+            await send_lottery_error(websocket, "unauthorized", "管理员连接需要有效 JWT")
             await websocket.close(code=1008)
             return
         try:
             await asyncio.to_thread(_authenticate_admin_websocket, token, settings)
-            snapshot = await asyncio.to_thread(
-                get_lottery_snapshot,
+            await lottery_manager.connect_and_send_ready(
                 activity_id,
-                settings,
-                include_sensitive=True,
+                websocket,
+                "admin",
+                lambda: _ready_payload(activity_id, settings, include_sensitive=True),
             )
         except HTTPException as error:
-            await _send_error(websocket, "unauthorized", str(error.detail))
+            await send_lottery_error(websocket, "unauthorized", str(error.detail))
             await websocket.close(code=1008)
             return
         except LotteryConfigError as error:
-            await _send_error(websocket, error.code, error.detail)
+            await send_lottery_error(websocket, error.code, error.detail)
             await websocket.close(code=1008)
             return
-        await lottery_manager.connect_and_send_ready(
-            activity_id,
-            websocket,
-            "admin",
-            _ready_payload(snapshot),
-        )
         connected = True
         while True:
             try:
@@ -339,75 +349,9 @@ async def admin_lottery_websocket(
             except WebSocketDisconnect:
                 break
             except (JSONDecodeError, ValueError, TypeError):
-                await _send_error(websocket, "protocol_error", "消息必须是合法 JSON")
+                await send_lottery_error(websocket, "protocol_error", "消息必须是合法 JSON")
                 continue
-            if not isinstance(message, dict):
-                await _send_error(websocket, "protocol_error", "消息格式不正确")
-                continue
-            message_type = message.get("type")
-            if message_type in {"lottery.ping", "ping"}:
-                await websocket.send_json({"type": "lottery.pong"})
-                continue
-            if message_type == "lottery.draw.request":
-                prize_id = message.get("prize_id")
-                request_id = message.get("request_id")
-                if isinstance(prize_id, bool) or not isinstance(prize_id, int) or prize_id < 1:
-                    await _send_error(websocket, "invalid_request", "prize_id 必须是正整数")
-                    continue
-                if not isinstance(request_id, str) or not request_id.strip() or len(request_id.strip()) > 100:
-                    await _send_error(websocket, "invalid_request", "request_id 必须是 1 至 100 个字符")
-                    continue
-                async with lottery_operation_lock:
-                    try:
-                        outcome = await asyncio.to_thread(
-                            draw_lottery,
-                            activity_id,
-                            prize_id,
-                            request_id,
-                            settings,
-                        )
-                    except LotteryDrawError as error:
-                        await _send_error(websocket, error.code, error.detail, request_id=request_id)
-                        continue
-                    result = {
-                        "type": "lottery.draw.result",
-                        "request_id": request_id,
-                        "idempotent": outcome.idempotent,
-                        "draw": outcome.draw.model_dump(mode="json"),
-                    }
-                    if outcome.idempotent:
-                        await websocket.send_json(result)
-                        continue
-                    await lottery_manager.broadcast_role(activity_id, "admin", result)
-                    await lottery_manager.broadcast_role(
-                        activity_id,
-                        "screen",
-                        {
-                            "type": "lottery.drawn",
-                            "draw": outcome.public_draw.model_dump(mode="json"),
-                            "roll_names": outcome.roll_names,
-                        },
-                    )
-                continue
-            if message_type in {"lottery.reset.request", "lottery.reset"}:
-                async with lottery_operation_lock:
-                    try:
-                        snapshot = await asyncio.to_thread(reset_lottery, activity_id, settings)
-                    except LotteryConfigError as error:
-                        await _send_error(websocket, error.code, error.detail)
-                        continue
-                    await lottery_manager.broadcast_role(
-                        activity_id,
-                        "admin",
-                        {"type": "lottery.reset", "snapshot": snapshot},
-                    )
-                    await lottery_manager.broadcast_role(
-                        activity_id,
-                        "screen",
-                        {"type": "lottery.reset", "snapshot": public_snapshot(snapshot)},
-                    )
-                continue
-            await _send_error(websocket, "protocol_error", "不支持的消息类型")
+            await handle_admin_lottery_message(activity_id, websocket, message, settings)
     finally:
         if connected:
             await lottery_manager.disconnect(activity_id, websocket)
@@ -423,22 +367,16 @@ async def screen_lottery_websocket(
     connected = False
     try:
         try:
-            snapshot = await asyncio.to_thread(
-                get_lottery_snapshot,
+            await lottery_manager.connect_and_send_ready(
                 activity_id,
-                settings,
-                include_sensitive=False,
+                websocket,
+                "screen",
+                lambda: _ready_payload(activity_id, settings, include_sensitive=False),
             )
         except LotteryConfigError as error:
-            await _send_error(websocket, error.code, error.detail)
+            await send_lottery_error(websocket, error.code, error.detail)
             await websocket.close(code=1008)
             return
-        await lottery_manager.connect_and_send_ready(
-            activity_id,
-            websocket,
-            "screen",
-            _ready_payload(snapshot),
-        )
         connected = True
         while True:
             try:
@@ -446,12 +384,12 @@ async def screen_lottery_websocket(
             except WebSocketDisconnect:
                 break
             except (JSONDecodeError, ValueError, TypeError):
-                await _send_error(websocket, "protocol_error", "消息必须是合法 JSON")
+                await send_lottery_error(websocket, "protocol_error", "消息必须是合法 JSON")
                 continue
             if isinstance(message, dict) and message.get("type") in {"lottery.ping", "ping"}:
                 await websocket.send_json({"type": "lottery.pong"})
             else:
-                await _send_error(websocket, "read_only", "大屏连接只允许读取抽奖状态")
+                await send_lottery_error(websocket, "read_only", "大屏连接只允许读取抽奖状态")
     finally:
         if connected:
             await lottery_manager.disconnect(activity_id, websocket)

@@ -31,7 +31,15 @@ export function useLotterySocket(activityId: string, onMessage: LotteryMessageHa
         token: localStorage.getItem("active_admin_token") || "",
       }));
     };
-    current.onmessage = onMessage;
+    current.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data) as { type?: string };
+        if (payload.type === "lottery.ready") connected.value = true;
+      } catch {
+        // 具体协议错误交给页面处理；连接状态只由 ready 帧确认。
+      }
+      onMessage(event);
+    };
     current.onerror = () => current.close();
     current.onclose = () => {
       if (socket !== current) return;

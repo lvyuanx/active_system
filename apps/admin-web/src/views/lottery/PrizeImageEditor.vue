@@ -9,12 +9,12 @@
       />
       <span v-else>图片无法预览</span>
     </div>
-    <label class="image-picker" :class="{ 'is-disabled': !prize.prize_id }">
+    <label class="image-picker" :class="{ 'is-disabled': !prize.prize_id || locked }">
       <span>{{ prize.imageLoading ? "处理中" : "选择图片" }}</span>
       <input
         type="file"
         accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-        :disabled="!prize.prize_id || prize.imageLoading"
+        :disabled="!prize.prize_id || prize.imageLoading || locked"
         @change="selectImage"
       />
     </label>
@@ -22,7 +22,7 @@
       v-if="prize.image_url || prize.pendingImage"
       text
       type="danger"
-      :disabled="prize.imageLoading"
+      :disabled="prize.imageLoading || locked"
       @click="removeImage"
     >移除图片</el-button>
     <small v-if="prize.imageError" class="prize-image-error">{{ prize.imageError }}</small>
@@ -35,9 +35,10 @@
 import { mediaURL } from "../../api/client";
 import type { FormPrize } from "./lottery-config-form";
 
-const props = defineProps<{ prize: FormPrize }>();
+const props = defineProps<{ prize: FormPrize; locked?: boolean }>();
 
 const selectImage = (event: Event) => {
+  if (props.locked) return;
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = "";
@@ -59,6 +60,7 @@ const selectImage = (event: Event) => {
 };
 
 const removeImage = () => {
+  if (props.locked) return;
   if (props.prize.previewUrl) URL.revokeObjectURL(props.prize.previewUrl);
   props.prize.pendingImage = undefined;
   props.prize.previewUrl = undefined;

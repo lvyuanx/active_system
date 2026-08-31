@@ -15,10 +15,14 @@
 ## 实时抽奖大屏
 
 `src/components/lottery/LotteryScreen.vue` 使用公开 `/api/v1/activities/{activity_id}/lottery/ws`，不发送管理员凭证和
-控制命令。连接成功后以 `lottery.ready` 建立已揭晓 `draw_id` 基线；后续 `lottery.drawn` 通过 `lottery-order.ts` 去重、
-按 ID 排队并播放约 3 秒的滚动候选名单和中奖揭晓。`lottery.reset` 清除队列和名单，`lottery.draw.error` 只显示错误。
-重连采用指数退避，ready 恢复最新库存和中奖名单，不重复播放历史结果。普通大屏通过 `activity_id`/`activityId` 查询参数或
+控制命令。连接成功后以 `lottery.ready` 建立已揭晓 `draw_id` 基线，并从 `active_round` 恢复进行中的球体；
+`lottery.draw.started` 传递开始时冻结的全部用户，`LotteryGlobe.vue` 使用 Canvas 持续旋转头像和姓名；收到
+`lottery.draw.stopping` 后立即停止旋转并打散，`lottery.drawn` 到达后把中奖者聚焦到中心再揭晓。旧版无轮次 `lottery.drawn`
+仍通过 `lottery-order.ts` 兜底。
+`lottery.reset` 清除轮次、队列和名单，`lottery.draw.error` 只结束带对应轮次 ID的失败动画。重连采用指数退避，ready 恢复最新库存和中奖名单，不重复播放历史结果。普通大屏通过 `activity_id`/`activityId` 查询参数或
 `/activities/{activity_id}/...` 路径进入抽奖页面，`danmaku-overlay=1` 仍优先进入弹幕渲染器。
+
+高人数球体使用 `lottery-globe-math.ts` 的渲染档位：全部用户保留球面点，头像和姓名按深度、人数和屏幕空间预算降级；头像圆形裁剪图、球体引导线和旋转矩阵均做缓存或复用，避免每帧重复创建高成本对象。
 
 奖品配置和开奖事件携带可选安全图片引用；大屏只把相对引用解析到 API 服务，奖品缩略图或中奖奖品图加载失败时
 隐藏图片并保留奖品名称、库存和中奖动画。

@@ -44,7 +44,12 @@
                 <span class="content-hint">配置和历史使用 HTTP 保存</span>
               </header>
 
-              <el-form label-position="top" class="lottery-form" @submit.prevent="saveConfig">
+              <el-form
+                label-position="top"
+                class="lottery-form"
+                :disabled="roundLocked"
+                @submit.prevent="saveConfig"
+              >
                 <div class="rule-grid">
                   <el-form-item label="跨奖品不重复中奖">
                     <el-switch v-model="form.no_repeat_across_prizes" active-text="启用" inactive-text="关闭" />
@@ -108,7 +113,7 @@
                              <span class="tree-connector" aria-hidden="true">└</span>
                              <div class="prize-name-fields">
                                <el-input v-model="prize.name" placeholder="例如：无线耳机" maxlength="200" />
-                               <PrizeImageEditor :prize="prize" />
+                               <PrizeImageEditor :prize="prize" :locked="roundLocked" />
                              </div>
                            </div>
                           <el-input-number
@@ -124,7 +129,7 @@
                         <el-button
                           plain
                           size="small"
-                          :disabled="award.award_id === null"
+                          :disabled="roundLocked || award.award_id === null"
                           @click="addPrize(award)"
                         >+ 添加奖品</el-button>
                         <p v-if="!isAwardSaved(award)" class="editor-note">奖品会随本次配置一起保存。</p>
@@ -147,7 +152,7 @@
                       <span><strong>{{ form.entry_summary.whitelisted }}</strong>白名单</span>
                       <span><strong>{{ form.entry_summary.inactive }}</strong>已停用</span>
                     </div>
-                    <el-button type="primary" plain @click="entryDialogVisible = true">
+                    <el-button type="primary" plain :disabled="roundLocked" @click="entryDialogVisible = true">
                       配置黑白名单
                     </el-button>
                   </div>
@@ -155,7 +160,12 @@
                 </section>
 
                 <div class="form-actions">
-                  <el-button native-type="submit" type="primary" :loading="saving">保存抽奖配置</el-button>
+                  <el-button
+                    native-type="submit"
+                    type="primary"
+                    :loading="saving"
+                    :disabled="roundLocked"
+                  >保存抽奖配置</el-button>
                 </div>
               </el-form>
             </article>
@@ -176,7 +186,13 @@
               />
               <div class="control-block">
                 <label for="prize-select">选择要抽取的奖品</label>
-                <el-select id="prize-select" v-model="selectedPrizeId" class="prize-select" placeholder="请选择奖品">
+                <el-select
+                  id="prize-select"
+                  v-model="selectedPrizeId"
+                  class="prize-select"
+                  placeholder="请选择奖品"
+                  :disabled="roundLocked"
+                >
                   <el-option
                     v-for="prize in savedPrizes"
                     :key="prize.prize_id ?? prize.name"
@@ -189,18 +205,16 @@
               <button
                 class="draw-button"
                 type="button"
-                :disabled="
-                  !connected || !selectedPrizeId || drawBusy || activity.status !== 'open'
-                "
-                @click="drawOne"
+                :disabled="drawButtonDisabled"
+                @click="toggleDraw"
               >
                 <span class="draw-button-mark">✦</span>
-                <span>{{ drawBusy ? "开奖处理中" : "抽取 1 人" }}</span>
+                <span>{{ drawButtonLabel }}</span>
               </button>
               <button
                 class="reset-button"
                 type="button"
-                :disabled="!connected || drawBusy"
+                :disabled="!connected || drawBusy || roundLocked || resetBusy"
                 @click="resetLottery"
               >
                 重置全部中奖记录
@@ -246,6 +260,7 @@
             v-model="entryDialogVisible"
             :activity-id="activityId"
             :summary="form.entry_summary"
+            :locked="roundLocked"
             @summary-updated="updateEntrySummary"
           />
         </template>
@@ -256,7 +271,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import { useRoute } from "vue-router";
 import ActivitySidebar from "../../components/ActivitySidebar.vue";
 import {
@@ -283,6 +298,7 @@ import {
   type LotteryForm,
 } from "./lottery-config-form";
 import { useLotterySocket } from "./useLotterySocket";
+import { useLotteryRoundControl } from "./useLotteryRoundControl";
 const route = useRoute();
 const activityId = String(route.params.activityId);
 const username = localStorage.getItem("active_admin_username") || "超级用户";
@@ -291,7 +307,6 @@ const config = ref<LotteryConfig>();
 const history = ref<LotteryDraw[]>([]);
 const loading = ref(true);
 const saving = ref(false);
-const drawBusy = ref(false);
 const error = ref("");
 const selectedPrizeId = ref<number>();
 const entryDialogVisible = ref(false);
@@ -369,6 +384,10 @@ const load = async () => {
   }
 };
 const saveConfig = async () => {
+  if (roundLocked.value) {
+    ElMessage.warning("抽奖进行中，暂不能修改抽奖配置");
+    return;
+  }
   saving.value = true;
   configRefreshVersion += 1;
   const imageActions = collectPrizeImageActions(form.prizes);
@@ -385,6 +404,7 @@ const saveConfig = async () => {
   }
 };
 const addAward = () => {
+  if (roundLocked.value) return;
   form.awards.push({
     award_id: nextTemporaryAwardId--,
     name: "新奖项",
@@ -392,6 +412,7 @@ const addAward = () => {
   });
 };
 const removeAward = (index: number) => {
+  if (roundLocked.value) return;
   const award = form.awards[index];
   if (award && award.award_id !== null) {
     form.prizes = form.prizes.filter((prize) => prize.award_id !== award.award_id);
@@ -403,6 +424,7 @@ const prizesForAward = (award: FormAward) => {
   return form.prizes.filter((prize) => prize.award_id === award.award_id);
 };
 const addPrize = (award: FormAward) => {
+  if (roundLocked.value) return;
   if (award.award_id === null) {
     ElMessage.warning("请先添加奖项");
     return;
@@ -420,6 +442,7 @@ const addPrize = (award: FormAward) => {
   });
 };
 const removePrize = (prize: FormPrize) => {
+  if (roundLocked.value) return;
   const index = form.prizes.indexOf(prize);
   if (index >= 0) form.prizes.splice(index, 1);
 };
@@ -427,67 +450,40 @@ const updateEntrySummary = (summary: LotteryEntrySummary) => {
   form.entry_summary = { ...summary };
   if (config.value) config.value.entry_summary = { ...summary };
 };
-const drawOne = () => {
-  if (!selectedPrizeId.value) return;
-  const requestId = globalThis.crypto?.randomUUID?.()
-    || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  if (!send({
-    type: "lottery.draw.request",
-    prize_id: selectedPrizeId.value,
-    request_id: requestId,
-  })) return;
-  drawBusy.value = true;
-};
-const resetLottery = async () => {
-  try {
-    await ElMessageBox.confirm(
-      "重置后所有中奖记录会清空，且大屏会同步清除中奖名单。",
-      "确认重置抽奖",
-      {
-        confirmButtonText: "确认重置",
-        cancelButtonText: "取消",
-        type: "warning",
-      },
-    );
-  } catch {
-    return;
-  }
-  if (!send({ type: "lottery.reset.request" })) return;
-  drawBusy.value = true;
-};
-const handleMessage = (event: MessageEvent<string>) => {
+function handleMessage(event: MessageEvent<string>) {
   let payload: Record<string, unknown>;
   try {
     payload = JSON.parse(event.data) as Record<string, unknown>;
   } catch {
     return;
   }
-  if (payload.type === "lottery.ready") {
-    connected.value = true;
-    applySnapshot(payload as unknown as LotterySnapshot);
-    drawBusy.value = false;
-  } else if (payload.type === "lottery.draw.result" && payload.draw) {
-    upsertHistory(payload.draw as LotteryDraw);
-    drawBusy.value = false;
-  } else if (payload.type === "lottery.draw.error") {
-    drawBusy.value = false;
-    ElMessage.error(String(payload.detail || "开奖失败"));
-    if (payload.code === "unauthorized") {
-      window.dispatchEvent(new CustomEvent("admin-unauthorized"));
-    }
-  } else if (payload.type === "lottery.reset" && payload.snapshot) {
-    applySnapshot(payload.snapshot as LotterySnapshot);
-    drawBusy.value = false;
-    ElMessage.success("中奖记录已重置");
-  } else if (payload.type === "lottery.config.updated") {
+  if (handleLotteryMessage(payload)) return;
+  if (payload.type === "lottery.config.updated") {
     if (saving.value) return;
     const refreshVersion = configRefreshVersion;
     void getLottery(activityId).then((latest) => {
       if (!saving.value && refreshVersion === configRefreshVersion) applyConfig(latest);
     }).catch(() => undefined);
   }
-};
+}
 const { connected, send } = useLotterySocket(activityId, handleMessage);
+const {
+  drawBusy,
+  roundLocked,
+  resetBusy,
+  drawButtonLabel,
+  drawButtonDisabled,
+  toggleDraw,
+  resetLottery,
+  handleLotteryMessage,
+} = useLotteryRoundControl({
+  activity,
+  connected,
+  selectedPrizeId,
+  send,
+  applySnapshot,
+  upsertHistory,
+});
 onMounted(() => {
   void load();
 });

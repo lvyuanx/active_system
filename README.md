@@ -57,11 +57,13 @@ Docker 部署使用持久化媒体卷，配置 JSON 不承载图片二进制。
 `/api/v1/admin/activities/{activity_id}/lottery/ws` 控制开奖和重置，连接首帧发送管理员 JWT；奖项、奖品和抽奖规则通过
 `GET/PUT /api/v1/admin/activities/{activity_id}/lottery` 配置，名单通过
 `GET/PUT /api/v1/admin/activities/{activity_id}/lottery/entries` 按页搜索和单行即时保存，中奖历史通过
-`GET /api/v1/admin/activities/{activity_id}/lottery/history` 查询。开奖事务提交后才广播，重复的 `request_id` 只返回原结果。
+`GET /api/v1/admin/activities/{activity_id}/lottery/history` 查询。抽奖先发送 `lottery.draw.start` 开始球体动画，
+收到 `lottery.draw.started` 后发送 `lottery.draw.stop` 才会开奖；开奖事务提交后才广播，轮次 ID保证重复停止幂等。
 
-公开大屏连接 `/api/v1/activities/{activity_id}/lottery/ws`，不携带管理员凭证；连接成功通过 `lottery.ready` 恢复快照，
-开奖事件使用 `lottery.drawn`，只包含用户名、奖项、序号和剩余库存，不返回手机号或名单标记。大屏地址可以使用
-`http://localhost:5174/?activity_id={activity_id}`，断线会指数退避重连并按 `draw_id` 去重，重置前管理端要求二次确认。
+公开大屏连接 `/api/v1/activities/{activity_id}/lottery/ws`，不携带管理员凭证；连接成功通过 `lottery.ready` 恢复快照和进行中的轮次，
+开始事件包含开始时冻结的活动用户头像与用户名，停止时先广播仅含轮次 ID 的 `lottery.draw.stopping` 让球体立即冻结并打散，
+事务提交后再由 `lottery.drawn` 触发中奖者聚焦和揭晓，不返回手机号或名单标记。
+大屏地址可以使用 `http://localhost:5174/?activity_id={activity_id}`，断线会指数退避重连并按 `draw_id` 去重，重置前管理端要求二次确认。
 
 奖品可绑定图片。管理端先保存奖品配置，再通过独立图片接口上传、替换或移除；公开大屏只收到活动隔离的安全图片引用。
 图片校验真实 MIME、扩展名和大小，旧资源在提交后清理，启动和配置操作会扫描孤儿文件；无图或加载失败时保留文字和库存展示。

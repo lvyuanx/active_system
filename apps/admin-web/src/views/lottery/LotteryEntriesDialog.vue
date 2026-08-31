@@ -37,7 +37,9 @@
       </el-radio-group>
     </div>
 
-    <p class="entry-dialog-note">黑白名单互斥；停用用户即使被加入白名单，也不会参与开奖。</p>
+    <p class="entry-dialog-note">
+      {{ locked ? "抽奖进行中，黑白名单暂不可修改。" : "黑白名单互斥；停用用户即使被加入白名单，也不会参与开奖。" }}
+    </p>
 
     <el-table
       v-loading="loading"
@@ -74,7 +76,7 @@
           <el-switch
             :model-value="row.is_blacklisted"
             :loading="isUpdating(row.activity_user_id)"
-            :disabled="isUpdating(row.activity_user_id)"
+            :disabled="locked || isUpdating(row.activity_user_id)"
             @change="updateFlag(row, 'blacklisted', Boolean($event))"
           />
         </template>
@@ -84,7 +86,7 @@
           <el-switch
             :model-value="row.is_whitelisted"
             :loading="isUpdating(row.activity_user_id)"
-            :disabled="isUpdating(row.activity_user_id)"
+            :disabled="locked || isUpdating(row.activity_user_id)"
             @change="updateFlag(row, 'whitelisted', Boolean($event))"
           />
         </template>
@@ -130,6 +132,7 @@ const props = defineProps<{
   modelValue: boolean;
   activityId: string;
   summary: LotteryEntrySummary;
+  locked?: boolean;
 }>();
 const emit = defineEmits<{
   (event: "update:modelValue", value: boolean): void;
@@ -218,7 +221,7 @@ const updateFlag = async (
   flag: "blacklisted" | "whitelisted",
   enabled: boolean,
 ) => {
-  if (isUpdating(entry.activity_user_id)) return;
+  if (props.locked || isUpdating(entry.activity_user_id)) return;
   const pending = new Set(updatingIds.value);
   pending.add(entry.activity_user_id);
   updatingIds.value = pending;
