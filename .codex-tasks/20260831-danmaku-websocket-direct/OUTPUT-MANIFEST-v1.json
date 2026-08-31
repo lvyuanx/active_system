@@ -1,0 +1,44 @@
+{
+  "task_version": "TASK-v1",
+  "plan_revision": "v10",
+  "head_sha": "5bc847a650a072b8ad13508b27a059983d18b036",
+  "tree_oid": "ac1cf86d65a128cec4b34dd7ed14732ebf55802c",
+  "tracked_diff": {
+    "command": "git diff --binary --full-index --no-ext-diff",
+    "sha256": "a96cec60903394d4010a35c7d12edffcff42193f9bc6da5ed4c785cccc2f3ffa",
+    "file_count": 11,
+    "independent_patch_path": null,
+    "reason": "SERIAL_SHARED_WRITE 直接在主工作树形成差异，未导出独立补丁文件。"
+  },
+  "tracked_files": [
+    {"path": "LEARNING.md", "sha256": "fb64f5f8bf0a5ef2f574539518697b75419214d793231c5e7f38878e8046c7ed"},
+    {"path": "MEMORY.md", "sha256": "d351f30f8298b87d28861dee8b2b82f2318683f5cd42227016c0c67a4b7a976d"},
+    {"path": "WIKI.md", "sha256": "072c23d1c43ca9181fd9fe2280cf0ddbd26f83d6c725e3b84e5372042a421fc8"},
+    {"path": "apps/backend/tests/test_danmaku.py", "sha256": "87cb5d1db5f580c9c8cafde8c5d98f43b22fc6dfd8b5d3d5314fb99f84403073"},
+    {"path": "apps/screen-web/AGENTS.md", "sha256": "5cbf424dd0370616655c1d9f2dd2563ecb03ece3eb2ea01463e06663b31f8a42"},
+    {"path": "apps/screen-web/scripts/test-danmaku-layout.mjs", "sha256": "69a6a8012851fd8c200ab077c66612760eff84bb937e48ebb273a3914ad946cf"},
+    {"path": "apps/screen-web/scripts/test-lottery-order.mjs", "sha256": "f722595eca0f3bda7973b010def81d0b38d490429b566f127c1c4abe20ac85d0"},
+    {"path": "apps/screen-web/scripts/test-message-order.mjs", "sha256": "50eab78909f2e8f393c0c0ab262c28b09cd461f99f1191d141a6f9bbaf609f28"},
+    {"path": "apps/screen-web/scripts/test-task-scheduler.mjs", "sha256": "fe043a35ca527f6943f092dd2eac9c3c47570eaa3d6a2334f271462d7d78e484"},
+    {"path": "apps/screen-web/src/components/realtime/DanmakuOverlay.vue", "sha256": "8d9410eed7032e021ef48017067354b8f96faffbed41c41ad9f959029b0f15c3"},
+    {"path": "apps/screen-web/src/components/realtime/message-order.ts", "sha256": "319e5dd203d85ed73ac8945f1f8956bf73388b1be6ddf1cfd2d0289787a82a2a"}
+  ],
+  "evidence_files": [
+    {"path": ".codex-tasks/20260831-danmaku-websocket-direct/TASK-v1.md", "sha256": "8325cc0f2421bf2b30b3626202fc1474897765a48ac9bfb90a783899dbf0f8c6"},
+    {"path": ".codex-tasks/20260831-danmaku-websocket-direct/PRODUCT-HANDOFF-v1.md", "sha256": "cca30816bf886c1af40f1b4bc0f66f5115ba896a5b4f5f9c5e38376141e654ec"},
+    {"path": ".codex-tasks/20260831-danmaku-websocket-direct/DEVELOPMENT-HANDOFF-v1.md", "sha256": "8934e7148f7c39773a943780d00ab83ba70a984bbac88a4ce55d15e9f6636530"},
+    {"path": ".codex-tasks/20260831-danmaku-websocket-direct/TESTING-HANDOFF-v1-BLOCKED.md", "sha256": "2f617d903c5bc135f61e3ac128480a3e4418588a1136ecc35ef8b12a1d7445a1"},
+    {"path": ".codex-tasks/20260831-danmaku-websocket-direct/TESTING-HANDOFF-v1.md", "sha256": "ed8dae2fb8be54917c86c04ba87b6990c7a3dd18b6de2d1f5baa964253759b11"},
+    {"path": ".codex-tasks/20260831-danmaku-websocket-direct/REVIEW-HANDOFF-v1-CHANGES_REQUIRED.md", "sha256": "58aded1d442e36ca9b56c0762ad56edb7f7252cbb275b66620861ee9effbc600"},
+    {"path": ".codex-tasks/20260831-danmaku-websocket-direct/REVIEW-HANDOFF-v2-CHANGES_REQUIRED.md", "sha256": "6e3c0ce2543549a63b808aa559a84ce4a8eb7ddb840bf563e28ade2991f439c8"},
+    {"path": ".codex-tasks/20260831-danmaku-websocket-direct/REVIEW-HANDOFF-v3-APPROVED.md", "sha256": "f4d57b83be3e86162aa052b2b9dd0f4d60b7ca6857d7f3876f9a62ccc69ccc74"},
+    {"path": ".codex-tasks/20260831-danmaku-websocket-direct/INPUT-MANIFEST-v1.json", "sha256": "de1cb8a7821918d412d8662e6c1b146c0f6d88c0ce09346dff141e66f8dc8de4"},
+    {"path": ".codex-tasks/20260831-danmaku-websocket-direct/ACCEPTANCE-HANDOFF-v1-BLOCKED.md", "sha256": "188cb764c563b5361d5314789e6191399620395789c7856750c70d886207a1a8"},
+    {"path": ".codex-tasks/20260831-danmaku-websocket-direct/ACCEPTANCE-HANDOFF-v2-ACCEPTED.md", "sha256": "bcc924b7e702524ea601542092b89618977e56d332af3a41463199fcddc2bb55"},
+    {"path": ".codex-tasks/20260831-danmaku-websocket-direct/CLEANUP-HANDOFF-v1.md", "sha256": "328ac6e2445ffccf37f0543d48349094a69081b1cd3d68b60326cba4fea116de"}
+  ],
+  "excluded_self_references": [
+    ".codex-tasks/20260831-danmaku-websocket-direct/TASKGRAPH-v1.json",
+    ".codex-tasks/20260831-danmaku-websocket-direct/OUTPUT-MANIFEST-v1.json"
+  ]
+}

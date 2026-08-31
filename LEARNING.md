@@ -39,6 +39,13 @@
 - 生命周期调度可由单个 `requestAnimationFrame` 循环统一处理，但弹幕位移保留 CSS `transform` 动画，避免 JavaScript
   逐帧改写位置；Electron 透明覆盖窗口需要显式关闭 `backgroundThrottling`。
 
+## 2026-08-31 弹幕 WebSocket 完整消息直达
+
+- WebSocket 已携带完整弹幕载荷时，客户端只有在 `message_id === lastMessageId + 1` 且没有恢复中的待处理消息时才可直接入队；
+  ID 缺口、恢复中的事件必须缓存完整载荷并从当前游标通过 HTTP 补齐。
+- 待恢复消息按 `message_id` 去重并限制容量；HTTP 与 WebSocket 交错到达时先按连续游标消费缓存，再合并恢复结果，
+  这样 HTTP 暂时失败不会丢失已经收到的正文，也不会重复展示。
+
 ## 2026-08-28 管理端活动壳
 
 - CSS Grid 的网格项默认会沿行轴拉伸；当活动管理页右侧内容变长时，左侧菜单会被同步撑高。需要让侧栏使用固定视口高度并设置 `align-self: start`，桌面端再配合 `position: sticky`；移动端应覆盖为自然高度和普通流定位。

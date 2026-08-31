@@ -29,10 +29,12 @@ import {
   type DanmakuSettings,
 } from "../../api/client";
 import {
-  addPendingRealtimeSignal,
+  addPendingRealtimeMessage,
   getReadyRecoveryAfterId,
+  getRealtimeMessageDecision,
   mergeOrderedMessages,
-  removeResolvedRealtimeSignals,
+  removeResolvedRealtimeMessages,
+  takeContiguousRealtimeMessages,
 } from "./message-order";
 import {
   DANMAKU_GAP_PX,
@@ -84,7 +86,7 @@ let reconnectAttempt = 0;
 let stopped = false;
 let recovering = false;
 let reconcilingRealtimeMessages = false;
-let pendingRealtimeMessageIds: number[] = [];
+let pendingRealtimeMessages: DanmakuMessage[] = [];
 let unsubscribeOverlaySession: (() => void) | undefined;
 let flushTaskId: ScheduledTaskId | undefined;
 let reconnectTaskId: ScheduledTaskId | undefined;
@@ -129,7 +131,7 @@ const resetRuntime = (next: DanmakuOverlayBootstrap) => {
   stopped = false;
   recovering = false;
   reconcilingRealtimeMessages = false;
-  pendingRealtimeMessageIds = [];
+  pendingRealtimeMessages = [];
   reconnectAttempt = 0;
   bootstrap.value = next;
   lastMessageId.value = next.session.latest_message_id;
@@ -246,8 +248,13 @@ const fetchMessagesAfter = async (afterId: number): Promise<DanmakuMessage[]> =>
 const applyOrderedMessages = (messages: DanmakuMessage[]) => {
   mergeOrderedMessages(lastMessageId.value, messages).forEach(queueMessage);
 };
+const drainPendingRealtimeMessages = () => {
+  const drained = takeContiguousRealtimeMessages(lastMessageId.value, pendingRealtimeMessages);
+  pendingRealtimeMessages = drained.remaining;
+  drained.messages.forEach(queueMessage);
+};
 const scheduleRealtimeRetry = () => {
-  if (realtimeRetryTaskId !== undefined || stopped || recovering || pendingRealtimeMessageIds.length === 0) return;
+  if (realtimeRetryTaskId !== undefined || stopped || recovering || pendingRealtimeMessages.length === 0) return;
   realtimeRetryTaskId = scheduler.scheduleAfter(500, () => {
     realtimeRetryTaskId = undefined;
     void reconcileRealtimeMessages();
@@ -257,14 +264,17 @@ const reconcileRealtimeMessages = async () => {
   if (reconcilingRealtimeMessages || recovering || stopped || !bootstrap.value) return;
   reconcilingRealtimeMessages = true;
   try {
-    while (!stopped && pendingRealtimeMessageIds.length > 0) {
+    while (!stopped && pendingRealtimeMessages.length > 0) {
+      drainPendingRealtimeMessages();
+      if (pendingRealtimeMessages.length === 0) return;
       const messages = await fetchMessagesAfter(lastMessageId.value);
+      if (messages.length > 0) applyOrderedMessages(messages);
+      drainPendingRealtimeMessages();
+      pendingRealtimeMessages = removeResolvedRealtimeMessages(pendingRealtimeMessages, lastMessageId.value);
       if (messages.length === 0) return;
-      applyOrderedMessages(messages);
-      pendingRealtimeMessageIds = removeResolvedRealtimeSignals(pendingRealtimeMessageIds, lastMessageId.value);
     }
   } catch {
-    // Keep the event IDs pending so a temporary HTTP failure cannot skip live messages.
+    // Keep complete WebSocket messages pending so a temporary HTTP failure cannot skip live messages.
   } finally {
     reconcilingRealtimeMessages = false;
     scheduleRealtimeRetry();
@@ -277,19 +287,35 @@ const handleReady = async (session: DanmakuSession, ws: WebSocket) => {
   let recoveredCompletely = false;
   try {
     applyOrderedMessages(await fetchMessagesAfter(recoveryCursor));
+    drainPendingRealtimeMessages();
     recoveredCompletely = true;
   } catch {
     // Keep the prior cursor so the next WebSocket session retries the complete missed range.
     ws.close(1012, "弹幕补齐失败，正在重连");
   } finally {
     recovering = false;
-    if (!recoveredCompletely) {
-      pendingRealtimeMessageIds = [];
-      return;
-    }
-    pendingRealtimeMessageIds = removeResolvedRealtimeSignals(pendingRealtimeMessageIds, lastMessageId.value);
+    if (!recoveredCompletely) return;
+    drainPendingRealtimeMessages();
+    pendingRealtimeMessages = removeResolvedRealtimeMessages(pendingRealtimeMessages, lastMessageId.value);
     void reconcileRealtimeMessages();
   }
+};
+const handleRealtimeMessage = (message: DanmakuMessage) => {
+  if (bootstrap.value?.session.activity_id !== message.activity_id) return;
+  pendingRealtimeMessages = removeResolvedRealtimeMessages(pendingRealtimeMessages, lastMessageId.value);
+  const decision = getRealtimeMessageDecision(
+    lastMessageId.value,
+    message.message_id,
+    recovering || reconcilingRealtimeMessages || pendingRealtimeMessages.length > 0,
+  );
+  if (decision === "ignore") return;
+  if (decision === "direct") {
+    queueMessage(message);
+    return;
+  }
+  pendingRealtimeMessages = addPendingRealtimeMessage(pendingRealtimeMessages, message);
+  drainPendingRealtimeMessages();
+  if (pendingRealtimeMessages.length > 0) void reconcileRealtimeMessages();
 };
 const connect = () => {
   if (stopped || !bootstrap.value) return;
@@ -309,13 +335,7 @@ const connect = () => {
     }
     if (payload.type === "danmaku.ready" && payload.session) void handleReady(payload.session, ws);
     if (payload.type === "danmaku.message.created" && payload.message) {
-      if (payload.message.message_id > lastMessageId.value) {
-        pendingRealtimeMessageIds = addPendingRealtimeSignal(
-          pendingRealtimeMessageIds,
-          payload.message.message_id,
-        );
-        void reconcileRealtimeMessages();
-      }
+      handleRealtimeMessage(payload.message);
     }
     if (payload.type === "danmaku.settings.updated" && payload.settings) setSettings(payload.settings);
     if (payload.type === "danmaku.error" && payload.code === "unauthorized") {

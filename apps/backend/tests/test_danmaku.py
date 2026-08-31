@@ -19,6 +19,7 @@ from app.modules.danmaku.testing import danmaku_test_manager
 def make_client(tmp_path: Path) -> tuple[TestClient, Settings]:
     settings = Settings(
         database_path=str(tmp_path / "danmaku.db"),
+        media_root=str(tmp_path / "media"),
         jwt_secret="test-secret-at-least-thirty-two-bytes",
         danmaku_token_secret="separate-danmaku-test-secret",
         superuser_username="root",
@@ -524,8 +525,9 @@ def test_admin_danmaku_test_sends_real_chat_messages_to_chat_and_overlay(
             "弹幕测试用户1",
             "弹幕测试用户2",
         }
+        chat_before_id = second_chat["message"]["message_id"] + 1
         chat_history = client.get(
-            f"/api/v1/activities/{activity_id}/chat/messages?limit=100",
+            f"/api/v1/activities/{activity_id}/chat/messages?before_id={chat_before_id}&limit=100",
             headers={"Authorization": f"Bearer {user_token}"},
         )
         assert chat_history.status_code == 200

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { enqueueLotteryDraw, readyLotteryDrawIds } from "../dist-test/components/lottery/lottery-order.js";
+import { enqueueLotteryDraw, readyLotteryDrawIds } from "../dist-test/lottery/lottery-order.js";
 
 const draw = (draw_id) => ({
   draw_id,

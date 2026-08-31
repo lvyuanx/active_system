@@ -1,0 +1,640 @@
+{
+  "plan_revision": "v10",
+  "task_version": "TASK-v1",
+  "workflow_id": "WF-20260831-DANMAKU-WEBSOCKET-DIRECT",
+  "run_id": "RUN-20260831-DANMAKU-WEBSOCKET-DIRECT-001",
+  "input_snapshot": {
+    "head_sha": "5bc847a650a072b8ad13508b27a059983d18b036",
+    "tree_oid": "ac1cf86d65a128cec4b34dd7ed14732ebf55802c",
+    "state": "clean",
+    "input_snapshot_id": "HEAD-5bc847a-clean-20260831"
+  },
+  "input_snapshot_id": "HEAD-5bc847a-clean-20260831",
+  "limits": {
+    "child_threads": 3,
+    "read_only_batches": 6,
+    "isolated_write_packages": 3,
+    "main_integration_writers": 1
+  },
+  "nodes": [
+    {
+      "workflow_id": "WF-20260831-DANMAKU-WEBSOCKET-DIRECT",
+      "task_version": "TASK-v1",
+      "node_id": "product",
+      "role": "product_manager",
+      "stage": "product",
+      "depends_on": [],
+      "required": true,
+      "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006"],
+      "handoff_ref": "TASK-v1.md",
+      "requested_mode": "READ_ONLY_PARALLEL",
+      "effective_mode": "SERIAL_SHARED_WRITE",
+      "permission_class": "read-only",
+      "priority": 1,
+      "batch_id": "batch-1",
+      "attempt": 1,
+      "thread_id": "/root/product_ws_direct",
+      "outcome": "completed",
+      "work_package_id": "WP-20260831-DANMAKU-WEBSOCKET-DIRECT-MAIN",
+      "resource_claims": ["source-snapshot"],
+      "status": "SUCCEEDED",
+      "started_at": "2026-08-31T11:09:35.1337524+08:00",
+      "ended_at": "2026-08-31T11:16:20.0405276+08:00",
+      "event_refs": ["GRAPH_PRECHECK_PASSED", "SERIAL_DEGRADATION"],
+      "evidence_refs": ["TASK-v1.md", "PRODUCT-HANDOFF-v1.md"],
+      "reason_code": "PARENT_PERMISSION_UNAVAILABLE"
+    },
+    {
+      "workflow_id": "WF-20260831-DANMAKU-WEBSOCKET-DIRECT",
+      "task_version": "TASK-v1",
+      "node_id": "development",
+      "role": "developer",
+      "stage": "development",
+      "depends_on": ["product"],
+      "required": true,
+      "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006"],
+      "handoff_ref": "DEVELOPMENT-HANDOFF-v1.md",
+      "requested_mode": "SERIAL_SHARED_WRITE",
+      "effective_mode": "SERIAL_SHARED_WRITE",
+      "permission_class": "workspace-write",
+      "priority": 1,
+      "batch_id": "batch-2",
+      "attempt": 8,
+      "thread_id": "/root/develop_evidence_fix",
+      "outcome": "completed",
+      "work_package_id": "WP-20260831-DANMAKU-WEBSOCKET-DIRECT-MAIN",
+      "resource_claims": ["main-worktree", "pnpm-cache"],
+      "status": "SUCCEEDED",
+      "started_at": "2026-08-31T14:55:02+08:00",
+      "ended_at": "2026-08-31T15:00:00+08:00",
+      "event_refs": ["INPUT_SNAPSHOT_REJECTED", "INPUT_SNAPSHOT_CORRECTED", "DEVELOPMENT_COMPLETED", "TESTING_ROLLBACK_TO_DEVELOPMENT", "TESTING_ATTEMPT_4_ROLLBACK_TO_DEVELOPMENT"],
+      "evidence_refs": ["git-show-head-tree-v2", "INPUT-MANIFEST-v1.json", "DEVELOPMENT-HANDOFF-v1.md"],
+      "reason_code": null
+    },
+    {
+      "workflow_id": "WF-20260831-DANMAKU-WEBSOCKET-DIRECT",
+      "task_version": "TASK-v1",
+      "node_id": "testing",
+      "role": "tester",
+      "stage": "testing",
+      "depends_on": ["development"],
+      "required": true,
+      "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006"],
+      "handoff_ref": "TESTING-HANDOFF-v1.md",
+      "requested_mode": "SERIAL_SHARED_WRITE",
+      "effective_mode": "SERIAL_SHARED_WRITE",
+      "permission_class": "workspace-write",
+      "priority": 1,
+      "batch_id": "batch-3",
+      "attempt": 8,
+      "thread_id": "/root/final_test_evidence",
+      "outcome": "completed",
+      "work_package_id": "WP-20260831-DANMAKU-WEBSOCKET-DIRECT-MAIN",
+      "resource_claims": ["main-worktree", "pnpm-cache"],
+      "status": "SUCCEEDED",
+      "started_at": "2026-08-31T15:55:02+08:00",
+      "ended_at": "2026-08-31T16:05:00+08:00",
+      "event_refs": ["TESTING_BLOCKED", "OUT_OF_SCOPE_WRITE", "TESTING_COMPLETED", "TESTER_THREAD_REPLACED", "TESTING_EVIDENCE_FIX_COMPLETED", "TESTING_ATTEMPT_4_BLOCKED", "TESTING_ATTEMPT_5_COMPLETED", "TESTING_STRUCTURAL_FINAL_COMPLETED", "TESTING_EVIDENCE_REVISED_COMPLETED"],
+      "evidence_refs": ["TESTING-HANDOFF-v1-BLOCKED.md", "TESTING-HANDOFF-v1.md"],
+      "reason_code": null
+    },
+    {
+      "workflow_id": "WF-20260831-DANMAKU-WEBSOCKET-DIRECT",
+      "task_version": "TASK-v1",
+      "node_id": "review",
+      "role": "reviewer",
+      "stage": "review",
+      "depends_on": ["testing"],
+      "required": true,
+      "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006"],
+      "handoff_ref": "REVIEW-HANDOFF-v1.md",
+      "requested_mode": "READ_ONLY_PARALLEL",
+      "effective_mode": "SERIAL_SHARED_WRITE",
+      "permission_class": "read-only",
+      "priority": 1,
+      "batch_id": "batch-4",
+      "attempt": 3,
+      "thread_id": "/root/rereview_ws_direct",
+      "outcome": "APPROVED",
+      "work_package_id": "WP-20260831-DANMAKU-WEBSOCKET-DIRECT-MAIN",
+      "resource_claims": ["source-snapshot", "test-evidence"],
+      "status": "SUCCEEDED",
+      "started_at": "2026-08-31T15:25:00+08:00",
+      "ended_at": "2026-08-31T15:35:00+08:00",
+      "event_refs": ["REVIEW_CHANGES_REQUIRED", "REVIEW_ROLLBACK_TO_DEVELOPMENT", "REREVIEW_CHANGES_REQUIRED", "REREVIEW_ROLLBACK_TO_DEVELOPMENT", "REVIEW_APPROVED"],
+      "evidence_refs": ["REVIEW-HANDOFF-v1-CHANGES_REQUIRED.md", "REVIEW-HANDOFF-v2-CHANGES_REQUIRED.md", "REVIEW-HANDOFF-v3-APPROVED.md"],
+      "reason_code": "PARENT_PERMISSION_UNAVAILABLE"
+    },
+    {
+      "workflow_id": "WF-20260831-DANMAKU-WEBSOCKET-DIRECT",
+      "task_version": "TASK-v1",
+      "node_id": "acceptance",
+      "role": "acceptance_owner",
+      "stage": "acceptance",
+      "depends_on": ["review"],
+      "required": true,
+      "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006"],
+      "handoff_ref": "ACCEPTANCE-HANDOFF-v2-ACCEPTED.md",
+      "requested_mode": "READ_ONLY_PARALLEL",
+      "effective_mode": "SERIAL_SHARED_WRITE",
+      "permission_class": "read-only",
+      "priority": 1,
+      "batch_id": "batch-5",
+      "attempt": 4,
+      "thread_id": "/root/accept_ws_direct",
+      "outcome": "ACCEPTED",
+      "work_package_id": "WP-20260831-DANMAKU-WEBSOCKET-DIRECT-MAIN",
+      "resource_claims": ["source-snapshot", "test-evidence"],
+      "status": "SUCCEEDED",
+      "started_at": "2026-08-31T16:05:02+08:00",
+      "ended_at": "2026-08-31T16:13:06.2745834+08:00",
+      "event_refs": ["ACCEPTANCE_BLOCKED", "ACCEPTANCE_ROLLBACK_TO_EVIDENCE", "ACCEPTANCE_EVIDENCE_CORRECTION_COMPLETED", "ACCEPTANCE_COMPLETED"],
+      "evidence_refs": ["ACCEPTANCE-HANDOFF-v1-BLOCKED.md", "ACCEPTANCE-HANDOFF-v2-ACCEPTED.md"],
+      "reason_code": null
+    },
+    {
+      "workflow_id": "WF-20260831-DANMAKU-WEBSOCKET-DIRECT",
+      "task_version": "TASK-v1",
+      "node_id": "cleanup",
+      "role": "main_agent",
+      "stage": "cleanup",
+      "depends_on": ["acceptance"],
+      "required": true,
+      "acceptance_refs": ["AC-006"],
+      "handoff_ref": "CLEANUP-HANDOFF-v1.md",
+      "requested_mode": "MAIN_INTEGRATION_WRITE",
+      "effective_mode": "MAIN_INTEGRATION_WRITE",
+      "permission_class": "workspace-write",
+      "priority": 1,
+      "batch_id": "batch-6",
+      "attempt": 1,
+      "thread_id": null,
+      "outcome": "completed",
+      "work_package_id": "WP-20260831-DANMAKU-WEBSOCKET-DIRECT-MAIN",
+      "resource_claims": ["main-worktree", "task-documents"],
+      "status": "SUCCEEDED",
+      "started_at": "2026-08-31T16:14:58+08:00",
+      "ended_at": "2026-08-31T16:17:51.8758817+08:00",
+      "event_refs": ["CLEANUP_COMPLETED"],
+      "evidence_refs": ["CLEANUP-HANDOFF-v1.md"],
+      "reason_code": null
+    }
+  ],
+  "batches": [
+    {
+      "batch_id": "batch-1",
+      "node_ids": ["product"],
+      "permission_class": "read-only",
+      "barrier_after": true
+    },
+    {
+      "batch_id": "batch-2",
+      "node_ids": ["development"],
+      "permission_class": "workspace-write",
+      "barrier_after": true
+    },
+    {
+      "batch_id": "batch-3",
+      "node_ids": ["testing"],
+      "permission_class": "workspace-write",
+      "barrier_after": true
+    },
+    {
+      "batch_id": "batch-4",
+      "node_ids": ["review"],
+      "permission_class": "read-only",
+      "barrier_after": true
+    },
+    {
+      "batch_id": "batch-5",
+      "node_ids": ["acceptance"],
+      "permission_class": "read-only",
+      "barrier_after": true
+    },
+    {
+      "batch_id": "batch-6",
+      "node_ids": ["cleanup"],
+      "permission_class": "workspace-write",
+      "barrier_after": true
+    }
+  ],
+  "work_packages": [
+    {
+      "work_package_id": "WP-20260831-DANMAKU-WEBSOCKET-DIRECT-MAIN",
+      "workflow_id": "WF-20260831-DANMAKU-WEBSOCKET-DIRECT",
+      "target": "主工作树中的 screen-web 弹幕实时消费链路",
+      "read_scope": [
+        "apps/screen-web/src/components/realtime",
+        "apps/screen-web/src/api/client.ts",
+        "apps/screen-web/scripts",
+        "apps/screen-web/AGENTS.md",
+        "apps/backend/app/modules/danmaku/manager.py",
+        "apps/backend/tests/test_danmaku.py",
+        "MEMORY.md",
+        "LEARNING.md",
+        "WIKI.md"
+      ],
+      "write_scope": [
+        "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+        "apps/screen-web/src/components/realtime/message-order.ts",
+        "apps/screen-web/scripts/test-message-order.mjs",
+        "apps/screen-web/scripts/test-task-scheduler.mjs",
+        "apps/screen-web/scripts/test-danmaku-layout.mjs",
+        "apps/screen-web/scripts/test-lottery-order.mjs",
+        "apps/backend/tests/test_danmaku.py",
+        "apps/screen-web/AGENTS.md",
+        "MEMORY.md",
+        "LEARNING.md",
+        "WIKI.md",
+        ".codex-tasks/20260831-danmaku-websocket-direct"
+      ],
+      "ephemeral_scope": [
+        "apps/screen-web/dist-test"
+      ],
+      "acceptance_refs": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006"],
+      "upstream_dependencies": ["product"],
+      "downstream_dependencies": ["testing", "review", "acceptance", "cleanup"],
+      "handoff_ref": "TASK-v1.md",
+      "input_snapshot": "HEAD-5bc847a-clean-20260831",
+      "input_snapshot_id": "HEAD-5bc847a-clean-20260831",
+      "input_manifest_sha256": "b79c0db350c77cc20b4177958c957f4494be5659cc673cce99c3328b95380c36",
+      "input_manifest_ref": "INPUT-MANIFEST-v1.json",
+      "input_manifest_semantics": "任务开始快照清单；聚合值必须从 INPUT-MANIFEST-v1.json 的 entries 重算，不能用当前工作树文件重算。当前已修改文件的 SHA 与输入快照不同属于预期，使用 actual_file_manifest/OUTPUT-MANIFEST-v1.json 验证当前状态。",
+      "input_manifest_entries_recomputed": true,
+      "input_manifest_recomputed_sha256": "b79c0db350c77cc20b4177958c957f4494be5659cc673cce99c3328b95380c36",
+      "input_tree_oid": "ac1cf86d65a128cec4b34dd7ed14732ebf55802c",
+      "head_snapshot": "HEAD-5bc847a-clean-20260831",
+      "head_sha": "5bc847a650a072b8ad13508b27a059983d18b036",
+      "branch_ref": "master",
+      "worktree_path": "D:/projects/active_system",
+      "upstream_patch_shas": [],
+      "output_patch_path": null,
+      "output_patch_sha256": null,
+      "output_patch_reason": "NOT_APPLICABLE：SERIAL_SHARED_WRITE 直接在主工作树形成差异，未导出独立补丁文件。",
+      "output_manifest_ref": "OUTPUT-MANIFEST-v1.json",
+      "output_manifest_sha256": "0bffffe5ed4b4f525b08d334bdd8aba285e77cc405777b53bb5970e7ac31c312",
+      "resource_claims": ["main-worktree", "pnpm-cache"],
+      "file_manifest": [
+        "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+        "apps/screen-web/src/components/realtime/message-order.ts",
+        "apps/screen-web/scripts/test-message-order.mjs",
+        "apps/screen-web/scripts/test-task-scheduler.mjs",
+        "apps/screen-web/scripts/test-danmaku-layout.mjs",
+        "apps/screen-web/scripts/test-lottery-order.mjs",
+        "apps/backend/tests/test_danmaku.py",
+        "apps/screen-web/AGENTS.md",
+        "MEMORY.md",
+        "LEARNING.md",
+        "WIKI.md",
+        ".codex-tasks/20260831-danmaku-websocket-direct"
+      ],
+      "actual_file_manifest": [
+        {"path": "LEARNING.md", "sha256": "fb64f5f8bf0a5ef2f574539518697b75419214d793231c5e7f38878e8046c7ed"},
+        {"path": "MEMORY.md", "sha256": "d351f30f8298b87d28861dee8b2b82f2318683f5cd42227016c0c67a4b7a976d"},
+        {"path": "WIKI.md", "sha256": "072c23d1c43ca9181fd9fe2280cf0ddbd26f83d6c725e3b84e5372042a421fc8"},
+        {"path": "apps/backend/tests/test_danmaku.py", "sha256": "87cb5d1db5f580c9c8cafde8c5d98f43b22fc6dfd8b5d3d5314fb99f84403073"},
+        {"path": "apps/screen-web/AGENTS.md", "sha256": "5cbf424dd0370616655c1d9f2dd2563ecb03ece3eb2ea01463e06663b31f8a42"},
+        {"path": "apps/screen-web/scripts/test-danmaku-layout.mjs", "sha256": "69a6a8012851fd8c200ab077c66612760eff84bb937e48ebb273a3914ad946cf"},
+        {"path": "apps/screen-web/scripts/test-lottery-order.mjs", "sha256": "f722595eca0f3bda7973b010def81d0b38d490429b566f127c1c4abe20ac85d0"},
+        {"path": "apps/screen-web/scripts/test-message-order.mjs", "sha256": "50eab78909f2e8f393c0c0ab262c28b09cd461f99f1191d141a6f9bbaf609f28"},
+        {"path": "apps/screen-web/scripts/test-task-scheduler.mjs", "sha256": "fe043a35ca527f6943f092dd2eac9c3c47570eaa3d6a2334f271462d7d78e484"},
+        {"path": "apps/screen-web/src/components/realtime/DanmakuOverlay.vue", "sha256": "8d9410eed7032e021ef48017067354b8f96faffbed41c41ad9f959029b0f15c3"},
+        {"path": "apps/screen-web/src/components/realtime/message-order.ts", "sha256": "319e5dd203d85ed73ac8945f1f8956bf73388b1be6ddf1cfd2d0289787a82a2a"}
+      ],
+      "patch_digest": "sha256:a96cec60903394d4010a35c7d12edffcff42193f9bc6da5ed4c785cccc2f3ffa",
+      "qualification": "NOT_APPLICABLE",
+      "status": "SUCCEEDED"
+    }
+  ],
+  "status": "SUCCEEDED",
+  "metrics": {
+    "peak_active_threads": 1,
+    "peak_isolated_write_packages": 0,
+    "queued_node_count": 0,
+    "queue_total_duration": 0,
+    "queue_duration_by_node": {},
+      "batch_duration": {
+      "batch-1": {"duration_ms": 404907, "source": "TaskGraph/TASK artifact timestamps"},
+      "batch-2-attempt-4": {"duration_ms": 5642832, "source": "review rollback to development handoff timestamp"},
+      "batch-2-attempt-7": {"duration_ms": 599000, "source": "TaskGraph event timestamps"},
+      "batch-2-attempt-8": {"duration_ms": 298000, "source": "TaskGraph event timestamps"},
+      "batch-3-attempt-3": {"duration_ms": 532335, "source": "development handoff to testing handoff timestamp"},
+      "batch-3-attempt-5": {"duration_ms": 599000, "source": "TaskGraph event timestamps"},
+      "batch-3-attempt-6": {"duration_ms": 1394372, "source": "testing structural handoff timestamp"},
+      "batch-4-attempt-1": {"duration_ms": 761895, "source": "testing handoff to CHANGES_REQUIRED review artifact timestamp"},
+      "batch-5-attempt-4": {"duration_ms": 484275, "source": "acceptance node start to ACCEPTANCE-HANDOFF-v2-ACCEPTED.md timestamp"},
+      "batch-6-attempt-1": {"duration_ms": 173876, "source": "cleanup command start to CLEANUP-HANDOFF-v1.md timestamp"}
+    },
+    "degradation_counts": {
+      "resource": 0,
+      "platform": 2,
+      "qualification": 2
+    },
+    "degradation_category": "qualification",
+    "degradation_reason_code": "OUT_OF_SCOPE_WRITE",
+    "degradation_reason_codes": ["PARENT_PERMISSION_UNAVAILABLE", "INPUT_SNAPSHOT_MISMATCH", "OUT_OF_SCOPE_WRITE"],
+    "degradation_reason": "只读岗位串行执行；输入 tree 元数据已纠正；首次完整测试暴露旧导入路径并触发越界媒体删除，已恢复文件并回退开发修复测试隔离。"
+  },
+  "events": [
+    {
+      "event": "GRAPH_PRECHECK_PASSED",
+      "at": "2026-08-31T11:09:35.1337524+08:00",
+      "evidence": "6 个 node_id 唯一，所有依赖存在，无自依赖；Kahn 已处理 6/6，顺序为 product -> development -> testing -> review -> acceptance -> cleanup，未处理节点为空。"
+    },
+    {
+      "event": "SERIAL_DEGRADATION",
+      "at": "2026-08-31T11:09:36+08:00",
+      "reason_code": "PARENT_PERMISSION_UNAVAILABLE",
+      "evidence": "只读角色不进入并发批次；子线程按线性依赖逐一派生，写入阶段保持主工作树单写入者。"
+    },
+    {
+      "event": "SCOPE_CLASSIFIED",
+      "at": "2026-08-31T11:09:37+08:00",
+      "evidence": "后端 manager 已广播完整 DanmakuMessage；本次不改协议与后端生产代码，按 screen-web 单模块行为变更 T4 路由。"
+    },
+    {
+      "event": "PRODUCT_COMPLETED",
+      "at": "2026-08-31T11:16:20.0405276+08:00",
+      "node_id": "product",
+      "evidence": "TASK-v1 已冻结，AC-001 至 AC-006 完整，无待确认项。"
+    },
+    {
+      "event": "INPUT_SNAPSHOT_REJECTED",
+      "at": "2026-08-31T11:34:00+08:00",
+      "node_id": "development",
+      "reason_code": "INPUT_SNAPSHOT_MISMATCH",
+      "evidence": "WorkPackage 首次记录 tree_oid=223994064...；git show 与 git cat-file 均证明 HEAD 5bc847a 的实际 tree 为 ac1cf86...，开发停止写入。"
+    },
+    {
+      "event": "INPUT_SNAPSHOT_CORRECTED",
+      "at": "2026-08-31T11:34:30+08:00",
+      "node_id": "development",
+      "evidence": "plan_revision 更新为 v2，HEAD 和 input_snapshot_id 不变，input_tree_oid 修正为 ac1cf86d65a128cec4b34dd7ed14732ebf55802c；TASK-v1 未改变。"
+    },
+    {
+      "event": "INPUT_MANIFEST_PERSISTED",
+      "at": "2026-08-31T11:35:10.3844509+08:00",
+      "node_id": "development",
+      "evidence": "主 Agent 将开发前采集的 10 个输入文件 SHA-256 与聚合值持久化为 INPUT-MANIFEST-v1.json。"
+    },
+    {
+      "event": "DEVELOPMENT_COMPLETED",
+      "at": "2026-08-31T11:40:00+08:00",
+      "node_id": "development",
+      "evidence": "development attempt=2 快照、范围、实现、文档和基础验证通过；DEVELOPMENT-HANDOFF-v1 状态 completed。"
+    },
+    {
+      "event": "TESTING_BLOCKED",
+      "at": "2026-08-31T11:47:32.2917099+08:00",
+      "node_id": "testing",
+      "reason_code": "DEPENDENCY_FAILED",
+      "evidence": "空 dist-test 下完整 screen-web test 因旧导入路径退出 1；TESTING-HANDOFF-v1-BLOCKED 状态 blocked。"
+    },
+    {
+      "event": "OUT_OF_SCOPE_WRITE",
+      "at": "2026-08-31T11:47:33+08:00",
+      "node_id": "testing",
+      "reason_code": "OUT_OF_SCOPE_WRITE",
+      "evidence": "后端测试 lifespan 使用默认 data/media 扫描并删除两个 tracked 奖品文件；测试立即停止，主 Agent 已按 HEAD 精确恢复。"
+    },
+    {
+      "event": "DEPENDENCY_BLOCKED_PROPAGATED",
+      "at": "2026-08-31T11:47:34+08:00",
+      "source_node_id": "testing",
+      "target_node_ids": ["review", "acceptance", "cleanup"],
+      "reason_code": "DEPENDENCY_FAILED",
+      "evidence": "首次测试门禁未通过，所有后继节点在回退前递归阻断，未启动审核或验收。"
+    },
+    {
+      "event": "UNINTENDED_DELETIONS_RESTORED",
+      "at": "2026-08-31T11:47:35+08:00",
+      "node_id": "cleanup",
+      "evidence": "仅恢复 data/media/lottery-prizes 下两个由本次测试删除的输入快照文件；恢复后两项不再出现在 git status。"
+    },
+    {
+      "event": "TESTING_ROLLBACK_TO_DEVELOPMENT",
+      "at": "2026-08-31T11:47:36+08:00",
+      "node_id": "development",
+      "evidence": "plan_revision=v3；TASK-v1 可观察行为不变，写入范围仅增加三个 screen-web 测试脚本和 test_danmaku.py 的 media_root 隔离。"
+    },
+    {
+      "event": "DEVELOPMENT_REPAIR_COMPLETED",
+      "at": "2026-08-31T11:54:48.1784816+08:00",
+      "node_id": "development",
+      "evidence": "development attempt=3 修复干净编译导入与 pytest media_root 隔离；空 dist-test 全量 screen-web test、typecheck、build 和后端 7 项测试通过，媒体哈希未变化。"
+    },
+    {
+      "event": "TESTING_COMPLETED",
+      "at": "2026-08-31T12:01:30.2822956+08:00",
+      "node_id": "testing",
+      "evidence": "testing attempt=2 从空 dist-test 完成五组测试、typecheck、build、后端 7 项回归、范围审计和媒体前后哈希校验；TESTING-HANDOFF-v1 状态 completed。"
+    },
+    {
+      "event": "REVIEW_CHANGES_REQUIRED",
+      "at": "2026-08-31T12:14:12.1761566+08:00",
+      "node_id": "review",
+      "reason_code": "HANDOFF_INVALID",
+      "evidence": "代码无阻断发现；TaskGraph 最终清单/差异摘要/批次时间缺失，测试交接有失效引用，MEMORY 状态滞后。"
+    },
+    {
+      "event": "REVIEW_DEPENDENCY_BLOCKED_PROPAGATED",
+      "at": "2026-08-31T12:14:12.5000000+08:00",
+      "source_node_id": "review",
+      "target_node_ids": ["acceptance", "cleanup"],
+      "reason_code": "DEPENDENCY_FAILED",
+      "evidence": "首次审核要求修改，验收与清理未启动。"
+    },
+    {
+      "event": "REVIEW_ROLLBACK_TO_DEVELOPMENT",
+      "at": "2026-08-31T12:14:13+08:00",
+      "node_id": "development",
+      "evidence": "plan_revision=v4，TASK-v1 行为不变；回退仅修正交付证据、测试交接引用和当前进度文档，之后重新测试与复审。"
+    },
+    {
+      "event": "DEVELOPER_THREAD_REPLACED",
+      "at": "2026-08-31T13:45:00+08:00",
+      "node_id": "development",
+      "reason_code": "PLATFORM_AUTHENTICATION_FAILED",
+      "attempt_count": 2,
+      "raw_error": "developer role request returned HTTP 401 before task execution",
+      "evidence": "原 development 线程连续两次在执行前遇到平台认证失败，未产生工作树改动；同角色新线程接替限定文档修订。"
+    },
+    {
+      "event": "DEVELOPMENT_EVIDENCE_FIX_COMPLETED",
+      "at": "2026-08-31T13:48:15.8320721+08:00",
+      "node_id": "development",
+      "evidence": "development attempt=4 仅更新 MEMORY 当前状态与 DEVELOPMENT-HANDOFF；TASK-v1 行为和测试资产未改，git diff --check 通过。"
+    },
+    {
+      "event": "TESTER_THREAD_REPLACED",
+      "at": "2026-08-31T13:49:00+08:00",
+      "node_id": "testing",
+      "reason_code": "PLATFORM_AUTHENTICATION_FAILED",
+      "attempt_count": 2,
+      "raw_error": "tester role request returned HTTP 401 before task execution",
+      "evidence": "原 testing 线程连续两次在执行前遇到平台认证失败，未产生工作树改动；同角色新线程接替重测。"
+    },
+    {
+      "event": "TESTING_EVIDENCE_FIX_COMPLETED",
+      "at": "2026-08-31T13:57:08.3349247+08:00",
+      "node_id": "testing",
+      "evidence": "testing attempt=3 修正失效引用；screen-web test/typecheck、后端 7 项回归和 diff check 通过，媒体哈希未变化。"
+    },
+    {
+      "event": "OUTPUT_MANIFEST_PERSISTED",
+      "at": "2026-08-31T13:58:14.0247617+08:00",
+      "evidence": "固化 11 个 tracked 文件 SHA-256、tracked binary diff SHA-256、7 个交接证据哈希和无独立补丁理由。"
+    },
+    {
+      "event": "REREVIEW_CHANGES_REQUIRED",
+      "at": "2026-08-31T14:10:00+08:00",
+      "node_id": "review",
+      "reason_code": "HANDOFF_INVALID",
+      "evidence": "代码与文件哈希无阻断；发现 testing 无效事件引用、401 失败分类错误、输出清单归属未满足依赖和 MEMORY attempt 状态滞后。"
+    },
+    {
+      "event": "REREVIEW_DEPENDENCY_BLOCKED_PROPAGATED",
+      "at": "2026-08-31T14:10:01+08:00",
+      "source_node_id": "review",
+      "target_node_ids": ["acceptance", "cleanup"],
+      "reason_code": "DEPENDENCY_FAILED",
+      "evidence": "第二次复审要求修改，验收与清理仍未启动。"
+    },
+    {
+      "event": "REREVIEW_ROLLBACK_TO_DEVELOPMENT",
+      "at": "2026-08-31T14:10:02+08:00",
+      "node_id": "development",
+      "evidence": "plan_revision=v5，TASK-v1 行为不变；仅修正真实事件链、MEMORY attempt 状态和派生输出清单。"
+    },
+    {
+      "event": "DEVELOPMENT_STATUS_EVIDENCE_COMPLETED",
+      "at": "2026-08-31T14:15:00+08:00",
+      "node_id": "development",
+      "evidence": "development attempt=5 将 MEMORY 更新为 testing attempt=3、两次审核 CHANGES_REQUIRED；生产实现和测试资产未改，diff check 通过。"
+    },
+    {
+      "event": "TESTING_ATTEMPT_4_BLOCKED",
+      "at": "2026-08-31T14:25:00+08:00",
+      "node_id": "testing",
+      "reason_code": "DEPENDENCY_FAILED",
+      "evidence": "后端全文件 pytest 首轮 1 failed/6 passed、复跑 7 passed；chat 历史默认最新 100 条导致首批消息断言随并发产量不稳定，测试拒绝以复跑通过掩盖失败。"
+    },
+    {
+      "event": "TESTING_ATTEMPT_4_DEPENDENCY_BLOCKED_PROPAGATED",
+      "at": "2026-08-31T14:25:01+08:00",
+      "source_node_id": "testing",
+      "target_node_ids": ["review", "acceptance", "cleanup"],
+      "reason_code": "DEPENDENCY_FAILED",
+      "evidence": "testing attempt=4 阻断，第三次复审未启动。"
+    },
+    {
+      "event": "TESTING_ATTEMPT_4_ROLLBACK_TO_DEVELOPMENT",
+      "at": "2026-08-31T14:25:02+08:00",
+      "node_id": "development",
+      "evidence": "plan_revision=v6；仅修正 test_danmaku.py 聊天历史查询的确定性，TASK-v1 生产行为不变。"
+    },
+    {
+      "event": "DEVELOPMENT_ATTEMPT_6_BLOCKED",
+      "at": "2026-08-31T14:35:00+08:00",
+      "node_id": "development",
+      "reason_code": "HANDOFF_INVALID",
+      "evidence": "主 Agent 指定 after_id=0，但既有 chat API 约束 after_id>=1，目标用例返回 422；生产代码未改，媒体最终已恢复。"
+    },
+    {
+      "event": "DEVELOPMENT_ATTEMPT_6_CLARIFIED",
+      "at": "2026-08-31T14:35:01+08:00",
+      "node_id": "development",
+      "evidence": "TASK-v1 未要求 chat after_id=0；plan_revision=v7 改用现有 before_id=second_message_id+1 获取首批目标消息，不扩大生产接口。"
+    },
+    {
+      "event": "PREEXISTING_MEDIA_DELETION_RESTORED_BEFORE_ATTEMPT_7",
+      "at": "2026-08-31T14:35:03+08:00",
+      "node_id": "development",
+      "evidence": "development attempt=7 正式测试前发现 PNG 为残留删除状态并按 HEAD 精确恢复；随后 7 次测试前后媒体状态/哈希均稳定。"
+    },
+    {
+      "event": "DEVELOPMENT_ATTEMPT_7_COMPLETED",
+      "at": "2026-08-31T14:45:00+08:00",
+      "node_id": "development",
+      "evidence": "chat history 改用 before_id=second_message_id+1；目标用例连续 5 次、后端全文件 2 次通过，未修改生产接口或放宽断言。"
+    },
+    {
+      "event": "TESTING_ATTEMPT_5_COMPLETED",
+      "at": "2026-08-31T14:55:00+08:00",
+      "node_id": "testing",
+      "evidence": "screen-web test/typecheck/build 通过；目标用例连续 5 次、后端全文件连续 3 次均首次通过；事件引用、范围和媒体哈希门禁通过。"
+    },
+    {
+      "event": "PRE_REVIEW_STATUS_SYNC_PLANNED",
+      "at": "2026-08-31T14:55:01+08:00",
+      "node_id": "development",
+      "evidence": "plan_revision=v8；复审前将 MEMORY 改为稳定的“最新全量门禁已通过、待复审与验收”表述，避免易变 attempt 编号再次滞后。"
+    },
+    {
+      "event": "DEVELOPMENT_FINAL_STATUS_SYNC_COMPLETED",
+      "at": "2026-08-31T15:00:00+08:00",
+      "node_id": "development",
+      "evidence": "development attempt=8 将 MEMORY 改为不依赖 attempt 编号的稳定状态；生产实现和测试资产未改，diff check 通过。"
+    },
+    {
+      "event": "TESTING_STRUCTURAL_FINAL_COMPLETED",
+      "at": "2026-08-31T15:23:15.3723888+08:00",
+      "node_id": "testing",
+      "evidence": "testing attempt=6 核验 v8 JSON、事件引用、7 个 v7 测试资产哈希、媒体哈希和 scope violation=0；未运行写业务数据的测试。"
+    },
+    {
+      "event": "REVIEW_APPROVED",
+      "at": "2026-08-31T15:35:00+08:00",
+      "node_id": "review",
+      "evidence": "第三次复审确认 TaskGraph/清单/范围/测试证据一致，生产实现无阻断问题；真实 Electron 覆盖缺口列为残余风险。"
+    },
+    {
+      "event": "OUTPUT_MANIFEST_REFRESHED",
+      "at": "2026-08-31T15:36:00+08:00",
+      "evidence": "输出清单加入第三次 APPROVED 审核交接，当前 SHA-256 为 d3fb08510db6076dc230e171475a0d5a62b674a4147eeca36560a1b70a9b60c1。"
+    },
+    {
+      "event": "ACCEPTANCE_BLOCKED",
+      "at": "2026-08-31T15:50:00+08:00",
+      "node_id": "acceptance",
+      "reason_code": "HANDOFF_INVALID",
+      "evidence": "AC-001 至 AC-005 通过；AC-006 因验收节点重复时间键、旧事件计数和输入快照语义未明确而阻断，记录于 ACCEPTANCE-HANDOFF-v1-BLOCKED。"
+    },
+    {
+      "event": "ACCEPTANCE_ROLLBACK_TO_EVIDENCE",
+      "at": "2026-08-31T15:50:01+08:00",
+      "node_id": "cleanup",
+      "reason_code": "HANDOFF_INVALID",
+      "evidence": "仅修正 TaskGraph/交接证据，不改变 TASK-v1 可观察行为；cleanup 暂不执行，修正后重新验收。"
+    },
+    {
+      "event": "ACCEPTANCE_EVIDENCE_CORRECTION_COMPLETED",
+      "at": "2026-08-31T15:55:00+08:00",
+      "evidence": "v10 明确输入清单按 entries 重算 b79c0d；当前工作树改动改由 output/actual manifest 验证；串行主树不要求虚构隔离集成节点。"
+    },
+    {
+      "event": "TESTING_EVIDENCE_REVISED_PLANNED",
+      "at": "2026-08-31T15:55:01+08:00",
+      "node_id": "testing",
+      "evidence": "测试交接需更新到 v10 的 event_count/plan_revision，并确认历史 v8/v9 结构核验结论未被覆盖。"
+    },
+    {
+      "event": "TESTING_EVIDENCE_REVISED_COMPLETED",
+      "at": "2026-08-31T16:05:00+08:00",
+      "node_id": "testing",
+      "evidence": "testing attempt=7 已核验 v10 事件引用、输入/输出快照语义、媒体哈希和范围；缺失引用修正后结构门禁通过。"
+    },
+    {
+      "event": "ACCEPTANCE_COMPLETED",
+      "at": "2026-08-31T16:13:06.2745834+08:00",
+      "node_id": "acceptance",
+      "evidence": "acceptance attempt=4 产出 ACCEPTANCE-HANDOFF-v2-ACCEPTED.md；AC-001 至 AC-006 全部 PASS，交接 SHA-256 为 bcc924b7e702524ea601542092b89618977e56d332af3a41463199fcddc2bb55。"
+    },
+    {
+      "event": "CLEANUP_COMPLETED",
+      "at": "2026-08-31T16:17:51.8758817+08:00",
+      "node_id": "cleanup",
+      "evidence": "已删除登记的 apps/screen-web/dist-test 临时目录（2 个子目录、5 个生成文件）；目标不存在、未被 Git 跟踪，媒体状态无变化；cleanup 交接 SHA-256 为 328ac6e2445ffccf37f0543d48349094a69081b1cd3d68b60326cba4fea116de。"
+    }
+  ]
+}

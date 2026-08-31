@@ -1,0 +1,50 @@
+{
+  "snapshot_id": "HEAD-5bc847a-clean-20260831",
+  "head_sha": "5bc847a650a072b8ad13508b27a059983d18b036",
+  "tree_oid": "ac1cf86d65a128cec4b34dd7ed14732ebf55802c",
+  "algorithm": "SHA-256",
+  "aggregate_format": "path<TAB>sha256 joined with LF in listed order",
+  "aggregate_sha256": "b79c0db350c77cc20b4177958c957f4494be5659cc673cce99c3328b95380c36",
+  "entries": [
+    {
+      "path": "apps/screen-web/src/components/realtime/DanmakuOverlay.vue",
+      "sha256": "1f47a3301c79da400d99a2b3d6093b81ae5de7fd2f03f85af11f46b40576258a"
+    },
+    {
+      "path": "apps/screen-web/src/components/realtime/message-order.ts",
+      "sha256": "3e3a66cb86d389a212a2fe2842fd7aaa28dcf9fd217d9c63c9ee97fb5448a47a"
+    },
+    {
+      "path": "apps/screen-web/scripts/test-message-order.mjs",
+      "sha256": "fd1a7b41211735f085349769b4ba4d129ab6d5ebad6cdfe0c2dde974d2bf2410"
+    },
+    {
+      "path": "apps/screen-web/src/api/client.ts",
+      "sha256": "9ddb62f14b2918ef8efecf72252d935e6177be99e16eae463d3c79dc9543f997"
+    },
+    {
+      "path": "apps/screen-web/AGENTS.md",
+      "sha256": "664629802ef3d5f0c6e1a0c150570dac48cfcc569077e3aa1f538486df5a1b31"
+    },
+    {
+      "path": "apps/backend/app/modules/danmaku/manager.py",
+      "sha256": "ed41da970e72e89969f706956f4f3079eae2fc959b66ff8fbb1be662c7439065"
+    },
+    {
+      "path": "apps/backend/tests/test_danmaku.py",
+      "sha256": "12431a85e67805e019d0d60448ebb0dd9e21d6fbe29db479f2a999e3ab5c8e31"
+    },
+    {
+      "path": "MEMORY.md",
+      "sha256": "5905f644ea2648c80de61ed3c30f603f17a9cee0eb46e345f32e562f5bb9f59e"
+    },
+    {
+      "path": "LEARNING.md",
+      "sha256": "b5dd1706d95e1498d1e521097bad8165682d1bad84c7a102b148496d546d921f"
+    },
+    {
+      "path": "WIKI.md",
+      "sha256": "928f9e3d431b3194404ca32b4e2a9ba9c5273c1a78487600d1d4eb5ebb148cd6"
+    }
+  ]
+}

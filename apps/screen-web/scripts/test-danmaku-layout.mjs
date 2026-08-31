@@ -10,7 +10,7 @@ const {
   isPendingMessageExpired,
   measureDanmakuText,
   willDanmakuCollide,
-} = await import("../dist-test/danmaku-layout.js");
+} = await import("../dist-test/realtime/danmaku-layout.js");
 
 const viewportWidth = 1000;
 const shortMotion = { startedAt: 0, durationMs: 10_000, width: 100 };

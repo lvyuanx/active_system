@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-const { createTaskScheduler } = await import("../dist-test/task-scheduler.js");
+const { createTaskScheduler } = await import("../dist-test/realtime/task-scheduler.js");
 
 let currentTime = 0;
 let nextFrameId = 0;
