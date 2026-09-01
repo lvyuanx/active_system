@@ -114,7 +114,7 @@
   min-height: 0;
   margin-top: clamp(14px, 2vh, 28px);
   flex: 1 1 auto;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 310px);
+  grid-template-columns: minmax(0, 1fr) clamp(232px, 25vw, 320px);
   gap: clamp(14px, 1.8vw, 24px);
 }
 
@@ -336,27 +336,99 @@
   50% { transform: scale(1.16) rotate(15deg); opacity: 0.55; }
 }
 
-@media (max-width: 900px) {
-  .lottery-content { width: min(100% - 32px, 680px); }
-  .draw-layout { display: block; }
+/* 竖屏先按 1:1 分界切换为上下布局，后面的方屏覆盖规则会保留 1:1 左右结构。 */
+@media (max-aspect-ratio: 1 / 1) {
+  .lottery-content {
+    width: min(calc(100% - 24px), 760px);
+    padding-top: clamp(16px, 3vh, 30px);
+    padding-bottom: clamp(12px, 2vh, 24px);
+  }
+
+  .draw-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) clamp(148px, 28vh, 250px);
+    gap: clamp(12px, 2vh, 20px);
+  }
+
+  .reveal-panel { height: auto; }
+  .draw-layout:not(.draw-layout--active) .prize-board {
+    position: static;
+    width: auto;
+    height: clamp(148px, 28vh, 250px);
+    max-height: none;
+    border-radius: 20px;
+  }
+
+  .prize-board {
+    padding: clamp(14px, 2vh, 20px) clamp(16px, 3vw, 24px);
+  }
+
+  .prize-board > header {
+    padding-bottom: clamp(11px, 1.8vh, 15px);
+  }
+
+  .award-card { padding-block: clamp(12px, 1.8vh, 15px); }
+}
+
+@media (min-aspect-ratio: 1 / 1) {
+  .lottery-content {
+    width: min(1440px, 90vw);
+    padding-top: clamp(16px, 3vh, 38px);
+    padding-bottom: clamp(12px, 2vh, 28px);
+  }
+
+  .draw-layout {
+    grid-template-columns: minmax(0, 1fr) clamp(232px, 25vw, 320px);
+    grid-template-rows: none;
+    gap: clamp(14px, 1.8vw, 24px);
+  }
+
   .reveal-panel { height: 100%; }
   .draw-layout:not(.draw-layout--active) .prize-board {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 4;
-    max-height: 28%;
+    position: relative;
+    width: auto;
+    height: auto;
+    max-height: none;
+    border-radius: 24px;
+  }
+  .prize-board { padding: 20px 22px; }
+  .prize-board > header { padding-bottom: 15px; }
+  .award-card { padding-block: 15px; }
+}
+
+@media (min-aspect-ratio: 1 / 1) and (max-width: 900px) {
+  .lottery-content { width: min(90vw, 920px); }
+
+  .draw-layout {
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) clamp(208px, 31vw, 260px);
+    grid-template-rows: none;
+  }
+
+  .reveal-panel {
+    height: 100%;
+    padding: clamp(18px, 3vh, 30px);
+  }
+
+  .prize-board {
+    position: relative;
+    height: auto;
+    padding: 16px 14px;
     border-radius: 18px;
   }
-  .draw-layout--active .prize-board {
-    top: auto;
-    right: 12px;
-    bottom: 12px;
-    left: 12px;
-    width: auto;
-    max-height: 24%;
-  }
+
+  .prize-board > header { gap: 8px; }
+  .prize-board header strong { font-size: 15px; }
+  .board-kicker { letter-spacing: 1.5px; font-size: 8px; }
+  .award-card { padding-block: 12px; }
+  .award-heading { align-items: flex-start; }
+  .award-heading span { font-size: 13px; }
+  .award-heading small { font-size: 10px; text-align: right; }
+  .prize-line { gap: 6px; font-size: 10px; }
+  .prize-line b { font-size: 17px; }
+  .prize-item .winner-list { padding-left: 38px; }
+  .winner-list { gap: 5px; }
+  .winner-list span { padding: 3px 6px; font-size: 10px; }
 }
 
 @media (max-width: 520px) {
@@ -376,9 +448,29 @@
   }
   .rolling-names { gap: 8px; font-size: 18px; }
   .winner-name { font-size: 54px; }
-  .draw-layout:not(.draw-layout--active) .prize-board { max-height: 25%; padding: 14px 16px; }
+  .draw-layout:not(.draw-layout--active) .prize-board {
+    height: clamp(140px, 27vh, 220px);
+    max-height: none;
+    padding: 14px 16px;
+  }
   .draw-layout--active .prize-board { display: none; }
   .lottery-footer { flex-direction: column; gap: 6px; }
+}
+
+@media (max-width: 520px) and (max-aspect-ratio: 1 / 1) {
+  .draw-layout { grid-template-rows: minmax(0, 1fr) clamp(140px, 27vh, 220px); }
+}
+
+@media (max-width: 520px) and (min-aspect-ratio: 1 / 1) {
+  .draw-layout {
+    grid-template-columns: minmax(0, 1fr) clamp(168px, 43vw, 220px);
+    grid-template-rows: none;
+  }
+  .reveal-label { letter-spacing: 2px; font-size: 9px; white-space: nowrap; }
+  .prize-board { padding-inline: 10px; }
+  .prize-board > header { gap: 4px; }
+  .prize-board header strong { font-size: 13px; }
+  .board-kicker { letter-spacing: 1px; font-size: 7px; }
 }
 
 @media (max-height: 650px) {

@@ -1,0 +1,227 @@
+diff --git a/LEARNING.md b/LEARNING.md
+index d36f834d9e1e93b70a861963bd252b1dfe928047..64a6bf2f9090c1f9c5903a5d5602a397f393d44a 100644
+--- a/LEARNING.md
++++ b/LEARNING.md
+@@ -175,6 +175,11 @@
+ - 奖项下包含多个奖品时，中奖用户名必须按 `prize_id` 过滤后渲染在对应奖品块下方；直接遍历 `award.draws` 会把不同奖品的中奖人混在一起。
+ - 奖品块应独立承载奖品行和可选中奖标签，没有中奖记录时不挂载空列表，避免制造无意义间距。
+ 
++## 2026-09-01 抽奖大屏响应式布局
++
++- 仅使用 `max-width` 判断大屏布局会把 1:1 方屏误判为移动端；方屏与横屏应保持左右并列，竖屏再单独切换上下分区。
++- 竖屏的奖项进度板应作为独立网格行限制高度，并保留板内滚动；用绝对定位压在主抽奖区上会遮挡中奖内容，也难以控制长奖项列表。
++
+ ## 2026-08-30 抽奖球体动画与开始/停止开奖
+ 
+ - 两阶段开奖应把开始动画和实际写库严格分离：开始阶段只冻结公开 participants 与候选 ID，停止阶段在 `BEGIN IMMEDIATE` 中重新复核有效资格，提交后再广播结果；这样新注册用户不会混入当前轮次，状态变化也不会绕过最终资格检查。
+diff --git a/MEMORY.md b/MEMORY.md
+index 96e032731ec7d047188ab4a4840457c70866e272..6fcaaa888e004d55094b783e981b54834bb22045 100644
+--- a/MEMORY.md
++++ b/MEMORY.md
+@@ -34,6 +34,8 @@
+ 
+ ## 最近完成
+ 
++- 完成 TASK-v1「抽奖大屏方屏、横屏与竖屏响应式布局」：1:1 方屏及横屏保持主抽奖区与奖项进度板左右并列，严格小于 1:1 的竖屏改为上下分区并让奖项板在自身区域滚动；已补验 1024×768、1000×1001 近方竖屏、768×768 方屏、390×844 竖屏等视口，screen-web 类型检查、抽奖脚本测试、生产构建和 `git diff --check` 通过。任务证据位于 `.codex-tasks/20260901-lottery-responsive/`。
++
+ - 完成 TASK-v12「中奖用户名按奖品归属显示」：奖品板将中奖用户名按 `prize_id` 分组显示在对应奖品下方，不再统一显示在奖项底部；浏览器实测一等奖/平板电脑/手机中奖人分别正确归属，screen-web 测试、类型检查和生产构建通过。
+ 
+ - 完成 TASK-v11「中奖结果区域展示用户头像」：正常页面的中奖结果区新增用户头像，本轮优先使用冻结参与者的真实 `avatar_id`，历史结果使用稳定本地头像兜底；1280×720 实测头像 108×108px、资源加载成功且无滚动，screen-web 测试、类型检查和生产构建通过。
+diff --git a/WIKI.md b/WIKI.md
+index bada83b342108d1f0bc7810fd100b297b49e0722..8e99376ff37665bbdb34a2704d5743c32cf14bf0 100644
+--- a/WIKI.md
++++ b/WIKI.md
+@@ -98,6 +98,7 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
+ 大屏 Header 只保留品牌和连接状态，活动名称动态写入浏览器 `document.title`；顶部标题区域显示当前奖品名称和图片，当前轮次优先，其次使用最近开奖结果或下一件有库存奖品；
+ 主抽奖面板只承载抽奖状态、球体和中奖者，避免重复显示奖品信息。
+ 顶部当前奖品图片使用 80×80px 桌面尺寸、64×64px 移动端尺寸，图片加载失败时隐藏图片但保留名称。
++普通非沉浸式页面按宽高比适配：1:1 方屏和横屏始终使用主抽奖区/奖项进度板左右并列；严格小于 1:1 的竖屏使用上下分区，奖项进度板限制高度并在自身区域滚动，避免覆盖主抽奖区或产生页面滚动。
+ 收到开始轮次后，大屏进入沉浸式视图，仅保留铺满视口的球体；停止后的中奖者中心放大完成并短暂展示后清理 `activeRound`，恢复 Header、奖品区、奖项板和底部信息。
+ 恢复后的中奖结果区同时显示用户头像和用户名；当前轮次使用参与者头像 ID，历史结果使用稳定本地头像兜底。
+ 奖品板按 `prize_id` 将中奖用户名显示在对应奖品下方；无中奖记录的奖品不显示空标签。
+diff --git a/apps/screen-web/AGENTS.md b/apps/screen-web/AGENTS.md
+index f11220e0ccbb843e91bae304ee0f074f56282447..561928ded3203793e0d54c2620bf30ea899bf2c8 100644
+--- a/apps/screen-web/AGENTS.md
++++ b/apps/screen-web/AGENTS.md
+@@ -32,6 +32,7 @@
+ 顶部当前奖品图片使用 80×80px 桌面尺寸和 64×64px 移动端尺寸，图片失败时仍只保留奖品名称。
+ 中奖结果恢复到正常页面后显示用户头像；当前轮次使用公开参与者头像 ID，历史结果使用稳定本地头像兜底。
+ 奖品板中的中奖用户名按 `prize_id` 分组显示在对应奖品下方，不再统一堆叠在奖项底部。
++普通页面的抽奖区响应式布局按视口宽高比判断：1:1 方屏及横屏始终让主抽奖区和奖项进度板左右并列；严格小于 1:1 的竖屏改为主抽奖区在上、奖项进度板在下，进度板限制高度并仅在自身内容区域滚动，不覆盖抽奖内容或制造页面滚动。
+ 
+ ## 本次修复说明
+ 
+diff --git a/apps/screen-web/src/components/lottery/AGENTS.md b/apps/screen-web/src/components/lottery/AGENTS.md
+index fee803a42c92ec340b9f3e0003aad4811c04f6d2..fbbabe63c27e346511845728b3a9e9a19cc0389f 100644
+--- a/apps/screen-web/src/components/lottery/AGENTS.md
++++ b/apps/screen-web/src/components/lottery/AGENTS.md
+@@ -33,5 +33,5 @@
+ 
+ 保留深色霓虹背景、光晕和粒子；Header 只保留品牌和连接状态，活动名称写入浏览器页面标题；顶部标题区仅展示当前奖品名称和图片，使用紧凑留白和字号给抽奖面板保留更多视口空间；抽奖时球体占据可用大屏区域，头像和用户名按深度缩放透明，停止后依次执行冻结、打散、
+ 中奖用户从打散位置向中心移动并放大，中心用户层持续作为最终结果展示。
+-页面根节点使用 `100dvh` 和 `overflow: hidden`，奖项进度板在抽奖态作为紧凑浮层，不制造页面滚动。普通 screen-web 入口通过
++普通非沉浸式页面在 1:1 方屏和横屏保持主抽奖区/奖项进度板左右并列；严格小于 1:1 的竖屏使用上下分区，主抽奖区占主要空间，奖项进度板固定在下方并在板内滚动。页面根节点使用 `100dvh` 和 `overflow: hidden`，抽奖态的奖项进度板仍作为紧凑浮层，不制造页面滚动。普通 screen-web 入口通过
+ `activity_id` 查询参数或活动路径进入抽奖页面，弹幕 overlay 参数仍优先进入既有弹幕渲染器。
+diff --git a/apps/screen-web/src/components/lottery/LotteryScreen.css b/apps/screen-web/src/components/lottery/LotteryScreen.css
+index 369aae46f3f264d7199eeaa4979e59945ad21056..af2b371fd1fabfa94647b566eafc86d314f6611e 100644
+--- a/apps/screen-web/src/components/lottery/LotteryScreen.css
++++ b/apps/screen-web/src/components/lottery/LotteryScreen.css
+@@ -114,7 +114,7 @@
+   min-height: 0;
+   margin-top: clamp(14px, 2vh, 28px);
+   flex: 1 1 auto;
+-  grid-template-columns: minmax(0, 1fr) minmax(260px, 310px);
++  grid-template-columns: minmax(0, 1fr) clamp(232px, 25vw, 320px);
+   gap: clamp(14px, 1.8vw, 24px);
+ }
+ 
+@@ -336,27 +336,99 @@
+   50% { transform: scale(1.16) rotate(15deg); opacity: 0.55; }
+ }
+ 
+-@media (max-width: 900px) {
+-  .lottery-content { width: min(100% - 32px, 680px); }
+-  .draw-layout { display: block; }
+-  .reveal-panel { height: 100%; }
++/* 竖屏先按 1:1 分界切换为上下布局，后面的方屏覆盖规则会保留 1:1 左右结构。 */
++@media (max-aspect-ratio: 1 / 1) {
++  .lottery-content {
++    width: min(calc(100% - 24px), 760px);
++    padding-top: clamp(16px, 3vh, 30px);
++    padding-bottom: clamp(12px, 2vh, 24px);
++  }
++
++  .draw-layout {
++    grid-template-columns: minmax(0, 1fr);
++    grid-template-rows: minmax(0, 1fr) clamp(148px, 28vh, 250px);
++    gap: clamp(12px, 2vh, 20px);
++  }
++
++  .reveal-panel { height: auto; }
+   .draw-layout:not(.draw-layout--active) .prize-board {
+-    position: absolute;
+-    right: 0;
+-    bottom: 0;
+-    left: 0;
+-    z-index: 4;
+-    max-height: 28%;
+-    border-radius: 18px;
++    position: static;
++    width: auto;
++    height: clamp(148px, 28vh, 250px);
++    max-height: none;
++    border-radius: 20px;
+   }
+-  .draw-layout--active .prize-board {
+-    top: auto;
+-    right: 12px;
+-    bottom: 12px;
+-    left: 12px;
++
++  .prize-board {
++    padding: clamp(14px, 2vh, 20px) clamp(16px, 3vw, 24px);
++  }
++
++  .prize-board > header {
++    padding-bottom: clamp(11px, 1.8vh, 15px);
++  }
++
++  .award-card { padding-block: clamp(12px, 1.8vh, 15px); }
++}
++
++@media (min-aspect-ratio: 1 / 1) {
++  .lottery-content {
++    width: min(1440px, 90vw);
++    padding-top: clamp(16px, 3vh, 38px);
++    padding-bottom: clamp(12px, 2vh, 28px);
++  }
++
++  .draw-layout {
++    grid-template-columns: minmax(0, 1fr) clamp(232px, 25vw, 320px);
++    grid-template-rows: none;
++    gap: clamp(14px, 1.8vw, 24px);
++  }
++
++  .reveal-panel { height: 100%; }
++  .draw-layout:not(.draw-layout--active) .prize-board {
++    position: relative;
+     width: auto;
+-    max-height: 24%;
++    height: auto;
++    max-height: none;
++    border-radius: 24px;
++  }
++  .prize-board { padding: 20px 22px; }
++  .prize-board > header { padding-bottom: 15px; }
++  .award-card { padding-block: 15px; }
++}
++
++@media (min-aspect-ratio: 1 / 1) and (max-width: 900px) {
++  .lottery-content { width: min(90vw, 920px); }
++
++  .draw-layout {
++    gap: 12px;
++    grid-template-columns: minmax(0, 1fr) clamp(208px, 31vw, 260px);
++    grid-template-rows: none;
++  }
++
++  .reveal-panel {
++    height: 100%;
++    padding: clamp(18px, 3vh, 30px);
++  }
++
++  .prize-board {
++    position: relative;
++    height: auto;
++    padding: 16px 14px;
++    border-radius: 18px;
+   }
++
++  .prize-board > header { gap: 8px; }
++  .prize-board header strong { font-size: 15px; }
++  .board-kicker { letter-spacing: 1.5px; font-size: 8px; }
++  .award-card { padding-block: 12px; }
++  .award-heading { align-items: flex-start; }
++  .award-heading span { font-size: 13px; }
++  .award-heading small { font-size: 10px; text-align: right; }
++  .prize-line { gap: 6px; font-size: 10px; }
++  .prize-line b { font-size: 17px; }
++  .prize-item .winner-list { padding-left: 38px; }
++  .winner-list { gap: 5px; }
++  .winner-list span { padding: 3px 6px; font-size: 10px; }
+ }
+ 
+ @media (max-width: 520px) {
+@@ -376,11 +448,31 @@
+   }
+   .rolling-names { gap: 8px; font-size: 18px; }
+   .winner-name { font-size: 54px; }
+-  .draw-layout:not(.draw-layout--active) .prize-board { max-height: 25%; padding: 14px 16px; }
++  .draw-layout:not(.draw-layout--active) .prize-board {
++    height: clamp(140px, 27vh, 220px);
++    max-height: none;
++    padding: 14px 16px;
++  }
+   .draw-layout--active .prize-board { display: none; }
+   .lottery-footer { flex-direction: column; gap: 6px; }
+ }
+ 
++@media (max-width: 520px) and (max-aspect-ratio: 1 / 1) {
++  .draw-layout { grid-template-rows: minmax(0, 1fr) clamp(140px, 27vh, 220px); }
++}
++
++@media (max-width: 520px) and (min-aspect-ratio: 1 / 1) {
++  .draw-layout {
++    grid-template-columns: minmax(0, 1fr) clamp(168px, 43vw, 220px);
++    grid-template-rows: none;
++  }
++  .reveal-label { letter-spacing: 2px; font-size: 9px; white-space: nowrap; }
++  .prize-board { padding-inline: 10px; }
++  .prize-board > header { gap: 4px; }
++  .prize-board header strong { font-size: 13px; }
++  .board-kicker { letter-spacing: 1px; font-size: 7px; }
++}
++
+ @media (max-height: 650px) {
+   .lottery-content { padding-top: 18px; }
+   .title-block h1 { margin-block: 4px; font-size: clamp(22px, 4vh, 34px); }
