@@ -1,0 +1,157 @@
+diff --git a/LEARNING.md b/LEARNING.md
+index c6bcc2cd85247b84dbeba39317da258526e68521..d36f834d9e1e93b70a861963bd252b1dfe928047 100644
+--- a/LEARNING.md
++++ b/LEARNING.md
+@@ -170,6 +170,11 @@
+ - 公开中奖结果只带用户 ID 和名称时，当前轮次仍可从冻结参与者列表读取真实 `avatar_id` 并保存到恢复状态；历史结果没有参与者时可用用户 ID 做稳定的本地头像映射。
+ - 头像应放在正常恢复结果区而不是沉浸式抽奖阶段，避免在中奖结果公开前提前暴露用户；本地头像资源不依赖外部请求。
+ 
++## 2026-09-01 奖品板中奖归属
++
++- 奖项下包含多个奖品时，中奖用户名必须按 `prize_id` 过滤后渲染在对应奖品块下方；直接遍历 `award.draws` 会把不同奖品的中奖人混在一起。
++- 奖品块应独立承载奖品行和可选中奖标签，没有中奖记录时不挂载空列表，避免制造无意义间距。
++
+ ## 2026-08-30 抽奖球体动画与开始/停止开奖
+ 
+ - 两阶段开奖应把开始动画和实际写库严格分离：开始阶段只冻结公开 participants 与候选 ID，停止阶段在 `BEGIN IMMEDIATE` 中重新复核有效资格，提交后再广播结果；这样新注册用户不会混入当前轮次，状态变化也不会绕过最终资格检查。
+diff --git a/MEMORY.md b/MEMORY.md
+index d782082c4f0729d9a016e8bdc06f101cdf7a0c04..96e032731ec7d047188ab4a4840457c70866e272 100644
+--- a/MEMORY.md
++++ b/MEMORY.md
+@@ -34,6 +34,8 @@
+ 
+ ## 最近完成
+ 
++- 完成 TASK-v12「中奖用户名按奖品归属显示」：奖品板将中奖用户名按 `prize_id` 分组显示在对应奖品下方，不再统一显示在奖项底部；浏览器实测一等奖/平板电脑/手机中奖人分别正确归属，screen-web 测试、类型检查和生产构建通过。
++
+ - 完成 TASK-v11「中奖结果区域展示用户头像」：正常页面的中奖结果区新增用户头像，本轮优先使用冻结参与者的真实 `avatar_id`，历史结果使用稳定本地头像兜底；1280×720 实测头像 108×108px、资源加载成功且无滚动，screen-web 测试、类型检查和生产构建通过。
+ 
+ - 完成 TASK-v10「抽奖时沉浸式球体与揭晓后恢复」：开始轮次后隐藏 Header、奖品区、奖项板和底部信息，仅铺满球体；中奖者揭晓后短暂展示并自动恢复正常页面；screen-web 测试、类型检查和生产构建通过。
+diff --git a/WIKI.md b/WIKI.md
+index bdccd4ff48c769ce26b6e2555ec30661611549e3..bada83b342108d1f0bc7810fd100b297b49e0722 100644
+--- a/WIKI.md
++++ b/WIKI.md
+@@ -100,6 +100,7 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
+ 顶部当前奖品图片使用 80×80px 桌面尺寸、64×64px 移动端尺寸，图片加载失败时隐藏图片但保留名称。
+ 收到开始轮次后，大屏进入沉浸式视图，仅保留铺满视口的球体；停止后的中奖者中心放大完成并短暂展示后清理 `activeRound`，恢复 Header、奖品区、奖项板和底部信息。
+ 恢复后的中奖结果区同时显示用户头像和用户名；当前轮次使用参与者头像 ID，历史结果使用稳定本地头像兜底。
++奖品板按 `prize_id` 将中奖用户名显示在对应奖品下方；无中奖记录的奖品不显示空标签。
+ 
+ 管理端奖品编辑行的左列包含名称输入和图片操作两行，数量、启用和删除控件使用顶部对齐以匹配名称输入首行；奖项头部仍保持居中，
+ 800px 和 520px 以下继续使用既有网格堆叠规则。
+diff --git a/apps/screen-web/AGENTS.md b/apps/screen-web/AGENTS.md
+index 8bd0bb60aa2ac136607dae84c5a6f1627dabc93b..f11220e0ccbb843e91bae304ee0f074f56282447 100644
+--- a/apps/screen-web/AGENTS.md
++++ b/apps/screen-web/AGENTS.md
+@@ -31,6 +31,7 @@
+ 活动名称不在页面正文中重复显示，而是动态写入浏览器 `document.title`；顶部标题区域仅显示当前奖品名称和可选图片，主抽奖面板不重复显示奖品名称或中奖奖品图片。
+ 顶部当前奖品图片使用 80×80px 桌面尺寸和 64×64px 移动端尺寸，图片失败时仍只保留奖品名称。
+ 中奖结果恢复到正常页面后显示用户头像；当前轮次使用公开参与者头像 ID，历史结果使用稳定本地头像兜底。
++奖品板中的中奖用户名按 `prize_id` 分组显示在对应奖品下方，不再统一堆叠在奖项底部。
+ 
+ ## 本次修复说明
+ 
+diff --git a/apps/screen-web/scripts/test-lottery-globe.mjs b/apps/screen-web/scripts/test-lottery-globe.mjs
+index f9edbcb71b6cafcae446df928f865ad8e8d82874..9b7ed59aa74ff4ae4b5c08dc37209c32b6aabb59 100644
+--- a/apps/screen-web/scripts/test-lottery-globe.mjs
++++ b/apps/screen-web/scripts/test-lottery-globe.mjs
+@@ -78,6 +78,9 @@ assert.match(screenSource, /class="title-prize__image"/);
+ assert.match(screenSource, /displayPrizeImageURL/);
+ assert.match(screenSource, /class="winner-result__avatar"/);
+ assert.match(screenSource, /rememberWinnerAvatar/);
++assert.match(screenSource, /class="prize-item"/);
++assert.match(screenSource, /prizeDraws\(award, prize\.prize_id\)/);
++assert.match(screenSource, /draw\.prize_id === prizeId/);
+ assert.doesNotMatch(screenSource, /winner-prize-image/);
+ assert.doesNotMatch(screenSource, /class="header-activity-name"|class="subtitle"/);
+ assert.doesNotMatch(screenSource, /CURRENT PRIZE|class="kicker"/);
+@@ -99,6 +102,7 @@ assert.match(screenStyles, /\.lottery-screen--immersive \.lottery-header/);
+ assert.match(screenStyles, /\.lottery-screen--immersive \.draw-layout/);
+ assert.match(screenStyles, /\.lottery-screen--immersive \.reveal-panel/);
+ assert.match(screenStyles, /\.winner-result__avatar\s*\{/);
++assert.match(screenStyles, /\.prize-item \.winner-list/);
+ assert.match(globeStyles, /\.lottery-globe\[data-phase="rolling"\] \.globe-caption/);
+ 
+ const compactProfile = globeRenderProfile(300, 1280, 720);
+diff --git a/apps/screen-web/src/components/lottery/AGENTS.md b/apps/screen-web/src/components/lottery/AGENTS.md
+index d45ada5463269480d0b43f4f26e7e092153ebd4f..fee803a42c92ec340b9f3e0003aad4811c04f6d2 100644
+--- a/apps/screen-web/src/components/lottery/AGENTS.md
++++ b/apps/screen-web/src/components/lottery/AGENTS.md
+@@ -17,6 +17,7 @@
+ `lottery.reset` 清空轮次、队列和名单，`lottery.config.updated` 更新奖项库存，错误事件只显示提示并结束对应轮次。
+ `LotteryGlobe.vue` 不再绘制中心十字，中奖聚焦阶段使用 Canvas 光环和中心用户放大层作为视觉焦点，不再额外切换矩形中奖卡片。
+ 进行中轮次会隐藏页面外围内容和球体辅助文字；`revealed` 完成后短暂保留中心揭晓，再清理轮次恢复正常页面，保留最近中奖结果。
++奖品板将奖项下的中奖记录按 `prize_id` 过滤，并把用户名标签渲染在对应奖品行下方。
+ 进行中轮次会隐藏页面外围内容和球体辅助文字；`revealed` 完成后短暂保留中心揭晓，再清理轮次恢复正常页面，保留最近中奖结果。
+ 
+ ## 安全与恢复
+diff --git a/apps/screen-web/src/components/lottery/LotteryScreen.css b/apps/screen-web/src/components/lottery/LotteryScreen.css
+index f4d7764027eaca54542affefe72d27def1dd3fbe..369aae46f3f264d7199eeaa4979e59945ad21056 100644
+--- a/apps/screen-web/src/components/lottery/LotteryScreen.css
++++ b/apps/screen-web/src/components/lottery/LotteryScreen.css
+@@ -248,9 +248,11 @@
+ .award-heading small,
+ .prize-line { color: #8186aa; font-size: 11px; }
+ .prize-line { margin-top: 10px; }
++.prize-item + .prize-item { margin-top: 14px; }
+ .prize-line b { color: #68e0d2; font-size: 19px; }
+ .prize-line b small { color: #747a9c; font-size: 11px; }
+ .winner-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
++.prize-item .winner-list { margin-top: 8px; padding-left: 42px; }
+ .winner-list span {
+   padding: 4px 8px;
+   color: #bfc3e0;
+diff --git a/apps/screen-web/src/components/lottery/LotteryScreen.vue b/apps/screen-web/src/components/lottery/LotteryScreen.vue
+index 6a019f3222caa420b786dacfec6ea4fe282ced4c..b286711ea70e79b92659f0775e052ed8694b778b 100644
+--- a/apps/screen-web/src/components/lottery/LotteryScreen.vue
++++ b/apps/screen-web/src/components/lottery/LotteryScreen.vue
+@@ -99,21 +99,23 @@
+             <div class="award-heading">
+               <span>{{ award.name }}</span><small>{{ award.draws.length }} 人已中奖</small>
+             </div>
+-            <div v-for="prize in award.prizes" :key="prize.prize_id" class="prize-line">
+-              <img
+-                v-if="prize.image_url && canShowImage(prize.image_url)"
+-                class="prize-image"
+-                :src="imageURL(prize.image_url)"
+-                alt=""
+-                @error="markImageFailed(prize.image_url)"
+-              />
+-              <span>{{ prize.name }}</span><b>{{ prize.remaining_quantity }}<small>/{{ prize.quantity }}</small></b>
+-            </div>
+-            <div v-if="award.draws.length" class="winner-list">
+-              <span
+-                v-for="draw in award.draws.slice(-4).reverse()"
+-                :key="draw.draw_id"
+-              >{{ draw.winner.username }}</span>
++            <div v-for="prize in award.prizes" :key="prize.prize_id" class="prize-item">
++              <div class="prize-line">
++                <img
++                  v-if="prize.image_url && canShowImage(prize.image_url)"
++                  class="prize-image"
++                  :src="imageURL(prize.image_url)"
++                  alt=""
++                  @error="markImageFailed(prize.image_url)"
++                />
++                <span>{{ prize.name }}</span><b>{{ prize.remaining_quantity }}<small>/{{ prize.quantity }}</small></b>
++              </div>
++              <div v-if="prizeDraws(award, prize.prize_id).length" class="winner-list">
++                <span
++                  v-for="draw in prizeDraws(award, prize.prize_id)"
++                  :key="draw.draw_id"
++                >{{ draw.winner.username }}</span>
++              </div>
+             </div>
+           </article>
+         </aside>
+@@ -264,6 +266,10 @@ const appendDraw = (draw: LotteryDraw) => {
+   if (award && !award.draws.some((item) => item.draw_id === draw.draw_id)) award.draws.push(draw);
+ };
+ 
++const prizeDraws = (award: LotterySnapshot["awards"][number], prizeId: number) => (
++  award.draws.filter((draw) => draw.prize_id === prizeId).slice(-4).reverse()
++);
++
+ const activateRound = (round: LotteryRound) => {
+   clearRestoreTimer();
+   const isStopping = round.phase === "stopping" || stoppingRoundIds.has(round.round_id);

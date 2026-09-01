@@ -1,0 +1,55 @@
+{
+  "task_version": "TASK-v12",
+  "input_snapshot_id": "HEAD-ed9165f-dirty-20260901-task-v12",
+  "state": "dirty-existing-changes-preserved",
+  "files": [
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.vue",
+      "sha256": "c20d65ce692c38b2af55dba3ed1314fa4b123cbb7ade19332f3ab9841c3fe192"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.css",
+      "sha256": "fbf4832470d3959cf68f82404a0f22ca83035d37acf48d276c91ceb03ce87713"
+    },
+    {
+      "path": "apps/screen-web/scripts/test-lottery-globe.mjs",
+      "sha256": "c0e9cdb7bb47a2bcc73c034579c2cd4c1de3190794ac81d6d22d8335187386a5"
+    },
+    {
+      "path": "apps/screen-web/AGENTS.md",
+      "sha256": "4e83a0f8bd7d900df88cd396b5caa9bf94e425a879c5a8698ff99741d4944a45"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/AGENTS.md",
+      "sha256": "4448c403a58f98208129553a7520aaf7b4be0dcf80075fe971706486d61477e6"
+    },
+    {
+      "path": "MEMORY.md",
+      "sha256": "c37e1f1130ec9ee88a20ef29f43383326b1ff8d6f72b8913e4b6eff67179b56c"
+    },
+    {
+      "path": "LEARNING.md",
+      "sha256": "f75a5be40823f9660f6743d3ab6c2ea4d175621ead7ac607ddba418de7b1b782"
+    },
+    {
+      "path": "WIKI.md",
+      "sha256": "7b4b5a179a7a6d1965f7cc95231925ebff89a18cfc2a87e4d83fe2bd4f4b266a"
+    }
+  ],
+  "verification": {
+    "screen_test": "passed",
+    "screen_typecheck": "passed",
+    "screen_build": "passed",
+    "git_diff_check": "passed",
+    "browser_prize_assignment": {
+      "status": "passed",
+      "iphone19": ["弹幕测试用户91"],
+      "平板电脑": ["弹幕测试用户166"],
+      "手机": ["弹幕测试用户258"]
+    },
+    "output_patch": {
+      "path": "OUTPUT-PATCH-v12.diff",
+      "sha256": "f297599f9381c2f68e7baa37ff3f939a59ec02818a77f41ad3277e7ee5de5018"
+    }
+  }
+}

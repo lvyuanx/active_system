@@ -248,9 +248,11 @@
 .award-heading small,
 .prize-line { color: #8186aa; font-size: 11px; }
 .prize-line { margin-top: 10px; }
+.prize-item + .prize-item { margin-top: 14px; }
 .prize-line b { color: #68e0d2; font-size: 19px; }
 .prize-line b small { color: #747a9c; font-size: 11px; }
 .winner-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.prize-item .winner-list { margin-top: 8px; padding-left: 42px; }
 .winner-list span {
   padding: 4px 8px;
   color: #bfc3e0;

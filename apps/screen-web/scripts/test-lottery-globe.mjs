@@ -78,6 +78,9 @@ assert.match(screenSource, /class="title-prize__image"/);
 assert.match(screenSource, /displayPrizeImageURL/);
 assert.match(screenSource, /class="winner-result__avatar"/);
 assert.match(screenSource, /rememberWinnerAvatar/);
+assert.match(screenSource, /class="prize-item"/);
+assert.match(screenSource, /prizeDraws\(award, prize\.prize_id\)/);
+assert.match(screenSource, /draw\.prize_id === prizeId/);
 assert.doesNotMatch(screenSource, /winner-prize-image/);
 assert.doesNotMatch(screenSource, /class="header-activity-name"|class="subtitle"/);
 assert.doesNotMatch(screenSource, /CURRENT PRIZE|class="kicker"/);
@@ -99,6 +102,7 @@ assert.match(screenStyles, /\.lottery-screen--immersive \.lottery-header/);
 assert.match(screenStyles, /\.lottery-screen--immersive \.draw-layout/);
 assert.match(screenStyles, /\.lottery-screen--immersive \.reveal-panel/);
 assert.match(screenStyles, /\.winner-result__avatar\s*\{/);
+assert.match(screenStyles, /\.prize-item \.winner-list/);
 assert.match(globeStyles, /\.lottery-globe\[data-phase="rolling"\] \.globe-caption/);
 
 const compactProfile = globeRenderProfile(300, 1280, 720);

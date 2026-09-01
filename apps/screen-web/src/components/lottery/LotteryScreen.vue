@@ -99,21 +99,23 @@
             <div class="award-heading">
               <span>{{ award.name }}</span><small>{{ award.draws.length }} 人已中奖</small>
             </div>
-            <div v-for="prize in award.prizes" :key="prize.prize_id" class="prize-line">
-              <img
-                v-if="prize.image_url && canShowImage(prize.image_url)"
-                class="prize-image"
-                :src="imageURL(prize.image_url)"
-                alt=""
-                @error="markImageFailed(prize.image_url)"
-              />
-              <span>{{ prize.name }}</span><b>{{ prize.remaining_quantity }}<small>/{{ prize.quantity }}</small></b>
-            </div>
-            <div v-if="award.draws.length" class="winner-list">
-              <span
-                v-for="draw in award.draws.slice(-4).reverse()"
-                :key="draw.draw_id"
-              >{{ draw.winner.username }}</span>
+            <div v-for="prize in award.prizes" :key="prize.prize_id" class="prize-item">
+              <div class="prize-line">
+                <img
+                  v-if="prize.image_url && canShowImage(prize.image_url)"
+                  class="prize-image"
+                  :src="imageURL(prize.image_url)"
+                  alt=""
+                  @error="markImageFailed(prize.image_url)"
+                />
+                <span>{{ prize.name }}</span><b>{{ prize.remaining_quantity }}<small>/{{ prize.quantity }}</small></b>
+              </div>
+              <div v-if="prizeDraws(award, prize.prize_id).length" class="winner-list">
+                <span
+                  v-for="draw in prizeDraws(award, prize.prize_id)"
+                  :key="draw.draw_id"
+                >{{ draw.winner.username }}</span>
+              </div>
             </div>
           </article>
         </aside>
@@ -263,6 +265,10 @@ const appendDraw = (draw: LotteryDraw) => {
   if (prize) prize.remaining_quantity = draw.remaining_quantity;
   if (award && !award.draws.some((item) => item.draw_id === draw.draw_id)) award.draws.push(draw);
 };
+
+const prizeDraws = (award: LotterySnapshot["awards"][number], prizeId: number) => (
+  award.draws.filter((draw) => draw.prize_id === prizeId).slice(-4).reverse()
+);
 
 const activateRound = (round: LotteryRound) => {
   clearRestoreTimer();
