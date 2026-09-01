@@ -1,0 +1,67 @@
+{
+  "task_version": "TASK-v9",
+  "input_snapshot_id": "HEAD-d8be58d-dirty-20260831-task-v9",
+  "state": "dirty-existing-changes-preserved",
+  "files": [
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.vue",
+      "sha256": "e4fb6b853c140d4e5084261bd650fd65e8699f84d2bf0a1c1c30b919a9933d6e"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.css",
+      "sha256": "7bbd4a4de2d263c8682665ff1a0463a7a2dcf5a41bc8ed6a4f3f83c0da3ffef8"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreenImages.css",
+      "sha256": "97315768fa0ccb3df76f5bf220e4bcd9651122c6b189fd7bb0da5993909a9907"
+    },
+    {
+      "path": "apps/screen-web/index.html",
+      "sha256": "b2ba1cb1ee6e43cb3a1bb324cfc86ffac7a718cfda99f085ef7fa1d14b4d5e90"
+    },
+    {
+      "path": "apps/screen-web/scripts/test-lottery-globe.mjs",
+      "sha256": "a9768f1ee2a67336c840263f658ff4ae51e9856bef4d0f828fa11d7a212c8b70"
+    },
+    {
+      "path": "apps/screen-web/AGENTS.md",
+      "sha256": "4f8be481e29eab4a11fdb0d0fd71c70b624c15c02bca081bb6c898b55aacf54a"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/AGENTS.md",
+      "sha256": "e22eb3e79849031f00fa9b62a04edfed72f14a8689e52b35cb23a1c4e45d37c1"
+    },
+    {
+      "path": "MEMORY.md",
+      "sha256": "0e3e4ff307e542a5f44f2c039bbbd01f047ff1a63126fcd604bbfc8542eb0822"
+    },
+    {
+      "path": "LEARNING.md",
+      "sha256": "4c63457ae6ba09b13576f69eef0ca92c53b2c72a3e19b1d3ebc1d7c638435ae3"
+    },
+    {
+      "path": "WIKI.md",
+      "sha256": "1d442f3cd43cdbbf023e3b94a9d535c7ed23fb6b6e7f454c12be9cb7f1406df1"
+    }
+  ],
+  "verification": {
+    "screen_test": "passed",
+    "screen_typecheck": "passed",
+    "screen_build": "passed",
+    "git_diff_check": "passed",
+    "browser_content_1280x720": {
+      "status": "passed",
+      "title": "测试活动",
+      "has_current_prize_text": false,
+      "image_width": 80,
+      "image_height": 80,
+      "image_loaded": true,
+      "scroll_width": 1280,
+      "scroll_height": 720
+    },
+    "output_patch": {
+      "path": "OUTPUT-PATCH-v9.diff",
+      "sha256": "cf4847d3584a02ea22158e8f3505bbeedad92bd1e2c7011d0a06d6b4a48cc4a6"
+    }
+  }
+}

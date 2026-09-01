@@ -1,0 +1,41 @@
+{
+  "workflow_id": "WF-20260831-LOTTERY-CENTER-REVEAL",
+  "task_version": "TASK-v1",
+  "input_snapshot_id": "HEAD-d8be58d-dirty-20260831",
+  "worktree_path": "D:/projects/active_system",
+  "head_sha": "d8be58db6ffdc3e3fe4f34a10a63360b515be33b",
+  "status": "serial-shared-write-completed",
+  "files": [
+    {"path": "apps/screen-web/src/components/lottery/LotteryGlobe.vue", "status": "M", "sha256": "56310d3697f1cf06cd037c6fbf1667813548c0848973ad649461176491154e48"},
+    {"path": "apps/screen-web/src/components/lottery/LotteryGlobe.css", "status": "M", "sha256": "7632ae0f5332e5b75bc3dec8f0a3a7735b05c5117ba64e1cf1459547bb6eb809"},
+    {"path": "apps/screen-web/src/components/lottery/LotteryWinnerReveal.vue", "status": "A", "sha256": "33d8bd4deff4c17c9a76d7fb977763509f6ac948efecd53c3f88b9026178c08f"},
+    {"path": "apps/screen-web/src/components/lottery/LotteryWinnerReveal.css", "status": "A", "sha256": "71eaf38645c907c09a780b3d9489160103a1dd67e88d8377dc09d95bf4109dff"},
+    {"path": "apps/screen-web/src/components/lottery/LotteryScreen.vue", "status": "M", "sha256": "8512dc3d7315a29e2790377d0bb724891e610c5365998569291ee46df0cbf683"},
+    {"path": "apps/screen-web/src/components/lottery/lottery-globe-math.ts", "status": "M", "sha256": "64bf0706ee9a2e59cb4e33696f5e1a687f8e986711f7fcb79f6b6e143d5b9e0f"},
+    {"path": "apps/screen-web/scripts/test-lottery-globe.mjs", "status": "M", "sha256": "496500b67b6975b5197b30990ab9f6c4cf345c9eb622a04d1e195f67ea877fd0"},
+    {"path": "apps/screen-web/AGENTS.md", "status": "M", "sha256": "6ad420e83ccc8f13f085e04fd1de5758a0fb27c03d2312291045d096eb162547"},
+    {"path": "apps/screen-web/src/components/lottery/AGENTS.md", "status": "M", "sha256": "a4d7984ec333a1c7aa97fe5c2c9941e672d6f74940084f5f174495993ac34688"},
+    {"path": "MEMORY.md", "status": "M", "sha256": "78c07489d42f5dc4ff74ec6c043ea408bed941051b7592b406fce0e0866f7382"},
+    {"path": "LEARNING.md", "status": "M", "sha256": "b2f064c1b5081f91f64448944a1c0d5e94a7a2ab2cac56b8366103c2605706c6"},
+    {"path": "WIKI.md", "status": "M", "sha256": "d95c55c934975e0bb4f5e7cfd940c3cdd3733d1e6f6ce2060fb0a10345dcdbf5"}
+  ],
+  "preexisting_out_of_scope_changes": [
+    {
+      "path": "data/media/lottery-prizes/152890d0279948f8893bf4611b9605ec.png",
+      "status": "D",
+      "head_blob_sha1": "49c90b238a0ba72f477c0ea80a1264c537db780e",
+      "current_sha256": null,
+      "handling": "未触碰，排除在本任务输出之外"
+    }
+  ],
+  "patch_digest": "fc49100ae368b59442d49f84ca36b092f1d8dcea52d132fedb05147c24d8d673",
+  "patch_summary": "commitless 主工作树串行集成；新增中心用户放大层并与 Canvas 中奖者透明交接，强化 revealed 卡片动效和阶段文案。",
+  "verification": {
+    "screen_test": 0,
+    "screen_typecheck": 0,
+    "screen_build": 0,
+    "git_diff_check": 0,
+    "browser_1280x720": "rolling/revealed 布局无溢出，控制台 error/warn 为空",
+    "browser_390x844": "响应式揭晓布局无横向溢出，控制台 error/warn 为空"
+  }
+}

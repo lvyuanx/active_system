@@ -1,0 +1,37 @@
+{
+  "workflow_id": "WF-20260831-LOTTERY-CENTER-REVEAL-V2",
+  "task_version": "TASK-v2",
+  "input_snapshot_id": "HEAD-d8be58d-dirty-20260831-task-v2",
+  "worktree_path": "D:/projects/active_system",
+  "head_sha": "d8be58db6ffdc3e3fe4f34a10a63360b515be33b",
+  "status": "serial-shared-write-completed",
+  "files": [
+    {"path": "apps/screen-web/src/components/lottery/LotteryWinnerReveal.vue", "status": "M", "sha256": "6c555aea133d5572ea13d541a621d918ce6adb6166470047f7b0e700b8e6b059"},
+    {"path": "apps/screen-web/src/components/lottery/LotteryWinnerReveal.css", "status": "M", "sha256": "b7a1b927806aae4a1a65ecf8c798367af0f40789f5e74d1ef457956764c46416"},
+    {"path": "apps/screen-web/scripts/test-lottery-globe.mjs", "status": "M", "sha256": "6f4956158d4fd1de75e119c999c86baf18e96f2cb798aeb71165cbde190512ad"},
+    {"path": "apps/screen-web/AGENTS.md", "status": "M", "sha256": "89dd74fb27fac2c9cde42b90dcc28f43bb277e625e253be8829716aaf1716411"},
+    {"path": "apps/screen-web/src/components/lottery/AGENTS.md", "status": "M", "sha256": "adce1ec0f43617ba03732321a63a72c82508ec844ed9e44f366ab802f00226d3"},
+    {"path": "LEARNING.md", "status": "M", "sha256": "3253a45025c99be6557a03299158a54d5d92750ceb49b2e0decc2fb9e6514b36"},
+    {"path": "MEMORY.md", "status": "M", "sha256": "71f60bd8ac76451326477c42667bf36b4515c60b741428cf80260ac6cfc9ca35"},
+    {"path": "WIKI.md", "status": "M", "sha256": "cd84254e5de2e69dc27507ecd35917a7714eb104f4c1d52dcf44a91d91e2bf36"}
+  ],
+  "preexisting_out_of_scope_changes": [
+    {
+      "path": "data/media/lottery-prizes/152890d0279948f8893bf4611b9605ec.png",
+      "status": "D",
+      "head_blob_sha1": "49c90b238a0ba72f477c0ea80a1264c537db780e",
+      "current_sha256": null,
+      "handling": "未触碰，排除在本任务输出之外"
+    }
+  ],
+  "patch_digest": "05684c42c96b9c63794d99e3e8a49a8c821cfc2b015225ada59b4527d510ef8d",
+  "patch_summary": "commitless 主工作树串行集成；移除 revealed 阶段矩形中奖卡片，保留 selecting 到 revealed 的中心用户放大层。",
+  "verification": {
+    "screen_test": 0,
+    "screen_typecheck": 0,
+    "screen_build": 0,
+    "git_diff_check": 0,
+    "card_dom_scan": "data-winner-card、class=globe-winner 不存在",
+    "focus_dom_scan": "selecting/revealed 条件和 data-winner-focus 保留"
+  }
+}

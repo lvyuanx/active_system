@@ -1,5 +1,6 @@
 from collections.abc import Collection
 from datetime import datetime
+import hmac
 import secrets
 import sqlite3
 
@@ -35,6 +36,7 @@ from .repository import (
     lottery_entry_rows,
     lottery_entry_summary,
     now,
+    prize_or_raise,
     public_draw,
 )
 from .snapshot import get_lottery_snapshot, public_config, public_snapshot, reset_lottery
@@ -47,6 +49,7 @@ def get_lottery_config(activity_id: str, settings: Settings) -> LotteryConfigRes
 
 def get_lottery_entries(
     activity_id: str,
+    prize_id: int,
     settings: Settings,
     *,
     keyword: str | None,
@@ -57,9 +60,11 @@ def get_lottery_entries(
     normalized_keyword = keyword.strip() if keyword else None
     with transaction(settings) as connection:
         config = ensure_config(connection, activity_id)
+        prize_or_raise(connection, activity_id, prize_id)
         rows, total = lottery_entry_rows(
             connection,
             activity_id,
+            prize_id,
             status=status,
             keyword=normalized_keyword or None,
             no_repeat=bool(config["no_repeat_across_prizes"]),
@@ -67,6 +72,7 @@ def get_lottery_entries(
             offset=(page - 1) * page_size,
         )
         return LotteryEntryPage(
+            prize_id=prize_id,
             items=[lottery_entry(row) for row in rows],
             page=page,
             page_size=page_size,
@@ -75,13 +81,32 @@ def get_lottery_entries(
             summary=lottery_entry_summary(
                 connection,
                 activity_id,
+                prize_id,
                 no_repeat=bool(config["no_repeat_across_prizes"]),
             ),
         )
 
 
+def verify_lottery_security_code(activity_id: str, security_code: str, settings: Settings) -> None:
+    with transaction(settings) as connection:
+        activity_or_raise(connection, activity_id)
+
+    configured_code = settings.lottery_security_code
+    if not configured_code.strip():
+        raise LotteryConfigError(
+            "security_code_not_configured",
+            "抽奖安全码尚未配置，请先在后端配置文件中设置 LOTTERY_SECURITY_CODE",
+        )
+    if not hmac.compare_digest(
+        security_code.encode("utf-8"),
+        configured_code.encode("utf-8"),
+    ):
+        raise LotteryConfigError("security_code_invalid", "安全码错误")
+
+
 def update_lottery_entry(
     activity_id: str,
+    prize_id: int,
     activity_user_id: int,
     payload: LotteryEntryUpdate,
     settings: Settings,
@@ -89,18 +114,20 @@ def update_lottery_entry(
     with transaction(settings) as connection:
         connection.execute("BEGIN IMMEDIATE")
         config = ensure_config(connection, activity_id)
-        lottery_entry_row(connection, activity_id, activity_user_id)
+        prize_or_raise(connection, activity_id, prize_id)
+        lottery_entry_row(connection, activity_id, prize_id, activity_user_id)
         current_time = now()
         connection.execute(
-            """INSERT INTO lottery_entries(
-                   activity_id, activity_user_id, is_blacklisted, is_whitelisted, created_at, updated_at
-               ) VALUES (?, ?, ?, ?, ?, ?)
-               ON CONFLICT(activity_id, activity_user_id) DO UPDATE SET
+            """INSERT INTO lottery_prize_entries(
+                   activity_id, prize_id, activity_user_id, is_blacklisted, is_whitelisted, created_at, updated_at
+               ) VALUES (?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(activity_id, prize_id, activity_user_id) DO UPDATE SET
                    is_blacklisted = excluded.is_blacklisted,
                    is_whitelisted = excluded.is_whitelisted,
                    updated_at = excluded.updated_at""",
             (
                 activity_id,
+                prize_id,
                 activity_user_id,
                 int(payload.is_blacklisted),
                 int(payload.is_whitelisted),
@@ -109,10 +136,12 @@ def update_lottery_entry(
             ),
         )
         return LotteryEntryUpdateResponse(
-            entry=lottery_entry(lottery_entry_row(connection, activity_id, activity_user_id)),
+            prize_id=prize_id,
+            entry=lottery_entry(lottery_entry_row(connection, activity_id, prize_id, activity_user_id)),
             summary=lottery_entry_summary(
                 connection,
                 activity_id,
+                prize_id,
                 no_repeat=bool(config["no_repeat_across_prizes"]),
             ),
         )
@@ -282,12 +311,14 @@ def update_lottery_config(
 def _eligible_candidates(
     connection: sqlite3.Connection,
     activity_id: str,
+    prize_id: int,
     *,
     no_repeat: bool,
 ) -> list[sqlite3.Row]:
     where, parameters = entry_where(
         connection,
         activity_id,
+        prize_id,
         status="eligible",
         keyword=None,
         no_repeat=no_repeat,
@@ -295,9 +326,10 @@ def _eligible_candidates(
     return connection.execute(
         """SELECT u.id, u.username, u.phone, u.created_at
              FROM activity_users u
-             LEFT JOIN lottery_entries e ON e.activity_id = u.activity_id AND e.activity_user_id = u.id
+             LEFT JOIN lottery_prize_entries e
+               ON e.activity_id = u.activity_id AND e.prize_id = ? AND e.activity_user_id = u.id
             WHERE """ + where + " ORDER BY u.id",
-        parameters,
+        (prize_id, *parameters),
     ).fetchall()
 
 
@@ -346,6 +378,7 @@ def prepare_lottery_round(
         candidates = _eligible_candidates(
             connection,
             activity_id,
+            prize_id,
             no_repeat=bool(config["no_repeat_across_prizes"]),
         )
         if not candidates:
@@ -417,6 +450,7 @@ def draw_lottery(
         candidates = _eligible_candidates(
             connection,
             activity_id,
+            prize_id,
             no_repeat=bool(config["no_repeat_across_prizes"]),
         )
         if candidate_user_ids is not None:

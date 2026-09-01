@@ -115,6 +115,7 @@ export interface LotteryEntrySummary {
 }
 export type LotteryEntryStatus = "all" | "eligible" | "blacklisted" | "whitelisted" | "inactive";
 export interface LotteryEntryPage {
+  prize_id: number;
   items: LotteryEntry[];
   page: number;
   page_size: number;
@@ -123,16 +124,17 @@ export interface LotteryEntryPage {
   summary: LotteryEntrySummary;
 }
 export interface LotteryEntryUpdateResponse {
+  prize_id: number;
   entry: LotteryEntry;
   summary: LotteryEntrySummary;
 }
+export interface LotterySecurityCodeResponse { verified: boolean }
 export interface LotteryConfig {
   activity_id: string;
   no_repeat_across_prizes: boolean;
   rolling_name_count: number;
   awards: LotteryAward[];
   prizes: LotteryPrize[];
-  entry_summary: LotteryEntrySummary;
   updated_at: string;
 }
 export interface LotteryDraw {
@@ -252,6 +254,11 @@ export const stopDanmakuTest = (activityId: string) =>
   request<DanmakuTestStatus>(`/admin/activities/${activityId}/danmaku/test/stop`, { method: "POST" });
 export const getLottery = (activityId: string) =>
   request<LotteryConfig>(`/admin/activities/${activityId}/lottery`);
+export const verifyLotterySecurityCode = (activityId: string, securityCode: string) =>
+  request<LotterySecurityCodeResponse>(`/admin/activities/${activityId}/lottery/security-code/verify`, {
+    method: "POST",
+    body: JSON.stringify({ security_code: securityCode }),
+  });
 export const updateLottery = (activityId: string, config: LotteryConfigUpdate) =>
   request<LotteryConfig>(`/admin/activities/${activityId}/lottery`, {
     method: "PUT",
@@ -259,6 +266,7 @@ export const updateLottery = (activityId: string, config: LotteryConfigUpdate) =
   });
 export const getLotteryEntries = (
   activityId: string,
+  prizeId: number,
   options: {
     keyword?: string;
     status?: LotteryEntryStatus;
@@ -267,6 +275,7 @@ export const getLotteryEntries = (
   } = {},
 ) => {
   const params = new URLSearchParams();
+  params.set("prize_id", String(prizeId));
   if (options.keyword) params.set("keyword", options.keyword);
   if (options.status) params.set("status", options.status);
   if (options.page) params.set("page", String(options.page));
@@ -278,10 +287,11 @@ export const getLotteryEntries = (
 };
 export const updateLotteryEntry = (
   activityId: string,
+  prizeId: number,
   activityUserId: number,
   payload: Pick<LotteryEntry, "is_blacklisted" | "is_whitelisted">,
 ) => request<LotteryEntryUpdateResponse>(
-  `/admin/activities/${activityId}/lottery/entries/${activityUserId}`,
+  `/admin/activities/${activityId}/lottery/entries/${activityUserId}?prize_id=${prizeId}`,
   { method: "PUT", body: JSON.stringify(payload) },
 );
 export const mediaURL = (imageUrl: string | null): string | null => {

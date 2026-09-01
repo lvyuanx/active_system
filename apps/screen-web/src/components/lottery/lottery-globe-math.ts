@@ -175,6 +175,10 @@ export function easeOutCubic(progress: number): number {
   return 1 - (1 - clamped) ** 3;
 }
 
+export function winnerFocusHandoff(progress: number): number {
+  return easeOutCubic((progress - 0.2) / 0.4);
+}
+
 export function globeScatterScale(progress: number, depth: number): number {
   const normalizedDepth = Math.min(1, Math.max(-1, depth));
   return 1 + easeOutCubic(progress) * (0.85 + ((normalizedDepth + 1) / 2) * 0.3);

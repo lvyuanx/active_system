@@ -61,6 +61,14 @@ class LotteryEntryUpdate(BaseModel):
         return self
 
 
+class LotterySecurityCodeRequest(BaseModel):
+    security_code: str = Field(min_length=1, max_length=200)
+
+
+class LotterySecurityCodeResponse(BaseModel):
+    verified: bool = True
+
+
 class LotteryConfigUpdate(BaseModel):
     no_repeat_across_prizes: bool | None = None
     rolling_name_count: int | None = Field(default=None, ge=1, le=20)
@@ -125,6 +133,7 @@ class LotteryEntrySummary(BaseModel):
 
 
 class LotteryEntryPage(BaseModel):
+    prize_id: int
     items: list[LotteryEntry]
     page: int = Field(ge=1)
     page_size: int = Field(ge=1, le=100)
@@ -134,6 +143,7 @@ class LotteryEntryPage(BaseModel):
 
 
 class LotteryEntryUpdateResponse(BaseModel):
+    prize_id: int
     entry: LotteryEntry
     summary: LotteryEntrySummary
 
@@ -144,7 +154,6 @@ class LotteryConfigResponse(BaseModel):
     rolling_name_count: int
     awards: list[LotteryAward]
     prizes: list[LotteryPrize]
-    entry_summary: LotteryEntrySummary
     updated_at: datetime
 
 

@@ -1,0 +1,45 @@
+{
+  "input_snapshot_id": "HEAD-d8be58d-dirty-20260831-task-v2",
+  "parent_task_version": "TASK-v1",
+  "head_sha": "d8be58db6ffdc3e3fe4f34a10a63360b515be33b",
+  "head_tree_oid": "003a05512dea303d600ead4d3759cb93fd8075c2",
+  "worktree_path": "D:/projects/active_system",
+  "status": "dirty-existing-changes-preserved",
+  "preexisting_changes": [
+    {
+      "path": "data/media/lottery-prizes/152890d0279948f8893bf4611b9605ec.png",
+      "status": "D",
+      "head_blob_sha1": "49c90b238a0ba72f477c0ea80a1264c537db780e",
+      "in_scope": false,
+      "handling": "用户已有任务外改动，未触碰"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryWinnerReveal.vue",
+      "status": "M from TASK-v1",
+      "sha256": "33d8bd4deff4c17c9a76d7fb977763509f6ac948efecd53c3f88b9026178c08f"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryWinnerReveal.css",
+      "status": "M from TASK-v1",
+      "sha256": "71eaf38645c907c09a780b3d9489160103a1dd67e88d8377dc09d95bf4109dff"
+    }
+  ],
+  "read_scope": [
+    "apps/screen-web/src/components/lottery",
+    "apps/screen-web/scripts/test-lottery-globe.mjs",
+    "apps/screen-web/package.json",
+    "apps/screen-web/src/components/lottery/AGENTS.md",
+    "TASK-v1 handoffs"
+  ],
+  "write_scope": [
+    "apps/screen-web/src/components/lottery/LotteryWinnerReveal.vue",
+    "apps/screen-web/src/components/lottery/LotteryWinnerReveal.css",
+    "apps/screen-web/scripts/test-lottery-globe.mjs",
+    "apps/screen-web/src/components/lottery/AGENTS.md",
+    "apps/screen-web/AGENTS.md",
+    "MEMORY.md",
+    "LEARNING.md",
+    "WIKI.md",
+    ".codex-tasks/20260831-lottery-center-reveal"
+  ]
+}

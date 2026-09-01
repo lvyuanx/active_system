@@ -1,0 +1,54 @@
+{
+  "task_version": "TASK-v3",
+  "input_snapshot_id": "HEAD-d8be58d-dirty-20260831-task-v3",
+  "state": "dirty-existing-changes-preserved",
+  "files": [
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.vue",
+      "sha256": "d0fc413e74ba75c7f170c29a88a7ef6e04d14bfa397cf52d2a0c678d8944e697"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.css",
+      "sha256": "5cf142d7fd881dfaed0110bc2e2139bafaa92b92c35834c9b6d777f9a35fef12"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreenImages.css",
+      "sha256": "9b5e8487aac648d42f2587f8a58023c94acd18f21d5a45145d5cf84a8dd73f37"
+    },
+    {
+      "path": "apps/screen-web/scripts/test-lottery-globe.mjs",
+      "sha256": "7472254678d9a7f6a7634fdac76154018b67deaad12785cb287c7f0461d52d25"
+    },
+    {
+      "path": "apps/screen-web/AGENTS.md",
+      "sha256": "7a780429ac91e13a194d6b40c13aa100d41ffe8cd213939a83dd4cd95f21054e"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/AGENTS.md",
+      "sha256": "9d4d71034565e12ffd66a579b7dd08a3315eed80525f5d0eaff4db831aaee3b3"
+    },
+    {
+      "path": "MEMORY.md",
+      "sha256": "78a168f3fa40ed7ab610f4407bb4b67f4264199e2cc2fa1c8238733322fe05d1"
+    },
+    {
+      "path": "LEARNING.md",
+      "sha256": "baef58e60622899eade73ad96f47c3221f97d924d604997fe4957da6bb9f7498"
+    },
+    {
+      "path": "WIKI.md",
+      "sha256": "3b92ef588450a582d49bd8fa2d047f95786d98b6bd61440064ea1fc5d39737a5"
+    }
+  ],
+  "verification": {
+    "screen_test": "passed",
+    "screen_typecheck": "passed",
+    "screen_build": "passed",
+    "git_diff_check": "passed",
+    "browser_layout_1280x720": "passed",
+    "output_patch": {
+      "path": "OUTPUT-PATCH-v3.diff",
+      "sha256": "e0ee1c6de06e3422a254febc7ea8eef74faf6ee7489aeed78c64917ef1c5e5e7"
+    }
+  }
+}

@@ -34,7 +34,7 @@ Electron 仅通过 `?danmaku-overlay=1` 加载透明弹幕渲染层。
 
 ## 管理员活动管理
 
-启动后端前复制 `.env.example` 为 `.env`，设置 `SUPERUSER_USERNAME`、`SUPERUSER_PASSWORD` 和随机的 `JWT_SECRET`。
+启动后端前复制 `.env.example` 为 `.env`，设置 `SUPERUSER_USERNAME`、`SUPERUSER_PASSWORD`、`LOTTERY_SECURITY_CODE` 和随机的 `JWT_SECRET`。
 可选设置独立的 `DANMAKU_TOKEN_SECRET`；为空时弹幕 token 使用 `JWT_SECRET` 派生。后端首次启动会初始化 SQLite 数据库和超级用户；只有该超级用户可以登录管理端。
 奖品图片由管理员通过独立 multipart 接口上传，默认保存到 `MEDIA_ROOT=./data/media`，支持 JPEG、PNG、WebP，单文件上限 5 MiB；
 Docker 部署使用持久化媒体卷，配置 JSON 不承载图片二进制。
@@ -55,8 +55,9 @@ Docker 部署使用持久化媒体卷，配置 JSON 不承载图片二进制。
 
 活动管理页的“实时抽奖”入口通过管理员连接
 `/api/v1/admin/activities/{activity_id}/lottery/ws` 控制开奖和重置，连接首帧发送管理员 JWT；奖项、奖品和抽奖规则通过
-`GET/PUT /api/v1/admin/activities/{activity_id}/lottery` 配置，名单通过
-`GET/PUT /api/v1/admin/activities/{activity_id}/lottery/entries` 按页搜索和单行即时保存，中奖历史通过
+`GET/PUT /api/v1/admin/activities/{activity_id}/lottery` 配置；管理端“特殊配置”入口需先调用
+`POST /api/v1/admin/activities/{activity_id}/lottery/security-code/verify` 校验 `LOTTERY_SECURITY_CODE`，名单通过
+`GET/PUT /api/v1/admin/activities/{activity_id}/lottery/entries?prize_id={prize_id}` 按指定奖品分页搜索和单行即时保存；不同奖品分别维护黑白名单，参与者统计和规则说明仅在验证后的弹窗内展示，中奖历史通过
 `GET /api/v1/admin/activities/{activity_id}/lottery/history` 查询。抽奖先发送 `lottery.draw.start` 开始球体动画，
 收到 `lottery.draw.started` 后发送 `lottery.draw.stop` 才会开奖；开奖事务提交后才广播，轮次 ID保证重复停止幂等。
 

@@ -1,0 +1,61 @@
+{
+  "task_version": "TASK-v5",
+  "input_snapshot_id": "HEAD-d8be58d-dirty-20260831-task-v5",
+  "state": "dirty-existing-changes-preserved",
+  "files": [
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.vue",
+      "sha256": "26d73c0b858338b603148ec5fd84205d387da436944a2dd80dcd7f26a4e10c9d"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.css",
+      "sha256": "f02bc71daa3aa8959a629dc94a346f04a65318e59ee5a1db9e1783c5e95574af"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreenImages.css",
+      "sha256": "33d0d8f3f3b567d25eeca6dda1bd25cff1a1afb666ce12bf6d27b4e6f018a66b"
+    },
+    {
+      "path": "apps/screen-web/scripts/test-lottery-globe.mjs",
+      "sha256": "28b7bba253e58cb3ce2806a7f5759b5943f7fd081dc0d5ed2b96734434fbbee4"
+    },
+    {
+      "path": "apps/screen-web/AGENTS.md",
+      "sha256": "8f5222ede3f1ec343447c8b7c70ff01bc0f576358b746142026cc5e9d60a8b67"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/AGENTS.md",
+      "sha256": "dafa9b5d17c3a15339bc3cd3afc9d8810ffa08a475d06fd5df4a4448a9c201e5"
+    },
+    {
+      "path": "MEMORY.md",
+      "sha256": "a963f6c7c36dcf5c258e9a510b28eb45fee37e1020be67b64d26f5e674e08573"
+    },
+    {
+      "path": "LEARNING.md",
+      "sha256": "79cfb8e8d630efb3f98655c9cd115217e8bb8cd10417bf7cfeae663be271c951"
+    },
+    {
+      "path": "WIKI.md",
+      "sha256": "9f8c1b23bec6c3c61b0f8f96d4032725f8a967ce9c32dfab4b0d3fa827085a53"
+    }
+  ],
+  "verification": {
+    "screen_test": "passed",
+    "screen_typecheck": "passed",
+    "screen_build": "passed",
+    "git_diff_check": "passed",
+    "browser_layout_1280x720": {
+      "status": "passed",
+      "activity_name_in_header": "测试活动",
+      "title_prize": "iphone19",
+      "title_image_loaded": true,
+      "scroll_width": 1280,
+      "scroll_height": 720
+    },
+    "output_patch": {
+      "path": "OUTPUT-PATCH-v5.diff",
+      "sha256": "9a098767ac5f482b22a47b35624520d7fb4b9c2508c45ae6106333a6080520e9"
+    }
+  }
+}

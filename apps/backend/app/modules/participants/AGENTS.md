@@ -28,7 +28,8 @@
 
 管理员接口统一使用 `/admin/activities/{activity_id}/participants` 前缀，所有读写都要求超级用户权限并带活动条件。
 
-新参与者注册事务会同步创建一条默认可参加的 `lottery_entries` 名单记录；历史参与者没有名单行时由抽奖服务按默认可参加处理。
+新参与者注册事务只创建 `activity_users` 记录，不预创建每个奖品的名单行；抽奖服务对缺失的 `lottery_prize_entries` 按默认可参加处理。
+历史活动的旧 `lottery_entries` 记录由抽奖模块按活动懒迁移到已有奖品，迁移完成后新增奖品不会继承旧标记。
 
 ## 迁移与注意事项
 

@@ -45,6 +45,41 @@ def activity_or_raise(connection: sqlite3.Connection, activity_id: str) -> sqlit
     return activity
 
 
+def prize_or_raise(connection: sqlite3.Connection, activity_id: str, prize_id: int) -> sqlite3.Row:
+    prize = connection.execute(
+        "SELECT prize_id, activity_id FROM lottery_prizes WHERE activity_id = ? AND prize_id = ?",
+        (activity_id, prize_id),
+    ).fetchone()
+    if not prize:
+        raise LotteryConfigError("invalid_prize", "奖品不存在或不属于当前活动")
+    return prize
+
+
+def _migrate_legacy_entries(connection: sqlite3.Connection, activity_id: str) -> None:
+    migrated = connection.execute(
+        "SELECT 1 FROM lottery_prize_entry_migrations WHERE activity_id = ?",
+        (activity_id,),
+    ).fetchone()
+    if migrated:
+        return
+    connection.execute(
+        """INSERT OR IGNORE INTO lottery_prize_entries(
+               activity_id, prize_id, activity_user_id, is_blacklisted, is_whitelisted, created_at, updated_at
+           )
+           SELECT legacy.activity_id, prize.prize_id, legacy.activity_user_id,
+                  legacy.is_blacklisted, legacy.is_whitelisted, legacy.created_at, legacy.updated_at
+             FROM lottery_entries legacy
+             JOIN lottery_prizes prize ON prize.activity_id = legacy.activity_id
+             JOIN activity_users user ON user.activity_id = legacy.activity_id AND user.id = legacy.activity_user_id
+            WHERE legacy.activity_id = ?""",
+        (activity_id,),
+    )
+    connection.execute(
+        "INSERT OR IGNORE INTO lottery_prize_entry_migrations(activity_id, migrated_at) VALUES (?, ?)",
+        (activity_id, now()),
+    )
+
+
 def ensure_config(connection: sqlite3.Connection, activity_id: str) -> sqlite3.Row:
     activity_or_raise(connection, activity_id)
     current_time = now()
@@ -81,6 +116,7 @@ def ensure_config(connection: sqlite3.Connection, activity_id: str) -> sqlite3.R
             "VALUES (?, ?, ?, 1, 0, 1)",
             (activity_id, award_id, DEFAULT_PRIZE_NAME),
         )
+    _migrate_legacy_entries(connection, activity_id)
     row = connection.execute(
         "SELECT * FROM lottery_configs WHERE activity_id = ?", (activity_id,)
     ).fetchone()
@@ -106,6 +142,7 @@ def prize_rows(connection: sqlite3.Connection, activity_id: str) -> list[sqlite3
 def entry_where(
     connection: sqlite3.Connection,
     activity_id: str,
+    prize_id: int,
     *,
     status: LotteryEntryStatus,
     keyword: str | None,
@@ -115,8 +152,9 @@ def entry_where(
     parameters: list[object] = [activity_id]
     if status == "eligible":
         has_whitelist = connection.execute(
-            "SELECT 1 FROM lottery_entries WHERE activity_id = ? AND is_whitelisted = 1 LIMIT 1",
-            (activity_id,),
+            "SELECT 1 FROM lottery_prize_entries "
+            "WHERE activity_id = ? AND prize_id = ? AND is_whitelisted = 1 LIMIT 1",
+            (activity_id, prize_id),
         ).fetchone()
         clauses.extend(
             [
@@ -147,6 +185,7 @@ def entry_where(
 def lottery_entry_row(
     connection: sqlite3.Connection,
     activity_id: str,
+    prize_id: int,
     activity_user_id: int,
 ) -> sqlite3.Row:
     row = connection.execute(
@@ -154,10 +193,10 @@ def lottery_entry_row(
                   COALESCE(e.is_blacklisted, 0) AS is_blacklisted,
                   COALESCE(e.is_whitelisted, 0) AS is_whitelisted
              FROM activity_users u
-             LEFT JOIN lottery_entries e
-               ON e.activity_id = u.activity_id AND e.activity_user_id = u.id
+             LEFT JOIN lottery_prize_entries e
+               ON e.activity_id = u.activity_id AND e.prize_id = ? AND e.activity_user_id = u.id
             WHERE u.activity_id = ? AND u.id = ?""",
-        (activity_id, activity_user_id),
+        (prize_id, activity_id, activity_user_id),
     ).fetchone()
     if not row:
         raise LotteryConfigError("entry_not_found", "参与者不存在或不属于当前活动")
@@ -175,9 +214,18 @@ def lottery_entry(row: sqlite3.Row) -> LotteryEntry:
     )
 
 
+def _lottery_entry_from_clause() -> str:
+    return (
+        "FROM activity_users u "
+        "LEFT JOIN lottery_prize_entries e "
+        "ON e.activity_id = u.activity_id AND e.prize_id = ? AND e.activity_user_id = u.id"
+    )
+
+
 def lottery_entry_rows(
     connection: sqlite3.Connection,
     activity_id: str,
+    prize_id: int,
     *,
     status: LotteryEntryStatus,
     keyword: str | None,
@@ -188,18 +236,16 @@ def lottery_entry_rows(
     where, parameters = entry_where(
         connection,
         activity_id,
+        prize_id,
         status=status,
         keyword=keyword,
         no_repeat=no_repeat,
     )
-    from_clause = (
-        "FROM activity_users u "
-        "LEFT JOIN lottery_entries e "
-        "ON e.activity_id = u.activity_id AND e.activity_user_id = u.id"
-    )
+    from_clause = _lottery_entry_from_clause()
+    query_parameters = [prize_id, *parameters]
     count_row = connection.execute(
         f"SELECT COUNT(*) AS total {from_clause} WHERE {where}",
-        parameters,
+        query_parameters,
     ).fetchone()
     rows = connection.execute(
         f"""SELECT u.id AS activity_user_id, u.username, u.phone, u.is_active,
@@ -209,7 +255,7 @@ def lottery_entry_rows(
             WHERE {where}
             ORDER BY u.created_at DESC, u.id DESC
             LIMIT ? OFFSET ?""",
-        (*parameters, limit, offset),
+        (*query_parameters, limit, offset),
     ).fetchall()
     return rows, int(count_row["total"])
 
@@ -217,6 +263,7 @@ def lottery_entry_rows(
 def lottery_entry_summary(
     connection: sqlite3.Connection,
     activity_id: str,
+    prize_id: int,
     *,
     no_repeat: bool,
 ) -> LotteryEntrySummary:
@@ -228,14 +275,15 @@ def lottery_entry_summary(
                       AS whitelisted,
                   COALESCE(SUM(CASE WHEN u.is_active = 0 THEN 1 ELSE 0 END), 0) AS inactive
              FROM activity_users u
-             LEFT JOIN lottery_entries e
-               ON e.activity_id = u.activity_id AND e.activity_user_id = u.id
-            WHERE u.activity_id = ?""",
-        (activity_id,),
+             LEFT JOIN lottery_prize_entries e
+               ON e.activity_id = u.activity_id AND e.prize_id = ? AND e.activity_user_id = u.id
+             WHERE u.activity_id = ?""",
+        (prize_id, activity_id),
     ).fetchone()
     eligible_where, eligible_parameters = entry_where(
         connection,
         activity_id,
+        prize_id,
         status="eligible",
         keyword=None,
         no_repeat=no_repeat,
@@ -243,10 +291,10 @@ def lottery_entry_summary(
     eligible_row = connection.execute(
         """SELECT COUNT(*) AS total
              FROM activity_users u
-             LEFT JOIN lottery_entries e
-               ON e.activity_id = u.activity_id AND e.activity_user_id = u.id
+             LEFT JOIN lottery_prize_entries e
+               ON e.activity_id = u.activity_id AND e.prize_id = ? AND e.activity_user_id = u.id
             WHERE """ + eligible_where,
-        eligible_parameters,
+        (prize_id, *eligible_parameters),
     ).fetchone()
     return LotteryEntrySummary(
         total=int(row["total"]),
@@ -289,11 +337,6 @@ def config_response(connection: sqlite3.Connection, activity_id: str) -> Lottery
             )
             for row in prize_rows(connection, activity_id)
         ],
-        entry_summary=lottery_entry_summary(
-            connection,
-            activity_id,
-            no_repeat=bool(config["no_repeat_across_prizes"]),
-        ),
         updated_at=datetime.fromisoformat(str(config["updated_at"])),
     )
 

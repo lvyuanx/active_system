@@ -54,10 +54,14 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 
 ## WebSocket 实时抽奖
 
-`lottery` 模块使用 `lottery_configs`、`lottery_awards`、`lottery_prizes`、`lottery_entries` 和 `lottery_draws` 五张活动隔离表。
-新参与者注册时创建默认名单行，历史参与者没有名单行时按默认可参加处理。配置 HTTP 接口是
-`/admin/activities/{activity_id}/lottery`，名单分页和单行更新接口是其 `/entries`，历史接口是其 `/history`；管理员控制连接是
+`lottery` 模块使用 `lottery_configs`、`lottery_awards`、`lottery_prizes`、`lottery_prize_entries` 和 `lottery_draws` 等活动隔离表。
+旧的 `lottery_entries` 仅作为历史活动级名单的迁移来源，`lottery_prize_entry_migrations` 记录每个活动的一次性迁移；新参与者不预创建名单行，
+缺失的奖品名单按默认可参加处理。配置 HTTP 接口是
+`/admin/activities/{activity_id}/lottery`，名单分页和单行更新接口是其带 `prize_id` 查询参数的 `/entries`，历史接口是其 `/history`；管理员控制连接是
 `/admin/activities/{activity_id}/lottery/ws`，公开大屏连接是 `/activities/{activity_id}/lottery/ws`。
+管理端名单入口先调用 `/admin/activities/{activity_id}/lottery/security-code/verify`；该接口只接受超级用户 JWT 和请求体中的安全码，
+安全码由后端 `LOTTERY_SECURITY_CODE` 配置，不返回给前端。主页面仅保留“特殊配置”入口，弹窗先选择奖品，再展示该奖品的参与者统计和规则说明；
+名单状态与摘要均按 `(activity_id, prize_id, activity_user_id)` 隔离，名单更新后的摘要仍由接口响应回写。
 
 开奖 service 在 `BEGIN IMMEDIATE` 事务内先按 `(activity_id, request_id)` 查幂等记录，再校验活动为 `open`、奖品库存、启用状态、
 黑名单/白名单、活动用户 `is_active` 和跨奖品不重复规则。管理员先发送 `lottery.draw.start`，后端按活动维护单个内存轮次，
@@ -65,6 +69,9 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 停止请求先把轮次标记为 stopping 并广播仅含轮次 ID 的 `lottery.draw.stopping`，让公开大屏冻结旋转并执行打散动画；剩余库存由奖品数量减中奖记录计数得到；事务提交后才广播管理员完整 `lottery.draw.result` 和带轮次 ID的公开脱敏
 `lottery.drawn`。管理员连接首帧必须提供超级用户 JWT，带活动上下文的用户 JWT 会被拒绝；大屏不能发送控制命令。
 `lottery.ready` 带有进行中的 `active_round`，公开开始事件只带活动用户 ID、用户名和头像 ID，不带手机号、名单标记、停用状态或管理员字段。
+
+公开大屏在 `scattering` 完成且收到匹配轮次的 `lottery.drawn` 后进入 `selecting`：中奖者保留从打散位置向舞台中心移动的 Canvas 轨迹，
+随后交接到中心用户层做明显的缩放揭晓；非中奖者渐隐，中心用户层持续展示到 `revealed`，不再额外切换矩形中奖卡片。中心层只渲染公开用户名和头像，不参与开奖控制。
 
 连接管理器为单进程活动房间实现，按 `admin`/`screen` 角色广播并在断开或发送失败时清理连接；轮次状态同样只保存在当前进程，服务重启会取消未落库轮次。管理端和大屏端均使用指数退避重连；
 大屏把 ready 历史作为已揭晓 `draw_id` 基线，后续事件去重后按序播放约 3 秒滚动揭晓。多副本部署仍需引入共享消息总线，不能把当前
@@ -81,6 +88,18 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 管理端图片通过独立 multipart 上传、删除和管理员读取接口处理，现有 lottery 配置 PUT 保持纯 JSON。
 公开配置、快照和开奖事件只包含 `/api/v1/activities/{activity_id}/lottery/prizes/{prize_id}/image?v={image_id}` 安全引用，
 公开图片路由不接受管理员凭证；旧版本引用在替换后返回 404。替换/删除提交后清理旧文件，启动和配置操作执行孤儿扫描。
+
+大屏进行中的顶部奖品标签不依赖开始轮次载荷新增字段，而是使用当前轮次的 `award_id`、`prize_id` 从公开快照匹配奖品图片；
+图片缺失或加载失败时保留奖项和奖品文字。
+
+大屏顶部活动标题区通过内容顶部留白、标题字号/行高及主面板上方间距共同控制；桌面、移动端和短屏均采用紧凑值，
+避免标题区占用过多视口而压缩抽奖球体空间。
+
+大屏 Header 只保留品牌和连接状态，活动名称动态写入浏览器 `document.title`；顶部标题区域显示当前奖品名称和图片，当前轮次优先，其次使用最近开奖结果或下一件有库存奖品；
+主抽奖面板只承载抽奖状态、球体和中奖者，避免重复显示奖品信息。
+顶部当前奖品图片使用 80×80px 桌面尺寸、64×64px 移动端尺寸，图片加载失败时隐藏图片但保留名称。
+收到开始轮次后，大屏进入沉浸式视图，仅保留铺满视口的球体；停止后的中奖者中心放大完成并短暂展示后清理 `activeRound`，恢复 Header、奖品区、奖项板和底部信息。
+恢复后的中奖结果区同时显示用户头像和用户名；当前轮次使用参与者头像 ID，历史结果使用稳定本地头像兜底。
 
 管理端奖品编辑行的左列包含名称输入和图片操作两行，数量、启用和删除控件使用顶部对齐以匹配名称输入首行；奖项头部仍保持居中，
 800px 和 520px 以下继续使用既有网格堆叠规则。

@@ -1,7 +1,10 @@
 <template>
   <main
     class="lottery-screen"
-    :class="{ 'lottery-screen--round-active': activeRound }"
+    :class="{
+      'lottery-screen--round-active': activeRound,
+      'lottery-screen--immersive': activeRound,
+    }"
     :data-lottery-phase="globePhase"
   >
     <div class="aurora aurora-one"></div>
@@ -22,9 +25,16 @@
 
     <section class="lottery-content">
       <div class="title-block">
-        <p class="kicker">SPECIAL EVENT · LUCKY DRAW</p>
-        <h1>{{ snapshot?.activity_name || "幸运抽奖" }}</h1>
-        <p class="subtitle">{{ subtitleText }}</p>
+        <div class="title-prize">
+          <img
+            v-if="displayPrizeImageURL && canShowImage(displayPrizeImageURL)"
+            class="title-prize__image"
+            :src="imageURL(displayPrizeImageURL)"
+            alt=""
+            @error="markImageFailed(displayPrizeImageURL)"
+          />
+          <h1>{{ displayPrizeName || "等待奖品" }}</h1>
+        </div>
       </div>
 
       <div class="draw-layout" :class="{ 'draw-layout--active': activeRound }">
@@ -35,14 +45,6 @@
         >
           <div class="reveal-beam"></div>
           <p class="reveal-label">{{ revealLabel }}</p>
-          <img
-            v-if="!activeRound && currentDraw?.prize_image_url && canShowImage(currentDraw.prize_image_url)"
-            class="winner-prize-image"
-            :src="imageURL(currentDraw.prize_image_url)"
-            alt="中奖奖品"
-            @error="markImageFailed(currentDraw.prize_image_url)"
-          />
-          <h2>{{ activeRound?.prize_name || currentDraw?.prize_name || selectedPrizeName || "等待抽奖" }}</h2>
           <div v-if="activeRound" class="globe-stage">
             <LotteryGlobe
               :participants="activeRound.participants"
@@ -55,7 +57,14 @@
               @settled="handleGlobeSettled"
             />
             <div class="round-prize-chip">
-              {{ activeRound.award_name }} · {{ activeRound.prize_name }}
+              <img
+                v-if="activePrizeImageURL && canShowImage(activePrizeImageURL)"
+                class="round-prize-chip__image"
+                :src="imageURL(activePrizeImageURL)"
+                alt=""
+                @error="markImageFailed(activePrizeImageURL)"
+              />
+              <span>{{ activeRound.award_name }} · {{ activeRound.prize_name }}</span>
             </div>
           </div>
           <div v-else class="name-stage">
@@ -68,7 +77,10 @@
                 {{ name }}
               </span>
             </div>
-            <div v-else-if="currentDraw" class="winner-name">{{ currentDraw.winner.username }}</div>
+            <div v-else-if="currentDraw" class="winner-result">
+              <img class="winner-result__avatar" :src="currentWinnerAvatarSource" alt="" />
+              <div class="winner-name">{{ currentDraw.winner.username }}</div>
+            </div>
             <div v-else class="waiting-mark">✦</div>
           </div>
           <div v-if="currentDraw && !activeRound" class="winner-meta">
@@ -76,7 +88,8 @@
             <b>第 {{ currentDraw.draw_number }} 位</b>
             <span>剩余 {{ currentDraw.remaining_quantity }}</span>
           </div>
-          <p v-if="!activeRound && !currentDraw" class="reveal-tip">大屏已就绪 · 等待管理端发起开奖</p>
+          <p v-if="error" class="reveal-tip">{{ error }}</p>
+          <p v-else-if="!activeRound && !currentDraw" class="reveal-tip">大屏已就绪 · 等待管理端发起开奖</p>
         </section>
 
         <aside class="prize-board">
@@ -115,15 +128,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   lotteryWebSocketURL,
   type LotteryDraw,
   type LotteryDrawnEvent,
   type LotteryRound,
+  type LotteryRoundParticipant,
   type LotterySnapshot,
 } from "../../api/client";
 import { enqueueLotteryDraw, readyLotteryDrawIds } from "./lottery-order";
+import { avatarSources } from "./avatar-sources";
 import LotteryGlobe from "./LotteryGlobe.vue";
 
 const props = defineProps<{ activityId: string; apiBaseUrl?: string }>();
@@ -132,6 +147,7 @@ const apiBaseUrl = props.apiBaseUrl
 const snapshot = ref<LotterySnapshot>();
 const queue = ref<LotteryDraw[]>([]);
 const currentDraw = ref<LotteryDraw>();
+const currentWinnerAvatarId = ref(1);
 const rollingNames = ref<string[]>([]);
 const activeRound = ref<LotteryRound>();
 const pendingDraw = ref<LotteryDraw>();
@@ -146,6 +162,7 @@ let knownDrawIds = new Set<number>();
 let socket: WebSocket | undefined;
 let reconnectTimer: number | undefined;
 let revealTimer: number | undefined;
+let restoreTimer: number | undefined;
 let pingTimer: number | undefined;
 let retryCount = 0;
 let stopped = false;
@@ -158,13 +175,6 @@ const globePhase = computed(() => {
   if (!activeRound.value) return "idle" as const;
   return globeStage.value;
 });
-const globeStageCaption = computed(() => ({
-  rolling: "所有参与者正在滚动",
-  scattering: "球体正在散开",
-  scattered: "等待中奖者聚焦",
-  selecting: "幸运者正在聚焦",
-  revealed: "中奖者已揭晓",
-}[globeStage.value]));
 const revealLabel = computed(() => {
   if (!activeRound.value) return currentDraw.value ? "WINNER REVEALED" : "READY TO DRAW";
   return ({
@@ -175,12 +185,6 @@ const revealLabel = computed(() => {
     revealed: "WINNER REVEALED",
   }[globeStage.value]);
 });
-const subtitleText = computed(() => (
-  error.value
-    || (activeRound.value
-      ? globeStageCaption.value
-      : "好运正在聚集，下一位幸运者即将揭晓")
-));
 const footerText = computed(() => (
   activeRound.value
     ? globeStage.value === "revealed" ? "中奖结果已揭晓" : "抽奖动画进行中"
@@ -198,12 +202,50 @@ const markImageFailed = (url: string | null) => {
   failedImageURLs.value = new Set([...failedImageURLs.value, url]);
 };
 
-const selectedPrizeName = computed(() => {
-  const prize = snapshot.value?.awards
-    .flatMap((award) => award.prizes)
-    .find((item) => item.remaining_quantity > 0);
-  return prize?.name;
+const activePrizeImageURL = computed(() => {
+  const round = activeRound.value;
+  if (!round) return null;
+  return snapshot.value?.awards
+    .find((award) => award.award_id === round.award_id)
+    ?.prizes.find((prize) => prize.prize_id === round.prize_id)?.image_url || null;
 });
+
+const selectedPrize = computed(() => snapshot.value?.awards
+  .flatMap((award) => award.prizes)
+  .find((item) => item.remaining_quantity > 0));
+const selectedPrizeName = computed(() => selectedPrize.value?.name);
+const displayPrizeName = computed(() => (
+  activeRound.value?.prize_name || currentDraw.value?.prize_name || selectedPrizeName.value
+));
+const displayPrizeImageURL = computed(() => {
+  if (activeRound.value) return activePrizeImageURL.value;
+  if (currentDraw.value) return currentDraw.value.prize_image_url;
+  return selectedPrize.value?.image_url || null;
+});
+const currentWinnerAvatarSource = computed(() => avatarSources[currentWinnerAvatarId.value] || avatarSources[1]);
+
+const fallbackWinnerAvatarId = (activityUserId: number) => {
+  const normalizedId = Math.max(1, Math.abs(Math.trunc(activityUserId)));
+  return ((normalizedId - 1) % Object.keys(avatarSources).length) + 1;
+};
+const rememberWinnerAvatar = (draw: LotteryDraw, participants: LotteryRoundParticipant[] = []) => {
+  const participant = participants.find((item) => item.activity_user_id === draw.winner.activity_user_id);
+  currentWinnerAvatarId.value = participant?.avatar_id || fallbackWinnerAvatarId(draw.winner.activity_user_id);
+};
+
+const clearRestoreTimer = () => {
+  if (restoreTimer === undefined) return;
+  window.clearTimeout(restoreTimer);
+  restoreTimer = undefined;
+};
+
+watch(
+  () => snapshot.value?.activity_name,
+  (activityName) => {
+    document.title = activityName?.trim() || "幸运抽奖";
+  },
+  { immediate: true },
+);
 
 const particleStyle = (index: number) => ({
   "--particle-x": `${(index * 37) % 100}%`,
@@ -223,6 +265,7 @@ const appendDraw = (draw: LotteryDraw) => {
 };
 
 const activateRound = (round: LotteryRound) => {
+  clearRestoreTimer();
   const isStopping = round.phase === "stopping" || stoppingRoundIds.has(round.round_id);
   stoppingRoundIds.delete(round.round_id);
   activeRound.value = isStopping ? { ...round, phase: "stopping" } : round;
@@ -254,7 +297,18 @@ const handleGlobeSettled = () => {
   globeStage.value = "revealed";
   globeSettled.value = true;
   currentDraw.value = pendingDraw.value;
+  rememberWinnerAvatar(pendingDraw.value, activeRound.value?.participants);
   if (roundQueue.value.length) activateQueuedRound();
+  else {
+    const duration = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 700 : 2200;
+    restoreTimer = window.setTimeout(() => {
+      restoreTimer = undefined;
+      activeRound.value = undefined;
+      pendingDraw.value = undefined;
+      globeSettled.value = false;
+      globeStage.value = "rolling";
+    }, duration);
+  }
 };
 
 const playNext = () => {
@@ -266,6 +320,7 @@ const playNext = () => {
   rollNamesByDraw.delete(draw.draw_id);
   revealTimer = window.setTimeout(() => {
     currentDraw.value = draw;
+    rememberWinnerAvatar(draw);
     rolling.value = false;
     appendDraw(draw);
     revealTimer = window.setTimeout(() => {
@@ -280,6 +335,7 @@ const handleReady = (ready: LotterySnapshot) => {
     window.clearTimeout(revealTimer);
     revealTimer = undefined;
   }
+  clearRestoreTimer();
   snapshot.value = ready;
   knownDrawIds = readyLotteryDrawIds(ready.draws);
   queue.value = [];
@@ -298,6 +354,7 @@ const handleReady = (ready: LotterySnapshot) => {
     currentDraw.value = ready.draws.reduce(
       (latest, draw) => draw.draw_id > latest.draw_id ? draw : latest,
     );
+    if (currentDraw.value) rememberWinnerAvatar(currentDraw.value);
   }
   if (currentDraw.value && !knownDrawIds.has(currentDraw.value.draw_id)) {
     currentDraw.value = undefined;
@@ -357,7 +414,10 @@ const handleMessage = (event: MessageEvent<string>) => {
         else if (globeStage.value === "scattered") globeStage.value = "selecting";
       } else {
         drawsByRound.set(roundId, drawn.draw);
-        if (!activeRound.value) currentDraw.value = drawn.draw;
+        if (!activeRound.value) {
+          currentDraw.value = drawn.draw;
+          rememberWinnerAvatar(drawn.draw);
+        }
       }
     } else {
       rollNamesByDraw.set(drawn.draw.draw_id, drawn.roll_names || []);
@@ -373,8 +433,10 @@ const handleMessage = (event: MessageEvent<string>) => {
       window.clearTimeout(revealTimer);
       revealTimer = undefined;
     }
+    clearRestoreTimer();
     handleReady(payload.snapshot as LotterySnapshot);
     currentDraw.value = undefined;
+    currentWinnerAvatarId.value = 1;
     activeRound.value = undefined;
     pendingDraw.value = undefined;
     roundQueue.value = [];
@@ -388,6 +450,7 @@ const handleMessage = (event: MessageEvent<string>) => {
     error.value = String(payload.detail || "开奖暂时失败");
     const roundId = typeof payload.round_id === "string" ? payload.round_id : undefined;
     if ((roundId && activeRound.value?.round_id === roundId) || payload.code === "activity_not_found") {
+      clearRestoreTimer();
       activeRound.value = undefined;
       pendingDraw.value = undefined;
       globeSettled.value = false;
@@ -442,6 +505,7 @@ onBeforeUnmount(() => {
   stopped = true;
   if (reconnectTimer !== undefined) window.clearTimeout(reconnectTimer);
   if (revealTimer !== undefined) window.clearTimeout(revealTimer);
+  clearRestoreTimer();
   if (pingTimer !== undefined) window.clearInterval(pingTimer);
   socket?.close();
 });

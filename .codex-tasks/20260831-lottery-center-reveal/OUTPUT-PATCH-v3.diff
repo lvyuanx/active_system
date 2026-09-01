@@ -1,0 +1,296 @@
+diff --git a/LEARNING.md b/LEARNING.md
+index 841de1cfd96951c78b1563856805cef86be7c9a1..68d5dbaab001b0814ed6857eb4f94ccbbe83f80a 100644
+--- a/LEARNING.md
++++ b/LEARNING.md
+@@ -129,6 +129,12 @@
+ - CSS Grid 行中如果左侧编辑器包含名称输入和图片操作两行，右侧单行控件不能继续使用父级 `align-items: center`；
+   该声明会让数量、开关和删除按钮相对整行垂直居中。应仅为奖品行设置 `align-items: start`，并保留奖项头部居中与既有响应式列定义。
+ 
++## 2026-08-31 抽奖进行中奖品标签
++
++- 进行中的 `LotteryRound` 公共载荷只需要奖项和奖品 ID/名称；大屏已有 `lottery.ready` 快照包含奖品图片引用，按当前轮次的
++  `award_id`、`prize_id` 从快照匹配即可展示图片，不必扩大 WebSocket 开始轮次协议。
++- 图片作为奖品标签中的缩略图展示时，应把文字保留为语义和回退内容，并让图片加载失败复用统一失败集合，避免破图或重复请求。
++
+ ## 2026-08-30 抽奖球体动画与开始/停止开奖
+ 
+ - 两阶段开奖应把开始动画和实际写库严格分离：开始阶段只冻结公开 participants 与候选 ID，停止阶段在 `BEGIN IMMEDIATE` 中重新复核有效资格，提交后再广播结果；这样新注册用户不会混入当前轮次，状态变化也不会绕过最终资格检查。
+@@ -151,3 +157,9 @@
+ - 停止动画和中奖聚焦动画应拆成 `scattering`、`scattered`、`selecting`、`revealed` 四个可恢复阶段；开奖结果提前到达时只缓存，
+   等打散完成后再聚焦，重连时根据 `active_round.phase` 从停止阶段恢复。
+ - 中心定位不必在停转时继续旋转整个球体；将中奖点从冻结后的屏幕坐标插值到画布中心，并在最后绘制光环和卡片，可以减少跳动并让大量非中奖用户自然淡出。
++
++## 2026-08-31 抽奖中心放大揭晓
++
++- Canvas 负责保留中奖者从打散位置到中心的空间轨迹，中心 DOM 层负责可读的头像/姓名缩放揭晓；两者按 selecting 阶段做透明度交接，
++  可以避免 Canvas 文字在大屏上过小，也不会出现两个中奖者同时占据中心。
++- 中心层必须只在开奖结果到达且阶段为 `selecting` 或 `revealed` 时挂载；revealed 阶段复用同一中心层，不再切换额外卡片，才能避免球体散开期间提前暴露中奖者并减少视觉跳变。
+diff --git a/MEMORY.md b/MEMORY.md
+index 3c5d9e460b8c59679b56d3a7c6b6e2ee0962850d..58d9d5a34243295189c3d5e9fa98d913b69aa4ad 100644
+--- a/MEMORY.md
++++ b/MEMORY.md
+@@ -34,6 +34,14 @@
+ 
+ ## 最近完成
+ 
++- 完成 TASK-v3「抽奖进行中标签展示奖品图片」：大屏按当前轮次的奖项/奖品 ID 从公开快照匹配已上传图片，在顶部奖品标签显示缩略图；
++  无图或加载失败时保留文字；screen-web 测试、类型检查、生产构建、浏览器布局检查和 diff 校验通过。
++
++- 完成 TASK-v2「移除最终中奖卡片」：删除 revealed 阶段的矩形中奖卡片，保留 selecting 到 revealed 的中心头像/姓名放大层；screen-web 测试、类型检查、生产构建和布局检查通过。
++
++- 完成 TASK-v1「抽奖中心放大揭晓」：保留球体散开后的中奖者中心聚焦轨迹，新增 selecting 阶段中心用户放大层并与 Canvas 透明交接，
++  强化最终中心卡片动效；screen-web 测试、类型检查、生产构建通过，1280×720 隔离浏览器已验证滚动/揭晓布局和控制台无告警。
++
+ - 完成 TASK-v1「抽奖球体停止、打散与中奖聚焦」：停止时新增不含中奖信息的 `lottery.draw.stopping` 广播，大屏按冻结、打散、等待、中奖聚焦、卡片揭晓分阶段运行，移除中心十字并保留高人数渲染优化；后端 57 条测试、两端类型检查/构建和 300 人 1280×720 浏览器流程通过。任务证据位于 `.codex-tasks/20260831-lottery-globe-stop-animation/`。
+ - 完成 TASK-v1「高人数抽奖球体性能优化」：大屏新增按人数分层的头像/光点/姓名渲染、屏幕空间姓名避让、旋转矩阵和投影对象复用、头像与球体引导线缓存、30 FPS 高密度档位和自适应 Canvas 像素比；300 人隔离场景浏览器验证不再文字成团，停止减速揭晓和无滚动保持正常。screen-web 测试、类型检查、全仓构建和代码规范检查通过。任务证据位于 `.codex-tasks/20260831-lottery-globe-performance/`。
+ - 完成 TASK-v1「抽奖球体动画与开始/停止开奖」：管理端改为 start/stop 两阶段，后端按活动维护内存轮次并冻结开始时全部用户与合资格用户 ID，停止时在 `BEGIN IMMEDIATE` 中复核并提交后广播；大屏新增本地头像 Canvas 3D 球体、中奖者减速居中、断线恢复和无滚动视口布局；后端 57 条测试、screen-web 测试、两端类型检查/生产构建、全仓 typecheck 和浏览器流程均通过。任务证据位于 `.codex-tasks/20260830-lottery-globe/`。
+diff --git a/WIKI.md b/WIKI.md
+index 3f60b8b80619b6f7e04496a6ebd028435af5a825..3410bf09d400403bf255df3205715639a4e04fb0 100644
+--- a/WIKI.md
++++ b/WIKI.md
+@@ -66,6 +66,9 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
+ `lottery.drawn`。管理员连接首帧必须提供超级用户 JWT，带活动上下文的用户 JWT 会被拒绝；大屏不能发送控制命令。
+ `lottery.ready` 带有进行中的 `active_round`，公开开始事件只带活动用户 ID、用户名和头像 ID，不带手机号、名单标记、停用状态或管理员字段。
+ 
++公开大屏在 `scattering` 完成且收到匹配轮次的 `lottery.drawn` 后进入 `selecting`：中奖者保留从打散位置向舞台中心移动的 Canvas 轨迹，
++随后交接到中心用户层做明显的缩放揭晓；非中奖者渐隐，中心用户层持续展示到 `revealed`，不再额外切换矩形中奖卡片。中心层只渲染公开用户名和头像，不参与开奖控制。
++
+ 连接管理器为单进程活动房间实现，按 `admin`/`screen` 角色广播并在断开或发送失败时清理连接；轮次状态同样只保存在当前进程，服务重启会取消未落库轮次。管理端和大屏端均使用指数退避重连；
+ 大屏把 ready 历史作为已揭晓 `draw_id` 基线，后续事件去重后按序播放约 3 秒滚动揭晓。多副本部署仍需引入共享消息总线，不能把当前
+ 进程内 manager 当作跨实例广播方案。
+@@ -82,6 +85,9 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
+ 公开配置、快照和开奖事件只包含 `/api/v1/activities/{activity_id}/lottery/prizes/{prize_id}/image?v={image_id}` 安全引用，
+ 公开图片路由不接受管理员凭证；旧版本引用在替换后返回 404。替换/删除提交后清理旧文件，启动和配置操作执行孤儿扫描。
+ 
++大屏进行中的顶部奖品标签不依赖开始轮次载荷新增字段，而是使用当前轮次的 `award_id`、`prize_id` 从公开快照匹配奖品图片；
++图片缺失或加载失败时保留奖项和奖品文字。
++
+ 管理端奖品编辑行的左列包含名称输入和图片操作两行，数量、启用和删除控件使用顶部对齐以匹配名称输入首行；奖项头部仍保持居中，
+ 800px 和 520px 以下继续使用既有网格堆叠规则。
+ 
+diff --git a/apps/screen-web/AGENTS.md b/apps/screen-web/AGENTS.md
+index 8ff2b404ccf5edca2c9e73c8dc0a741bc06e0209..bd649e59bef3a98af8f8741cef2f734a0e596bef 100644
+--- a/apps/screen-web/AGENTS.md
++++ b/apps/screen-web/AGENTS.md
+@@ -17,16 +17,16 @@
+ 
+ `src/components/lottery/LotteryScreen.vue` 使用公开 `/api/v1/activities/{activity_id}/lottery/ws`，不发送管理员凭证和
+ 控制命令。连接成功后以 `lottery.ready` 建立已揭晓 `draw_id` 基线，并从 `active_round` 恢复进行中的球体；
+-`lottery.draw.started` 传递开始时冻结的全部用户，`LotteryGlobe.vue` 使用 Canvas 持续旋转头像和姓名；收到
+-`lottery.draw.stopping` 后立即停止旋转并打散，`lottery.drawn` 到达后把中奖者聚焦到中心再揭晓。旧版无轮次 `lottery.drawn`
++`lottery.draw.started` 传递开始时冻结的全部用户，`LotteryGlobe.vue` 使用 Canvas 持续旋转头像和姓名，`LotteryWinnerReveal.vue` 负责中心揭晓；收到
++`lottery.draw.stopping` 后立即停止旋转并打散，`lottery.drawn` 到达后把中奖者从打散位置聚焦到中心并交接到中心放大层，放大层持续展示到最终揭晓。旧版无轮次 `lottery.drawn`
+ 仍通过 `lottery-order.ts` 兜底。
+ `lottery.reset` 清除轮次、队列和名单，`lottery.draw.error` 只结束带对应轮次 ID的失败动画。重连采用指数退避，ready 恢复最新库存和中奖名单，不重复播放历史结果。普通大屏通过 `activity_id`/`activityId` 查询参数或
+ `/activities/{activity_id}/...` 路径进入抽奖页面，`danmaku-overlay=1` 仍优先进入弹幕渲染器。
+ 
+ 高人数球体使用 `lottery-globe-math.ts` 的渲染档位：全部用户保留球面点，头像和姓名按深度、人数和屏幕空间预算降级；头像圆形裁剪图、球体引导线和旋转矩阵均做缓存或复用，避免每帧重复创建高成本对象。
+ 
+-奖品配置和开奖事件携带可选安全图片引用；大屏只把相对引用解析到 API 服务，奖品缩略图或中奖奖品图加载失败时
+-隐藏图片并保留奖品名称、库存和中奖动画。
++奖品配置和开奖事件携带可选安全图片引用；大屏只把相对引用解析到 API 服务，进行中轮次顶部标签按奖项/奖品 ID 从公开快照
++匹配奖品图，奖品缩略图或中奖奖品图加载失败时隐藏图片并保留奖品名称、库存和中奖动画。
+ 
+ ## 本次修复说明
+ 
+diff --git a/apps/screen-web/scripts/test-lottery-globe.mjs b/apps/screen-web/scripts/test-lottery-globe.mjs
+index ffc65140d4f8212d0c61fd0341c602e7d66ad737..d4a3c3df010a94c87302b3b3b91c40dd460ab609 100644
+--- a/apps/screen-web/scripts/test-lottery-globe.mjs
++++ b/apps/screen-web/scripts/test-lottery-globe.mjs
+@@ -1,4 +1,5 @@
+ import assert from "node:assert/strict";
++import { readFileSync } from "node:fs";
+ import {
+   easeOutCubic,
+   fibonacciSphere,
+@@ -6,6 +7,7 @@ import {
+   globeScatterScale,
+   rotateGlobePoint,
+   winnerTargetRotation,
++  winnerFocusHandoff,
+ } from "../dist-test/lottery/lottery-globe-math.js";
+ 
+ const points = fibonacciSphere(120);
+@@ -29,6 +31,41 @@ assert.ok(easeOutCubic(0.7) > 0.7);
+ assert.equal(globeScatterScale(0, 0), 1);
+ assert.ok(globeScatterScale(1, 1) > globeScatterScale(1, -1));
+ assert.ok(globeScatterScale(1, 0) > 1.8);
++assert.equal(winnerFocusHandoff(0), 0);
++assert.equal(winnerFocusHandoff(0.2), 0);
++assert.equal(winnerFocusHandoff(0.6), 1);
++assert.ok(winnerFocusHandoff(0.4) > 0);
++
++const globeSource = readFileSync(new URL("../src/components/lottery/LotteryGlobe.vue", import.meta.url), "utf8");
++const winnerSource = readFileSync(
++  new URL("../src/components/lottery/LotteryWinnerReveal.vue", import.meta.url),
++  "utf8",
++);
++const winnerStyles = readFileSync(
++  new URL("../src/components/lottery/LotteryWinnerReveal.css", import.meta.url),
++  "utf8",
++);
++const screenSource = readFileSync(
++  new URL("../src/components/lottery/LotteryScreen.vue", import.meta.url),
++  "utf8",
++);
++const screenImageStyles = readFileSync(
++  new URL("../src/components/lottery/LotteryScreenImages.css", import.meta.url),
++  "utf8",
++);
++assert.match(globeSource, /LotteryWinnerReveal/);
++assert.match(winnerSource, /data-winner-focus/);
++assert.match(winnerSource, /\(phase === 'selecting' \|\| phase === 'revealed'\) && winnerName/);
++assert.doesNotMatch(winnerSource, /data-winner-card|class="globe-winner"/);
++assert.match(globeSource, /winnerFocusHandoff\(selectionProgress\)/);
++assert.match(winnerStyles, /@keyframes globe-winner-focus-in/);
++assert.match(winnerStyles, /@media \(prefers-reduced-motion: reduce\)/);
++assert.doesNotMatch(winnerStyles, /\.globe-winner\s*\{|@keyframes globe-winner-in/);
++assert.match(screenSource, /activePrizeImageURL/);
++assert.match(screenSource, /class="round-prize-chip__image"/);
++assert.match(screenSource, /imageURL\(activePrizeImageURL\)/);
++assert.match(screenSource, /markImageFailed\(activePrizeImageURL\)/);
++assert.match(screenImageStyles, /\.round-prize-chip__image\s*\{/);
+ 
+ const compactProfile = globeRenderProfile(300, 1280, 720);
+ assert.ok(compactProfile.avatarLimit < 300);
+diff --git a/apps/screen-web/src/components/lottery/AGENTS.md b/apps/screen-web/src/components/lottery/AGENTS.md
+index 49344fde2328679454ce719f29393276f5f5d429..fb906c1f0e9ca3e45b963b8de918f30f26b04360 100644
+--- a/apps/screen-web/src/components/lottery/AGENTS.md
++++ b/apps/screen-web/src/components/lottery/AGENTS.md
+@@ -3,19 +3,19 @@
+ ## 模块职责
+ 
+ `src/components/lottery/` 提供公开活动抽奖大屏，不保存管理员凭证，不承担开奖控制，只消费活动级 lottery WebSocket。
+-`LotteryGlobe.vue` 使用 Canvas 绘制头像与用户名 3D 球体，并按人数启用头像/光点/姓名的分层渲染；`lottery-globe-canvas.ts` 缓存球体引导线，
+-`lottery-globe-assets.ts` 缓存头像圆形位图；`LotteryScreen.css` 负责全屏主视觉，
+-`LotteryScreenImages.css` 负责奖品缩略图和中奖图片样式。
++`LotteryGlobe.vue` 使用 Canvas 绘制头像与用户名 3D 球体，并按人数启用头像/光点/姓名的分层渲染；`LotteryWinnerReveal.vue` 负责中奖者中心放大层；
++`lottery-globe-canvas.ts` 缓存球体引导线，`lottery-globe-assets.ts` 缓存头像圆形位图；`LotteryScreen.css` 负责全屏主视觉，
++`LotteryScreenImages.css` 负责奖品缩略图、进行中轮次标签图片和中奖图片样式。
+ 
+ ## 主要流程
+ 
+ 组件连接 `/api/v1/activities/{activity_id}/lottery/ws` 后接收公开 `lottery.ready` 快照；ready 中的历史记录只建立已揭晓
+ 基线，进行中的 `active_round` 会恢复球体。收到 `lottery.draw.started` 后冻结的全部用户进入持续旋转的球体；收到
+ `lottery.draw.stopping` 立即冻结旋转，球体先向外打散，再在收到带 `round_id` 的 `lottery.drawn` 后让中奖用户从打散位置
+-聚焦到中心，最后揭晓中奖者；若事件用户不在本地布局，仍使用事件中的用户名和默认头像揭晓。
++聚焦到中心，并在 `selecting` 阶段交接到从舞台中心缩放出现、并持续到 `revealed` 的中心用户层；若事件用户不在本地布局，仍使用事件中的用户名和默认头像揭晓。
+ 旧版无轮次事件仍使用候选名单滚动兜底。高人数时全部用户仍保留为球面点，前景姓名通过数量上限和屏幕空间碰撞避让筛选，动画按人数降帧并降低 Canvas 像素比。
+ `lottery.reset` 清空轮次、队列和名单，`lottery.config.updated` 更新奖项库存，错误事件只显示提示并结束对应轮次。
+-`LotteryGlobe.vue` 不再绘制中心十字，中奖聚焦阶段使用光环和中心卡片作为视觉焦点。
++`LotteryGlobe.vue` 不再绘制中心十字，中奖聚焦阶段使用 Canvas 光环和中心用户放大层作为视觉焦点，不再额外切换矩形中奖卡片。
+ 
+ ## 安全与恢复
+ 
+@@ -23,11 +23,12 @@
+ - 重连使用指数退避，重连成功以 ready 覆盖当前状态；无进行中轮次时从 ready 历史恢复最新中奖者，已揭晓记录不会再次播放。
+ - 公开开始轮次只展示活动用户 ID、用户名和头像 ID；中奖快照只展示用户名、奖项、序号、库存和安全奖品图片引用，
+   不渲染手机号、名单标记、停用状态、管理员字段或存储 key。
+-- 奖项进度显示奖品缩略图，中奖揭晓显示中奖奖品图；无图、404 或加载失败时隐藏图片并保留文字和库存。
++- 奖项进度显示奖品缩略图，进行中轮次的顶部标签按当前奖项和奖品 ID 从公开快照匹配并显示奖品图，中奖揭晓显示中奖奖品图；
++  无图、404 或加载失败时隐藏图片并保留文字和库存。
+ 
+ ## 视觉约定
+ 
+ 保留深色霓虹背景、光晕和粒子；抽奖时球体占据可用大屏区域，头像和用户名按深度缩放透明，停止后依次执行冻结、打散、
+-中奖用户聚焦到中心和卡片揭晓。
++中奖用户从打散位置向中心移动并放大，中心用户层持续作为最终结果展示。
+ 页面根节点使用 `100dvh` 和 `overflow: hidden`，奖项进度板在抽奖态作为紧凑浮层，不制造页面滚动。普通 screen-web 入口通过
+ `activity_id` 查询参数或活动路径进入抽奖页面，弹幕 overlay 参数仍优先进入既有弹幕渲染器。
+diff --git a/apps/screen-web/src/components/lottery/LotteryScreen.css b/apps/screen-web/src/components/lottery/LotteryScreen.css
+index 4553c231ee7a61122740777178e044747fce4f62..90842110a89f8b878ac29ac0527a9e2a8c358c7a 100644
+--- a/apps/screen-web/src/components/lottery/LotteryScreen.css
++++ b/apps/screen-web/src/components/lottery/LotteryScreen.css
+@@ -174,6 +174,11 @@
+   top: clamp(70px, 10vh, 108px);
+   left: 50%;
+   z-index: 3;
++  display: inline-flex;
++  min-width: 0;
++  max-width: min(70vw, 340px);
++  align-items: center;
++  gap: 8px;
+   padding: 7px 13px;
+   color: #9deee3;
+   background: rgb(7 14 34 / 66%);
+@@ -183,6 +188,7 @@
+   letter-spacing: 1px;
+   transform: translateX(-50%);
+ }
++.round-prize-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ 
+ .name-stage { display: grid; width: 100%; min-height: 126px; place-items: center; }
+ .rolling-names {
+diff --git a/apps/screen-web/src/components/lottery/LotteryScreen.vue b/apps/screen-web/src/components/lottery/LotteryScreen.vue
+index b9c3f5d2c5ca7e532c00882a91f00f2eaebff143..de613e88166c44cdd94c17add6dcd1abec1b1fd7 100644
+--- a/apps/screen-web/src/components/lottery/LotteryScreen.vue
++++ b/apps/screen-web/src/components/lottery/LotteryScreen.vue
+@@ -55,7 +55,14 @@
+               @settled="handleGlobeSettled"
+             />
+             <div class="round-prize-chip">
+-              {{ activeRound.award_name }} · {{ activeRound.prize_name }}
++              <img
++                v-if="activePrizeImageURL && canShowImage(activePrizeImageURL)"
++                class="round-prize-chip__image"
++                :src="imageURL(activePrizeImageURL)"
++                alt=""
++                @error="markImageFailed(activePrizeImageURL)"
++              />
++              <span>{{ activeRound.award_name }} · {{ activeRound.prize_name }}</span>
+             </div>
+           </div>
+           <div v-else class="name-stage">
+@@ -162,7 +169,7 @@ const globeStageCaption = computed(() => ({
+   rolling: "所有参与者正在滚动",
+   scattering: "球体正在散开",
+   scattered: "等待中奖者聚焦",
+-  selecting: "幸运者正在聚焦",
++  selecting: "中奖者正在中心放大",
+   revealed: "中奖者已揭晓",
+ }[globeStage.value]));
+ const revealLabel = computed(() => {
+@@ -198,6 +205,14 @@ const markImageFailed = (url: string | null) => {
+   failedImageURLs.value = new Set([...failedImageURLs.value, url]);
+ };
+ 
++const activePrizeImageURL = computed(() => {
++  const round = activeRound.value;
++  if (!round) return null;
++  return snapshot.value?.awards
++    .find((award) => award.award_id === round.award_id)
++    ?.prizes.find((prize) => prize.prize_id === round.prize_id)?.image_url || null;
++});
++
+ const selectedPrizeName = computed(() => {
+   const prize = snapshot.value?.awards
+     .flatMap((award) => award.prizes)
+diff --git a/apps/screen-web/src/components/lottery/LotteryScreenImages.css b/apps/screen-web/src/components/lottery/LotteryScreenImages.css
+index d7f419b9782a9c8a37f12cba86b36b1320c2478b..9a328af86b45642eb575d24094895b965ec7ad06 100644
+--- a/apps/screen-web/src/components/lottery/LotteryScreenImages.css
++++ b/apps/screen-web/src/components/lottery/LotteryScreenImages.css
+@@ -10,6 +10,16 @@
+   box-shadow: 0 0 24px rgb(101 229 211 / 20%);
+ }
+ 
++.round-prize-chip__image {
++  flex: 0 0 auto;
++  width: 28px;
++  height: 28px;
++  object-fit: cover;
++  border: 1px solid rgb(101 229 211 / 55%);
++  border-radius: 7px;
++  box-shadow: 0 0 12px rgb(101 229 211 / 18%);
++}
++
+ .prize-image {
+   flex: 0 0 auto;
+   width: 32px;
+@@ -18,3 +28,7 @@
+   border: 1px solid rgb(144 130 255 / 30%);
+   border-radius: 6px;
+ }
++
++@media (max-width: 520px) {
++  .round-prize-chip__image { width: 24px; height: 24px; }
++}

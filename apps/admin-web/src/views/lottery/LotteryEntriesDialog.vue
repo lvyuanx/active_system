@@ -17,7 +17,38 @@
       </div>
     </template>
 
-    <div class="entry-dialog-toolbar">
+    <div class="entry-dialog-prize-picker">
+      <span>配置奖品</span>
+      <el-select
+        v-model="selectedPrizeId"
+        class="entry-prize-select"
+        :disabled="locked || !prizes.length"
+        placeholder="请选择奖品"
+        @change="changePrize"
+      >
+        <el-option
+          v-for="prize in prizes"
+          :key="prize.prize_id"
+          :label="prize.name"
+          :value="prize.prize_id"
+        />
+      </el-select>
+    </div>
+
+    <el-empty v-if="!prizes.length" description="请先保存至少一个奖品" :image-size="54" />
+
+    <div v-if="selectedPrizeId" class="entry-dialog-summary">
+      <div class="entry-dialog-summary-stats">
+        <span><strong>{{ summary.total }}</strong>总人数</span>
+        <span><strong>{{ summary.eligible }}</strong>可抽奖</span>
+        <span><strong>{{ summary.blacklisted }}</strong>黑名单</span>
+        <span><strong>{{ summary.whitelisted }}</strong>白名单</span>
+        <span><strong>{{ summary.inactive }}</strong>已停用</span>
+      </div>
+      <p>存在白名单时只抽取白名单用户；黑名单优先排除，停用用户始终不能中奖。</p>
+    </div>
+
+    <div v-if="selectedPrizeId" class="entry-dialog-toolbar">
       <div class="entry-search-row">
         <el-input
           v-model="keywordInput"
@@ -37,11 +68,12 @@
       </el-radio-group>
     </div>
 
-    <p class="entry-dialog-note">
-      {{ locked ? "抽奖进行中，黑白名单暂不可修改。" : "黑白名单互斥；停用用户即使被加入白名单，也不会参与开奖。" }}
+    <p v-if="selectedPrizeId" class="entry-dialog-note">
+      {{ locked ? "抽奖进行中，黑白名单暂不可修改。" : "黑白名单互斥。" }}
     </p>
 
     <el-table
+      v-if="selectedPrizeId"
       v-loading="loading"
       :data="entries"
       row-key="activity_user_id"
@@ -100,7 +132,7 @@
     </el-table>
 
     <template #footer>
-      <div class="entry-dialog-footer">
+      <div v-if="selectedPrizeId" class="entry-dialog-footer">
         <span>{{ rangeLabel }}</span>
         <el-pagination
           v-model:current-page="page"
@@ -131,15 +163,23 @@ import {
 const props = defineProps<{
   modelValue: boolean;
   activityId: string;
-  summary: LotteryEntrySummary;
+  prizes: Array<{ prize_id: number; name: string }>;
+  defaultPrizeId?: number;
   locked?: boolean;
 }>();
 const emit = defineEmits<{
   (event: "update:modelValue", value: boolean): void;
-  (event: "summary-updated", value: LotteryEntrySummary): void;
 }>();
 
 const entries = ref<LotteryEntry[]>([]);
+const selectedPrizeId = ref<number>();
+const summary = ref<LotteryEntrySummary>({
+  total: 0,
+  eligible: 0,
+  blacklisted: 0,
+  whitelisted: 0,
+  inactive: 0,
+});
 const keywordInput = ref("");
 const statusFilter = ref<LotteryEntryStatus>("all");
 const page = ref(1);
@@ -161,8 +201,12 @@ const isUpdating = (activityUserId: number) => updatingIds.value.has(activityUse
 const loadEntries = async () => {
   const sequence = ++loadSequence;
   loading.value = true;
+  if (!selectedPrizeId.value) {
+    loading.value = false;
+    return;
+  }
   try {
-    const response = await getLotteryEntries(props.activityId, {
+    const response = await getLotteryEntries(props.activityId, selectedPrizeId.value, {
       keyword: keywordInput.value.trim() || undefined,
       status: statusFilter.value,
       page: page.value,
@@ -173,7 +217,7 @@ const loadEntries = async () => {
     page.value = response.page;
     pageSize.value = response.page_size;
     total.value = response.total;
-    emit("summary-updated", response.summary);
+    summary.value = response.summary;
   } catch (error) {
     if (sequence === loadSequence) {
       ElMessage.error(error instanceof Error ? error.message : "名单加载失败，请稍后重试");
@@ -192,11 +236,38 @@ const refreshCurrentPage = async () => {
 };
 
 const openDialog = () => {
+  const preferredPrizeId = props.defaultPrizeId && props.prizes.some(
+    (prize) => prize.prize_id === props.defaultPrizeId,
+  ) ? props.defaultPrizeId : undefined;
+  selectedPrizeId.value = preferredPrizeId ?? props.prizes[0]?.prize_id;
   keywordInput.value = "";
   statusFilter.value = "all";
   page.value = 1;
   total.value = 0;
   entries.value = [];
+  summary.value = {
+    total: 0,
+    eligible: 0,
+    blacklisted: 0,
+    whitelisted: 0,
+    inactive: 0,
+  };
+  if (selectedPrizeId.value) void loadEntries();
+};
+
+const changePrize = () => {
+  keywordInput.value = "";
+  statusFilter.value = "all";
+  page.value = 1;
+  total.value = 0;
+  entries.value = [];
+  summary.value = {
+    total: 0,
+    eligible: 0,
+    blacklisted: 0,
+    whitelisted: 0,
+    inactive: 0,
+  };
   void loadEntries();
 };
 
@@ -221,7 +292,7 @@ const updateFlag = async (
   flag: "blacklisted" | "whitelisted",
   enabled: boolean,
 ) => {
-  if (props.locked || isUpdating(entry.activity_user_id)) return;
+  if (props.locked || !selectedPrizeId.value || isUpdating(entry.activity_user_id)) return;
   const pending = new Set(updatingIds.value);
   pending.add(entry.activity_user_id);
   updatingIds.value = pending;
@@ -232,8 +303,13 @@ const updateFlag = async (
   if (flag === "blacklisted" && enabled) payload.is_whitelisted = false;
   if (flag === "whitelisted" && enabled) payload.is_blacklisted = false;
   try {
-    const response = await updateLotteryEntry(props.activityId, entry.activity_user_id, payload);
-    emit("summary-updated", response.summary);
+    const response = await updateLotteryEntry(
+      props.activityId,
+      selectedPrizeId.value,
+      entry.activity_user_id,
+      payload,
+    );
+    summary.value = response.summary;
     await refreshCurrentPage();
     ElMessage.success("名单规则已更新");
   } catch (error) {
@@ -289,10 +365,65 @@ watch(
   font-weight: 700;
 }
 
+.entry-dialog-prize-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.entry-dialog-prize-picker > span {
+  flex: none;
+  color: #53615a;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.entry-prize-select {
+  width: min(420px, 100%);
+}
+
 .entry-dialog-toolbar {
   display: grid;
   gap: 14px;
   margin-bottom: 10px;
+}
+
+.entry-dialog-summary {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: #f5f9f7;
+  border: 1px solid #dfeae5;
+  border-radius: 8px;
+}
+
+.entry-dialog-summary-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.entry-dialog-summary-stats span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: #718078;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.entry-dialog-summary-stats strong {
+  color: #0f6652;
+  font-size: 18px;
+}
+
+.entry-dialog-summary p {
+  margin: 0;
+  color: #849089;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .entry-search-row {
@@ -365,6 +496,15 @@ watch(
 
   .entry-search-row {
     flex-direction: column;
+  }
+
+  .entry-dialog-prize-picker {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .entry-prize-select {
+    width: 100%;
   }
 
   .entry-search-row :deep(.el-input) {

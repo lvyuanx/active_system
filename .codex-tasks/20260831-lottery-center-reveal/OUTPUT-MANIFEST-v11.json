@@ -1,0 +1,62 @@
+{
+  "task_version": "TASK-v11",
+  "input_snapshot_id": "HEAD-d8be58d-dirty-20260831-task-v11",
+  "state": "dirty-existing-changes-preserved",
+  "files": [
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.vue",
+      "sha256": "bf86a18b28e4c20b6da0b3f4a1d7694595341ab313abb84cfb75359607b8e3ba"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.css",
+      "sha256": "09a0725437509bb191949d992afdce9303f9c2a77f24cf5d579d96dcfd8aa746"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryGlobe.css",
+      "sha256": "fae06b1106a670b643d0a477f0517218346e34c263a21475f9e0901a5d8cf304"
+    },
+    {
+      "path": "apps/screen-web/scripts/test-lottery-globe.mjs",
+      "sha256": "4f06a1b8a1eb212ec432eda053224c9708036649a66ad3ce3f666516a764b58a"
+    },
+    {
+      "path": "apps/screen-web/AGENTS.md",
+      "sha256": "10ca2966f2971de191aef7de018f7fcc5f038923d55c1ca78fefcab309c4bc1e"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/AGENTS.md",
+      "sha256": "a8bd9d2dc14847de3388a327e1f84de22bc3144f40ad8cde9d4d5d07b4415ade"
+    },
+    {
+      "path": "MEMORY.md",
+      "sha256": "8da5e013d9fbe534af6f4f9fe2c1e1cb84b4d522719ab30e0f609d9133d9cf2a"
+    },
+    {
+      "path": "LEARNING.md",
+      "sha256": "8c70c3c65f1809017e0264328faf2e78e3f3cd59785f46b89f892c373bbdc505"
+    },
+    {
+      "path": "WIKI.md",
+      "sha256": "05838c98eb8ad847d78ceae4a8ca30928706d717342cac418393d09ae87a1341"
+    }
+  ],
+  "verification": {
+    "screen_test": "passed",
+    "screen_typecheck": "passed",
+    "screen_build": "passed",
+    "git_diff_check": "passed",
+    "browser_winner_avatar_1280x720": {
+      "status": "passed",
+      "winner_name": "弹幕测试用户91",
+      "avatar_width": 108,
+      "avatar_height": 108,
+      "image_loaded": true,
+      "scroll_width": 1280,
+      "scroll_height": 720
+    },
+    "output_patch": {
+      "path": "OUTPUT-PATCH-v11.diff",
+      "sha256": "3995e8e0790e216b1894663dbb1d31a89a8b52fa998a9ef2b8c6a81e60b72615"
+    }
+  }
+}

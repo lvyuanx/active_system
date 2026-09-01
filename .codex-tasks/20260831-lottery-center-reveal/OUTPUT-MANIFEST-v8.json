@@ -1,0 +1,68 @@
+{
+  "task_version": "TASK-v8",
+  "input_snapshot_id": "HEAD-d8be58d-dirty-20260831-task-v8",
+  "state": "dirty-existing-changes-preserved",
+  "files": [
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.vue",
+      "sha256": "fd44eccb5b81fa618ee5f9030801962b0b3100ec1a0c1b5a5d1765de982843de"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.css",
+      "sha256": "034344322a7627caa78b1aa301834e3f942fc4249b84c1619c2fd64a25bf9c54"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreenImages.css",
+      "sha256": "97315768fa0ccb3df76f5bf220e4bcd9651122c6b189fd7bb0da5993909a9907"
+    },
+    {
+      "path": "apps/screen-web/index.html",
+      "sha256": "b2ba1cb1ee6e43cb3a1bb324cfc86ffac7a718cfda99f085ef7fa1d14b4d5e90"
+    },
+    {
+      "path": "apps/screen-web/scripts/test-lottery-globe.mjs",
+      "sha256": "898328f9f84e15828ee31abfd95c5ce2b48fbe76dca5de4d21a191d91a49a5d6"
+    },
+    {
+      "path": "apps/screen-web/AGENTS.md",
+      "sha256": "b2538a5ecbfb1ea699d78025f95b855e67a1ba721680a2978368ab2bb10086f1"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/AGENTS.md",
+      "sha256": "65e74fa7ada9b216e31e2854b900e8f0d2155554c16cac91d52bc75ce93ebb7c"
+    },
+    {
+      "path": "MEMORY.md",
+      "sha256": "d553cfa09a1e2d01369c1bf8f45c30c691de5a6c49dd99594d67201286e126a0"
+    },
+    {
+      "path": "LEARNING.md",
+      "sha256": "80c6078931dd617a908b73354ec09fac6c8493aad4023e4c9e332dffda21dde3"
+    },
+    {
+      "path": "WIKI.md",
+      "sha256": "7ee125e6a1fc59f761d6f9ed59cd9d5e13150eac9fb77821156d1a54691d0b21"
+    }
+  ],
+  "verification": {
+    "screen_test": "passed",
+    "screen_typecheck": "passed",
+    "screen_build": "passed",
+    "git_diff_check": "passed",
+    "browser_title_and_content_1280x720": {
+      "status": "passed",
+      "title": "测试活动",
+      "activity_text_in_body": false,
+      "prompt_text_in_body": false,
+      "prize_image_width": 80,
+      "prize_image_height": 80,
+      "image_loaded": true,
+      "scroll_width": 1280,
+      "scroll_height": 720
+    },
+    "output_patch": {
+      "path": "OUTPUT-PATCH-v8.diff",
+      "sha256": "7da829114c878c0ee603bf7db1576cf52e1084f5d00aa9d183e4d26e11f43aef"
+    }
+  }
+}

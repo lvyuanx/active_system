@@ -93,15 +93,17 @@ def configure_lottery(
     assert response.status_code == 200, response.text
     config = response.json()
     for entry in entries or []:
-        entry_response = client.put(
-            f"/api/v1/admin/activities/{activity_id}/lottery/entries/{entry['activity_user_id']}",
-            headers=headers,
-            json={
-                "is_blacklisted": entry.get("is_blacklisted", False),
-                "is_whitelisted": entry.get("is_whitelisted", False),
-            },
-        )
-        assert entry_response.status_code == 200, entry_response.text
+        for prize in config["prizes"]:
+            entry_response = client.put(
+                f"/api/v1/admin/activities/{activity_id}/lottery/entries/{entry['activity_user_id']}"
+                f"?prize_id={prize['prize_id']}",
+                headers=headers,
+                json={
+                    "is_blacklisted": entry.get("is_blacklisted", False),
+                    "is_whitelisted": entry.get("is_whitelisted", False),
+                },
+            )
+            assert entry_response.status_code == 200, entry_response.text
     return config
 
 
@@ -116,7 +118,7 @@ def test_lottery_config_and_history_are_activity_isolated(tmp_path: Path) -> Non
         first_id, headers = create_activity(client, "第一场抽奖")
         second_id, _ = create_activity(client, "第二场抽奖")
         first_user = register_user(client, first_id, "小明", "13800001001")
-        configure_lottery(client, first_id, headers, quantity=2)
+        first_config = configure_lottery(client, first_id, headers, quantity=2)
 
         first = client.get(f"/api/v1/admin/activities/{first_id}/lottery", headers=headers)
         second = client.get(f"/api/v1/admin/activities/{second_id}/lottery", headers=headers)
@@ -124,18 +126,20 @@ def test_lottery_config_and_history_are_activity_isolated(tmp_path: Path) -> Non
         assert first.json()["activity_id"] == first_id
         assert second.json()["activity_id"] == second_id
         assert "entries" not in first.json()
-        assert first.json()["entry_summary"]["total"] == 1
-        assert second.json()["entry_summary"]["total"] == 0
+        first_prize_id = first_config["prizes"][0]["prize_id"]
+        second_prize_id = second.json()["prizes"][0]["prize_id"]
         first_entries = client.get(
-            f"/api/v1/admin/activities/{first_id}/lottery/entries",
+            f"/api/v1/admin/activities/{first_id}/lottery/entries?prize_id={first_prize_id}",
             headers=headers,
         )
         second_entries = client.get(
-            f"/api/v1/admin/activities/{second_id}/lottery/entries",
+            f"/api/v1/admin/activities/{second_id}/lottery/entries?prize_id={second_prize_id}",
             headers=headers,
         )
         assert first_entries.json()["items"][0]["activity_user_id"] == first_user["activity_user_id"]
+        assert first_entries.json()["summary"]["total"] == 1
         assert second_entries.json()["items"] == []
+        assert second_entries.json()["summary"]["total"] == 0
 
         history = client.get(f"/api/v1/admin/activities/{first_id}/lottery/history", headers=headers)
         assert history.status_code == 200
@@ -159,14 +163,16 @@ def test_lottery_entries_support_search_filters_pagination_and_activity_isolatio
             for index in range(5)
         ]
         register_user(client, other_activity_id, "其他用户", "13800002999")
-        configure_lottery(client, activity_id, headers, quantity=2)
+        config = configure_lottery(client, activity_id, headers, quantity=2)
+        prize_id = config["prizes"][0]["prize_id"]
 
         for user, flags in (
             (users[0], {"is_blacklisted": True, "is_whitelisted": False}),
             (users[1], {"is_blacklisted": False, "is_whitelisted": True}),
         ):
             response = client.put(
-                f"/api/v1/admin/activities/{activity_id}/lottery/entries/{user['activity_user_id']}",
+                f"/api/v1/admin/activities/{activity_id}/lottery/entries/{user['activity_user_id']}"
+                f"?prize_id={prize_id}",
                 headers=headers,
                 json=flags,
             )
@@ -178,7 +184,7 @@ def test_lottery_entries_support_search_filters_pagination_and_activity_isolatio
         assert deactivated.status_code == 200, deactivated.text
 
         page = client.get(
-            f"/api/v1/admin/activities/{activity_id}/lottery/entries?page=1&page_size=2",
+            f"/api/v1/admin/activities/{activity_id}/lottery/entries?prize_id={prize_id}&page=1&page_size=2",
             headers=headers,
         )
         assert page.status_code == 200, page.text
@@ -194,12 +200,13 @@ def test_lottery_entries_support_search_filters_pagination_and_activity_isolatio
         }
 
         by_username = client.get(
-            f"/api/v1/admin/activities/{activity_id}/lottery/entries?keyword=%E7%94%A8%E6%88%B73",
+            f"/api/v1/admin/activities/{activity_id}/lottery/entries?prize_id={prize_id}"
+            "&keyword=%E7%94%A8%E6%88%B73",
             headers=headers,
         )
         assert [item["username"] for item in by_username.json()["items"]] == ["用户3"]
         by_phone = client.get(
-            f"/api/v1/admin/activities/{activity_id}/lottery/entries?keyword=02002",
+            f"/api/v1/admin/activities/{activity_id}/lottery/entries?prize_id={prize_id}&keyword=02002",
             headers=headers,
         )
         assert [item["username"] for item in by_phone.json()["items"]] == ["用户2"]
@@ -212,18 +219,69 @@ def test_lottery_entries_support_search_filters_pagination_and_activity_isolatio
         }
         for status_filter, expected_username in expected_filters.items():
             response = client.get(
-                f"/api/v1/admin/activities/{activity_id}/lottery/entries?status={status_filter}",
+                f"/api/v1/admin/activities/{activity_id}/lottery/entries"
+                f"?prize_id={prize_id}&status={status_filter}",
                 headers=headers,
             )
             assert [item["username"] for item in response.json()["items"]] == [expected_username]
 
+        other_config = client.get(
+            f"/api/v1/admin/activities/{other_activity_id}/lottery", headers=headers
+        ).json()
+        other_prize_id = other_config["prizes"][0]["prize_id"]
         isolated = client.get(
-            f"/api/v1/admin/activities/{other_activity_id}/lottery/entries",
+            f"/api/v1/admin/activities/{other_activity_id}/lottery/entries?prize_id={other_prize_id}",
             headers=headers,
         )
         assert [item["username"] for item in isolated.json()["items"]] == ["其他用户"]
-        unauthenticated = client.get(f"/api/v1/admin/activities/{activity_id}/lottery/entries")
+        unauthenticated = client.get(
+            f"/api/v1/admin/activities/{activity_id}/lottery/entries?prize_id={prize_id}"
+        )
         assert unauthenticated.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_lottery_security_code_verification_is_server_side_and_activity_scoped(tmp_path: Path) -> None:
+    client, settings = make_client(tmp_path)
+    try:
+        activity_id, headers = create_activity(client, "特殊配置验证")
+        not_configured = client.post(
+            f"/api/v1/admin/activities/{activity_id}/lottery/security-code/verify",
+            headers=headers,
+            json={"security_code": "lottery-pass"},
+        )
+        assert not_configured.status_code == 503
+
+        settings.lottery_security_code = "lottery-pass"
+        unauthenticated = client.post(
+            f"/api/v1/admin/activities/{activity_id}/lottery/security-code/verify",
+            json={"security_code": "lottery-pass"},
+        )
+        assert unauthenticated.status_code == 401
+
+        invalid = client.post(
+            f"/api/v1/admin/activities/{activity_id}/lottery/security-code/verify",
+            headers=headers,
+            json={"security_code": "wrong-pass"},
+        )
+        assert invalid.status_code == 403
+        assert "lottery-pass" not in invalid.text
+
+        valid = client.post(
+            f"/api/v1/admin/activities/{activity_id}/lottery/security-code/verify",
+            headers=headers,
+            json={"security_code": "lottery-pass"},
+        )
+        assert valid.status_code == 200
+        assert valid.json() == {"verified": True}
+
+        missing_activity = client.post(
+            "/api/v1/admin/activities/missing/lottery/security-code/verify",
+            headers=headers,
+            json={"security_code": "lottery-pass"},
+        )
+        assert missing_activity.status_code == 404
     finally:
         app.dependency_overrides.clear()
 
@@ -234,24 +292,30 @@ def test_lottery_entry_updates_are_incremental_and_validate_flags(tmp_path: Path
         activity_id, headers = create_activity(client, "名单即时保存")
         first = register_user(client, activity_id, "第一位", "13800002101")
         second = register_user(client, activity_id, "第二位", "13800002102")
-        configure_lottery(client, activity_id, headers, quantity=2)
+        config = configure_lottery(client, activity_id, headers, quantity=2)
+        prize_id = config["prizes"][0]["prize_id"]
 
         first_update = client.put(
-            f"/api/v1/admin/activities/{activity_id}/lottery/entries/{first['activity_user_id']}",
+            f"/api/v1/admin/activities/{activity_id}/lottery/entries/{first['activity_user_id']}"
+            f"?prize_id={prize_id}",
             headers=headers,
             json={"is_blacklisted": True, "is_whitelisted": False},
         )
         second_update = client.put(
-            f"/api/v1/admin/activities/{activity_id}/lottery/entries/{second['activity_user_id']}",
+            f"/api/v1/admin/activities/{activity_id}/lottery/entries/{second['activity_user_id']}"
+            f"?prize_id={prize_id}",
             headers=headers,
             json={"is_blacklisted": False, "is_whitelisted": True},
         )
         assert first_update.status_code == second_update.status_code == 200
         assert first_update.json()["entry"]["is_blacklisted"] is True
         assert second_update.json()["entry"]["is_whitelisted"] is True
+        assert second_update.json()["summary"]["blacklisted"] == 1
+        assert second_update.json()["summary"]["whitelisted"] == 1
 
         invalid = client.put(
-            f"/api/v1/admin/activities/{activity_id}/lottery/entries/{first['activity_user_id']}",
+            f"/api/v1/admin/activities/{activity_id}/lottery/entries/{first['activity_user_id']}"
+            f"?prize_id={prize_id}",
             headers=headers,
             json={"is_blacklisted": True, "is_whitelisted": True},
         )
@@ -263,11 +327,9 @@ def test_lottery_entry_updates_are_incremental_and_validate_flags(tmp_path: Path
             json={"rolling_name_count": 12},
         )
         assert config_update.status_code == 200, config_update.text
-        assert config_update.json()["entry_summary"]["blacklisted"] == 1
-        assert config_update.json()["entry_summary"]["whitelisted"] == 1
 
         entries = client.get(
-            f"/api/v1/admin/activities/{activity_id}/lottery/entries",
+            f"/api/v1/admin/activities/{activity_id}/lottery/entries?prize_id={prize_id}",
             headers=headers,
         ).json()["items"]
         states = {entry["username"]: entry for entry in entries}
@@ -275,7 +337,7 @@ def test_lottery_entry_updates_are_incremental_and_validate_flags(tmp_path: Path
         assert states["第二位"]["is_whitelisted"] is True
 
         missing = client.put(
-            f"/api/v1/admin/activities/{activity_id}/lottery/entries/999999",
+            f"/api/v1/admin/activities/{activity_id}/lottery/entries/999999?prize_id={prize_id}",
             headers=headers,
             json={"is_blacklisted": True, "is_whitelisted": False},
         )

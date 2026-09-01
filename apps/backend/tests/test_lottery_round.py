@@ -80,7 +80,8 @@ def test_round_starts_animation_without_drawing_and_freezes_pool(tmp_path: Path)
 
                 late = register_user(client, activity_id, "开始后用户", "13800003004")
                 blocked_update = client.put(
-                    f"/api/v1/admin/activities/{activity_id}/lottery/entries/{first['activity_user_id']}",
+                    f"/api/v1/admin/activities/{activity_id}/lottery/entries/{first['activity_user_id']}"
+                    f"?prize_id={prize_id}",
                     headers=headers,
                     json={"is_blacklisted": True, "is_whitelisted": False},
                 )

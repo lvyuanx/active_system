@@ -1,0 +1,59 @@
+{
+  "task_version": "TASK-v10",
+  "input_snapshot_id": "HEAD-d8be58d-dirty-20260831-task-v10",
+  "state": "dirty-existing-changes-preserved",
+  "files": [
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.vue",
+      "sha256": "3a5c5d5a0ca137c3ea07a6c3b5fe4bbd71ea0ddb54487ee3caf6623371a9957f"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryScreen.css",
+      "sha256": "145fa2be9781e271a0e6d245c10410e35b1e19a72ee2dd685b535b1a91d518f0"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/LotteryGlobe.css",
+      "sha256": "fae06b1106a670b643d0a477f0517218346e34c263a21475f9e0901a5d8cf304"
+    },
+    {
+      "path": "apps/screen-web/scripts/test-lottery-globe.mjs",
+      "sha256": "0c8aee2419896002f7e6c1260989dca269a1da8aee63bc7d45461569ae705fae"
+    },
+    {
+      "path": "apps/screen-web/AGENTS.md",
+      "sha256": "cb35b144d3e53733b240e98f72dd00bcd8010380e5237ad3b5dd5d481db0e8f8"
+    },
+    {
+      "path": "apps/screen-web/src/components/lottery/AGENTS.md",
+      "sha256": "d8080eee419d7576a05ecc18f0e48fa8296dbf7da43de9cf638152ecb5d18e18"
+    },
+    {
+      "path": "MEMORY.md",
+      "sha256": "9cf6213182f2f635595df9a863f83a3ae213ca9c86ff52eac971bfc1f2474f12"
+    },
+    {
+      "path": "LEARNING.md",
+      "sha256": "bf16e28289b1abbb1614274884ad5d78808c91b3f4f6545ccfaf83cddcc09332"
+    },
+    {
+      "path": "WIKI.md",
+      "sha256": "4084dd9102a14b564cd2b2cf911c9c497de8593a10847b2826cc862857a00fd8"
+    }
+  ],
+  "verification": {
+    "screen_test": "passed",
+    "screen_typecheck": "passed",
+    "screen_build": "passed",
+    "git_diff_check": "passed",
+    "behavioral_coverage": {
+      "immersive_root_state": true,
+      "restore_after_reveal": true,
+      "restore_timer_cleanup": true,
+      "browser_runtime_click_flow": "not-run-to-preserve-activity-data"
+    },
+    "output_patch": {
+      "path": "OUTPUT-PATCH-v10.diff",
+      "sha256": "178e2b94d77ea8c135894235c8601e813bf864b85ae7585a6660ab8677b592b1"
+    }
+  }
+}

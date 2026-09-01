@@ -11,10 +11,12 @@
       role="img"
       :aria-label="`抽奖用户球体，共 ${participants.length} 位参与者`"
     />
-    <div v-if="phase === 'revealed' && winnerName" class="globe-winner" data-winner-card aria-live="polite">
-      <img :src="avatarSources[winnerAvatarId] || avatarSources[1]" alt="" />
-      <span>{{ winnerName }}</span>
-    </div>
+    <LotteryWinnerReveal
+      :phase="phase"
+      :participants="participants"
+      :winner-id="winnerId"
+      :winner="winner"
+    />
     <p class="globe-caption">{{ phaseCaption }}</p>
   </div>
 </template>
@@ -32,10 +34,12 @@ import {
   globeRenderProfile,
   globeScatterScale,
   rotateGlobePointInto,
+  winnerFocusHandoff,
   type GlobePoint,
   type GlobeRenderProfile,
   type GlobeRotation,
 } from "./lottery-globe-math";
+import LotteryWinnerReveal from "./LotteryWinnerReveal.vue";
 
 type GlobePhase = "idle" | "rolling" | "scattering" | "scattered" | "selecting" | "revealed";
 
@@ -52,17 +56,12 @@ const emit = defineEmits<{ scattered: []; settled: [] }>();
 const host = ref<HTMLDivElement>();
 const canvas = ref<HTMLCanvasElement>();
 const winnerId = computed(() => props.winnerId ?? props.winner?.activity_user_id);
-const winnerParticipant = computed(() => props.participants.find(
-  (participant) => participant.activity_user_id === winnerId.value,
-));
-const winnerName = computed(() => winnerParticipant.value?.username || props.winner?.username);
-const winnerAvatarId = computed(() => winnerParticipant.value?.avatar_id || 1);
 const phaseCaption = computed(() => ({
   idle: "等待抽奖",
   rolling: "所有参与者正在滚动",
   scattering: "球体正在散开",
   scattered: "等待中奖者聚焦",
-  selecting: "幸运者正在聚焦",
+  selecting: "中奖者正在中心放大",
   revealed: "中奖者",
 }[props.phase]));
 
@@ -298,10 +297,13 @@ const drawEntry = (projected: ProjectedGlobeEntry, radius: number) => {
   if (!context) return;
   const winner = isWinner(projected);
   if (props.phase === "revealed" && winner) return;
-  const focusPhase = props.phase === "selecting" || props.phase === "revealed";
-  const winnerSpotlight = winner && props.phase === "selecting";
+  const winnerFocusLayerVisible = props.phase === "selecting" && winnerId.value !== undefined;
+  const winnerSpotlight = winner && props.phase === "selecting" && !winnerFocusLayerVisible;
   if (!projected.visible && !winnerSpotlight) return;
   const visual = visualEntry(projected, radius);
+  if (winner && winnerFocusLayerVisible) {
+    visual.alpha *= 1 - winnerFocusHandoff(selectionProgress);
+  }
   if (visual.alpha < 0.02 && !winnerSpotlight) return;
   const showAvatar = projected.showAvatar || winnerSpotlight;
   const showName = projected.showName || winnerSpotlight;

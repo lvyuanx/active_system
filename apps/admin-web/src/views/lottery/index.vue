@@ -142,21 +142,17 @@
 
                 <section class="editor-section entry-section">
                   <div class="editor-heading">
-                    <h3>抽奖名单</h3><span>{{ form.entry_summary.total }} 位参与者</span>
-                  </div>
-                  <div class="entry-summary">
-                    <div class="entry-summary-stats">
-                      <span><strong>{{ form.entry_summary.total }}</strong>总人数</span>
-                      <span><strong>{{ form.entry_summary.eligible }}</strong>可抽奖</span>
-                      <span><strong>{{ form.entry_summary.blacklisted }}</strong>黑名单</span>
-                      <span><strong>{{ form.entry_summary.whitelisted }}</strong>白名单</span>
-                      <span><strong>{{ form.entry_summary.inactive }}</strong>已停用</span>
-                    </div>
-                    <el-button type="primary" plain :disabled="roundLocked" @click="entryDialogVisible = true">
-                      配置黑白名单
+                    <h3>抽奖名单</h3>
+                    <el-button
+                      type="primary"
+                      plain
+                      :loading="entrySecurityChecking"
+                      :disabled="roundLocked || entrySecurityChecking"
+                      @click="openSpecialConfig"
+                    >
+                      特殊配置
                     </el-button>
                   </div>
-                  <p class="editor-note">存在白名单时只抽取白名单用户；黑名单优先排除，停用用户始终不能中奖。</p>
                 </section>
 
                 <div class="form-actions">
@@ -259,9 +255,9 @@
           <LotteryEntriesDialog
             v-model="entryDialogVisible"
             :activity-id="activityId"
-            :summary="form.entry_summary"
+            :prizes="savedPrizes"
+            :default-prize-id="selectedPrizeId"
             :locked="roundLocked"
-            @summary-updated="updateEntrySummary"
           />
         </template>
       </main>
@@ -271,17 +267,17 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { useRoute } from "vue-router";
 import ActivitySidebar from "../../components/ActivitySidebar.vue";
 import {
   getActivity,
   getLottery,
   getLotteryHistory,
+  verifyLotterySecurityCode,
   type Activity,
   type LotteryConfig,
   type LotteryDraw,
-  type LotteryEntrySummary,
   type LotterySnapshot,
 } from "../../api/client";
 import LotteryEntriesDialog from "./LotteryEntriesDialog.vue";
@@ -310,6 +306,7 @@ const saving = ref(false);
 const error = ref("");
 const selectedPrizeId = ref<number>();
 const entryDialogVisible = ref(false);
+const entrySecurityChecking = ref(false);
 let nextTemporaryAwardId = -1;
 let configRefreshVersion = 0;
 const form = reactive<LotteryForm>({
@@ -318,16 +315,12 @@ const form = reactive<LotteryForm>({
   rolling_name_count: 8,
   awards: [],
   prizes: [],
-  entry_summary: {
-    total: 0,
-    eligible: 0,
-    blacklisted: 0,
-    whitelisted: 0,
-    inactive: 0,
-  },
   updated_at: "",
 });
-const savedPrizes = computed(() => form.prizes.filter((prize) => Boolean(prize.prize_id)));
+type SavedFormPrize = FormPrize & { prize_id: number };
+const savedPrizes = computed(() => form.prizes.filter(
+  (prize): prize is SavedFormPrize => typeof prize.prize_id === "number" && prize.prize_id > 0,
+));
 const latestDraw = computed(() => history.value[0]);
 const isAwardSaved = (award: FormAward) => typeof award.award_id === "number" && award.award_id > 0;
 const statusLabel = (status: Activity["status"]) =>
@@ -340,7 +333,6 @@ const applyConfig = (response: LotteryConfig) => {
   form.rolling_name_count = response.rolling_name_count;
   form.awards = response.awards.map((award) => ({ ...award }));
   form.prizes = response.prizes.map((prize) => ({ ...prize }));
-  form.entry_summary = { ...response.entry_summary };
   form.updated_at = response.updated_at;
   if (!selectedPrizeId.value || !form.prizes.some((prize) => prize.prize_id === selectedPrizeId.value)) {
     selectedPrizeId.value = form.prizes.find(
@@ -446,9 +438,36 @@ const removePrize = (prize: FormPrize) => {
   const index = form.prizes.indexOf(prize);
   if (index >= 0) form.prizes.splice(index, 1);
 };
-const updateEntrySummary = (summary: LotteryEntrySummary) => {
-  form.entry_summary = { ...summary };
-  if (config.value) config.value.entry_summary = { ...summary };
+const openSpecialConfig = async () => {
+  if (roundLocked.value || entrySecurityChecking.value) return;
+  let securityCode: string;
+  try {
+    const result = await ElMessageBox.prompt(
+      "请输入安全码以打开黑白名单配置。",
+      "安全验证",
+      {
+        inputType: "password",
+        inputPlaceholder: "请输入安全码",
+        inputPattern: /\S+/,
+        inputErrorMessage: "请输入安全码",
+        confirmButtonText: "验证并打开",
+        cancelButtonText: "取消",
+        closeOnClickModal: false,
+      },
+    );
+    securityCode = result.value;
+  } catch {
+    return;
+  }
+  entrySecurityChecking.value = true;
+  try {
+    await verifyLotterySecurityCode(activityId, securityCode);
+    entryDialogVisible.value = true;
+  } catch (err) {
+    ElMessage.error(err instanceof Error ? err.message : "安全码验证失败，请稍后重试");
+  } finally {
+    entrySecurityChecking.value = false;
+  }
 };
 function handleMessage(event: MessageEvent<string>) {
   let payload: Record<string, unknown>;

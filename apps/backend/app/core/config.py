@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     jwt_secret: str = "development-only-change-this-secret"
     jwt_expire_minutes: int = 60
     danmaku_token_secret: str = ""
+    lottery_security_code: str = ""
     superuser_username: str = "admin"
     superuser_password: str = ""
 

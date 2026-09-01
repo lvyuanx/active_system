@@ -77,6 +77,26 @@ CREATE INDEX IF NOT EXISTS idx_lottery_entries_activity
     ON lottery_entries(activity_id, activity_user_id);
 CREATE INDEX IF NOT EXISTS idx_lottery_entries_activity_flags
     ON lottery_entries(activity_id, is_blacklisted, is_whitelisted, activity_user_id);
+CREATE TABLE IF NOT EXISTS lottery_prize_entries (
+    entry_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,
+    prize_id INTEGER NOT NULL REFERENCES lottery_prizes(prize_id) ON DELETE CASCADE,
+    activity_user_id INTEGER NOT NULL REFERENCES activity_users(id) ON DELETE CASCADE,
+    is_blacklisted INTEGER NOT NULL DEFAULT 0 CHECK(is_blacklisted IN (0, 1)),
+    is_whitelisted INTEGER NOT NULL DEFAULT 0 CHECK(is_whitelisted IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(activity_id, prize_id, activity_user_id),
+    CHECK(NOT (is_blacklisted = 1 AND is_whitelisted = 1))
+);
+CREATE INDEX IF NOT EXISTS idx_lottery_prize_entries_activity_prize
+    ON lottery_prize_entries(activity_id, prize_id, activity_user_id);
+CREATE INDEX IF NOT EXISTS idx_lottery_prize_entries_flags
+    ON lottery_prize_entries(activity_id, prize_id, is_blacklisted, is_whitelisted, activity_user_id);
+CREATE TABLE IF NOT EXISTS lottery_prize_entry_migrations (
+    activity_id TEXT PRIMARY KEY REFERENCES activities(activity_id) ON DELETE CASCADE,
+    migrated_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS lottery_draws (
     draw_id INTEGER PRIMARY KEY AUTOINCREMENT,
     activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,

@@ -17,6 +17,8 @@ from app.modules.lottery.models import (
     LotteryEntryUpdate,
     LotteryEntryUpdateResponse,
     LotteryPrizeImageResponse,
+    LotterySecurityCodeRequest,
+    LotterySecurityCodeResponse,
 )
 from app.modules.files.service import MediaError
 from app.modules.lottery.media_service import (
@@ -34,6 +36,7 @@ from app.modules.lottery.service import (
     get_lottery_snapshot,
     list_lottery_history,
     public_config,
+    verify_lottery_security_code,
     update_lottery_entry,
     update_lottery_config,
 )
@@ -56,6 +59,10 @@ def _config_http_error(error: LotteryConfigError) -> HTTPException:
         return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error.detail)
     if error.code in {"config_conflict", "prize_has_draws", "quantity_below_draws", "draw_in_progress"}:
         return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error.detail)
+    if error.code == "security_code_invalid":
+        return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=error.detail)
+    if error.code == "security_code_not_configured":
+        return HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=error.detail)
     return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=error.detail)
 
 
@@ -173,9 +180,27 @@ def get_admin_lottery(
         raise _config_http_error(error) from error
 
 
+@admin_router.post(
+    "/{activity_id}/lottery/security-code/verify",
+    response_model=LotterySecurityCodeResponse,
+)
+def verify_admin_lottery_security_code(
+    activity_id: str,
+    payload: LotterySecurityCodeRequest,
+    _: str = Depends(require_superuser),
+    settings: Settings = Depends(get_settings),
+) -> LotterySecurityCodeResponse:
+    try:
+        verify_lottery_security_code(activity_id, payload.security_code, settings)
+    except LotteryConfigError as error:
+        raise _config_http_error(error) from error
+    return LotterySecurityCodeResponse()
+
+
 @admin_router.get("/{activity_id}/lottery/entries", response_model=LotteryEntryPage)
 def get_admin_lottery_entries(
     activity_id: str,
+    prize_id: Annotated[int, Query(ge=1)],
     _: str = Depends(require_superuser),
     settings: Settings = Depends(get_settings),
     keyword: Annotated[str | None, Query(max_length=100)] = None,
@@ -186,6 +211,7 @@ def get_admin_lottery_entries(
     try:
         return get_lottery_entries(
             activity_id,
+            prize_id,
             settings,
             keyword=keyword,
             status=status_filter,
@@ -203,6 +229,7 @@ def get_admin_lottery_entries(
 async def save_admin_lottery_entry(
     activity_id: str,
     activity_user_id: int,
+    prize_id: Annotated[int, Query(ge=1)],
     payload: LotteryEntryUpdate,
     _: str = Depends(require_superuser),
     settings: Settings = Depends(get_settings),
@@ -214,6 +241,7 @@ async def save_admin_lottery_entry(
             return await asyncio.to_thread(
                 update_lottery_entry,
                 activity_id,
+                prize_id,
                 activity_user_id,
                 payload,
                 settings,
