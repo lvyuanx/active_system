@@ -5,9 +5,17 @@
         v-for="item in activeItems"
         :key="item.key"
         class="danmaku-item"
+        :class="{ 'danmaku-item--sticker': Boolean(item.sticker) }"
         :style="item.style"
       >
-        {{ item.body }}
+        <img
+          v-if="item.sticker && !item.imageFailed"
+          class="danmaku-sticker"
+          :src="resolveImageURL(item.sticker.image_url)"
+          :alt="item.sticker.name"
+          @error="markImageFailed(item.key)"
+        />
+        <span v-else>{{ item.body }}</span>
       </p>
     </div>
     <section v-else class="danmaku-launch-placeholder">
@@ -20,6 +28,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import "./DanmakuOverlay.css";
 import {
   danmakuWebSocketURL,
   getDanmakuMessages,
@@ -38,8 +47,10 @@ import {
 } from "./message-order";
 import {
   DANMAKU_GAP_PX,
+  DANMAKU_STICKER_HEIGHT_MULTIPLIER,
   findSafeTrack,
   isPendingMessageExpired,
+  measureDanmakuImageWidth,
   measureDanmakuText,
   type DanmakuMotion,
 } from "./danmaku-layout";
@@ -51,6 +62,8 @@ type ActiveItem = {
   track: number;
   top: number;
   width: number;
+  sticker: DanmakuMessage["sticker"];
+  imageFailed: boolean;
   startedAt: number;
   durationMs: number;
   style: Record<string, string>;
@@ -160,6 +173,23 @@ const measureBodyWidth = (body: string, fontSize: number) => {
   context.font = `${DANMAKU_FONT_WEIGHT} ${fontSize}px ${DANMAKU_FONT_FAMILY}`;
   return measureDanmakuText(body, fontSize, (text) => context.measureText(text).width);
 };
+const measureMessageWidth = (message: DanmakuMessage, fontSize: number) => {
+  if (message.message_type === "sticker" && message.sticker) {
+    const imageWidth = measureDanmakuImageWidth(message.sticker.width, message.sticker.height, fontSize);
+    const fallbackWidth = measureBodyWidth(message.body, fontSize);
+    return Math.max(imageWidth, fallbackWidth);
+  }
+  return measureBodyWidth(message.body, fontSize);
+};
+const resolveImageURL = (imageURL: string) => {
+  const apiBaseUrl = bootstrap.value?.apiBaseUrl;
+  if (!apiBaseUrl) return imageURL;
+  return new URL(imageURL, apiBaseUrl).toString();
+};
+const markImageFailed = (key: string) => {
+  const item = activeItems.value.find((candidate) => candidate.key === key);
+  if (item) item.imageFailed = true;
+};
 const queueMessage = (message: DanmakuMessage) => {
   if (!canRender.value || message.message_id <= lastMessageId.value) return;
   lastMessageId.value = message.message_id;
@@ -186,7 +216,8 @@ const flushQueue = () => {
       pendingMessages.value.shift();
       continue;
     }
-    const width = measureBodyWidth(pending.message.body, currentSettings.font_size);
+    const width = measureMessageWidth(pending.message, currentSettings.font_size);
+    const stickerHeight = currentSettings.font_size * DANMAKU_STICKER_HEIGHT_MULTIPLIER;
     const durationMs = currentSettings.duration_seconds * 1000;
     const candidate: DanmakuMotion = { startedAt: now, durationMs, width };
     const track = findSafeTrack(
@@ -213,6 +244,8 @@ const flushQueue = () => {
       track,
       top,
       width,
+      sticker: pending.message.message_type === "sticker" ? pending.message.sticker : null,
+      imageFailed: false,
       startedAt: now,
       durationMs,
       style: {
@@ -220,6 +253,8 @@ const flushQueue = () => {
         "--danmaku-font-size": `${currentSettings.font_size}px`,
         "--danmaku-opacity": String(currentSettings.opacity),
         "--danmaku-duration": `${currentSettings.duration_seconds}s`,
+        "--danmaku-width": `${width}px`,
+        "--danmaku-sticker-height": `${stickerHeight}px`,
         "--danmaku-color": currentSettings.text_color,
       },
     });
@@ -374,90 +409,3 @@ onBeforeUnmount(() => {
   flushTaskId = undefined;
 });
 </script>
-
-<style scoped>
-.danmaku-overlay {
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.danmaku-canvas {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-.danmaku-item {
-  position: absolute;
-  top: var(--danmaku-top);
-  margin: 0;
-  color: var(--danmaku-color);
-  font-size: var(--danmaku-font-size);
-  font-weight: 750;
-  line-height: 1.2;
-  left: 0;
-  opacity: var(--danmaku-opacity);
-  text-shadow: 0 2px 4px rgb(0 0 0 / 70%);
-  white-space: nowrap;
-  will-change: transform;
-  animation: danmaku-fly var(--danmaku-duration) linear forwards;
-}
-
-.danmaku-launch-placeholder {
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 12px;
-  width: min(100% - 48px, 480px);
-  min-height: 100vh;
-  margin: 0 auto;
-  color: #dfe9e4;
-  text-align: center;
-}
-
-.danmaku-launch-mark {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  color: #17211e;
-  background: #77d2b5;
-  border-radius: 6px;
-  font-size: 23px;
-  font-weight: 800;
-}
-
-.danmaku-launch-placeholder h1 {
-  margin: 6px 0 0;
-  font-size: 22px;
-}
-
-.danmaku-launch-placeholder p {
-  margin: 0;
-  color: #9daea6;
-  font-size: 14px;
-}
-
-.danmaku-overlay--standalone {
-  background: #07111f;
-}
-
-@keyframes danmaku-fly {
-  from {
-    transform: translate3d(100vw, 0, 0);
-  }
-
-  to {
-    transform: translate3d(-100%, 0, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .danmaku-item {
-    animation-duration: 0.01ms !important;
-  }
-}
-</style>

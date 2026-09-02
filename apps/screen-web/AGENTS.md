@@ -2,7 +2,7 @@
 
 大屏端使用 Vue 3 + ECharts，保留普通活动大屏入口，并为 Electron 弹幕工具提供可嵌入渲染层。仅 URL 带有
 `danmaku-overlay=1` 时，`src/components/realtime/DanmakuOverlay.vue` 才会使用桌面预加载层临时提供的 token 与会话
-连接独立弹幕 WebSocket；普通入口继续显示活动数据大屏基础页面。弹幕仅显示聊天正文，首次 HTTP session 的最大消息 ID
+连接独立弹幕 WebSocket；普通入口继续显示活动数据大屏基础页面。弹幕显示聊天正文和表情图片，首次 HTTP session 的最大消息 ID
 是唯一不回放历史的基线。每次 `danmaku.ready` 都从当前游标以 `after_id` 有序补齐，ready 快照不得直接抬高游标；
 恢复完成后的连续实时消息直接消费 WebSocket 完整正文，只有恢复中、乱序或检测到 ID 缺口时才通过 HTTP 补齐。
 `message-order.ts` 提供无浏览器依赖的消息 ID 合并、实时消息路由、待恢复完整消息缓存和 ready 补齐游标逻辑，
@@ -12,6 +12,12 @@
 `task-scheduler.ts` 使用单个
 `requestAnimationFrame` 循环和 `performance.now()` 派发生命周期、重连、重试和队列刷新任务；位移继续由 CSS
 `transform` 动画完成，不在 JavaScript 中逐帧改写位置。
+
+`DanmakuOverlay.vue` 负责消息连接、排序恢复和队列，`DanmakuOverlay.css` 负责文字/图片弹幕的动画样式。
+
+弹幕消息同时支持文字和活动聊天表情；表情使用 `<img>` 滚动，GIF 保持浏览器动画，图片按当前字体高度和原始宽高比
+计算展示宽度，并使用同一宽度参与轨道碰撞和入场间隔；入场宽度至少覆盖兼容正文，确保失败回退可读。图片加载失败时显示兼容正文。
+表情展示高度默认使用文字字号的 2.2 倍，宽度测量、CSS 占位高度和失败回退共用该倍率；表情垂直锚定到轨道中心，避免放大后视觉偏移。
 
 ## 实时抽奖大屏
 
@@ -36,7 +42,7 @@
 
 ## 本次修复说明
 
-- 恢复完成后，连续的 WS 事件直接把四字段完整消息加入弹幕队列，不再为每条实时消息发起 `/danmaku/messages` 请求。
+- 恢复完成后，连续的 WS 事件直接把文字或表情的完整消息加入弹幕队列，不再为每条实时消息发起 `/danmaku/messages` 请求。
 - WS 乱序或 ID 缺口事件缓存完整消息并去重，容量上限为 200；超限丢弃最早缓存，但 HTTP 恢复仍以已处理的
   `lastMessageId` 调用 `after_id`，不会因缓存溢出而跳过中间消息。
 - HTTP 恢复与 WS 事件交错时按消息 ID 合并；重复消息不重复展示，恢复失败保留未解决的完整 WS 消息并重试。

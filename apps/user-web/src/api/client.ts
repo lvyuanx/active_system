@@ -1,6 +1,11 @@
 const baseURL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
 export const apiURL = (path: string) => `${baseURL}${path}`;
+export const mediaURL = (imageUrl: string | null): string | null => {
+  if (!imageUrl) return null;
+  const origin = baseURL.startsWith("http") ? new URL(baseURL).origin : window.location.origin;
+  return new URL(imageUrl, origin).toString();
+};
 export const chatWebSocketURL = (activityId: string) => {
   const url = apiURL(`/activities/${activityId}/chat/ws`);
   return url.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
@@ -49,6 +54,16 @@ export interface ChatMessage {
   sender_username: string;
   body: string;
   created_at: string;
+  message_type: "text" | "sticker";
+  sticker: ChatSticker | null;
+}
+export interface ChatSticker {
+  sticker_id: number;
+  name: string;
+  image_url: string;
+  mime: string;
+  width: number;
+  height: number;
 }
 export interface ChatMessagePage {
   items: ChatMessage[];
@@ -106,6 +121,10 @@ export const loginActivityUser = (
   });
 export const getActivityMe = (activityId: string, token: string) =>
   request<ActivityUserResponse>(`/activities/${activityId}/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+export const getChatStickers = (activityId: string, token: string) =>
+  request<ChatSticker[]>(`/activities/${activityId}/chat/stickers`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 export const getChatMessages = (

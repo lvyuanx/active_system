@@ -113,12 +113,29 @@ CREATE INDEX IF NOT EXISTS idx_lottery_draws_activity
     ON lottery_draws(activity_id, draw_id);
 CREATE INDEX IF NOT EXISTS idx_lottery_draws_prize
     ON lottery_draws(activity_id, prize_id, draw_id);
+CREATE TABLE IF NOT EXISTS activity_chat_stickers (
+    sticker_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,
+    name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 100),
+    image_id TEXT NOT NULL UNIQUE,
+    image_storage_key TEXT NOT NULL UNIQUE,
+    image_mime TEXT NOT NULL,
+    image_size INTEGER NOT NULL CHECK(image_size BETWEEN 1 AND 5242880),
+    image_width INTEGER NOT NULL CHECK(image_width > 0),
+    image_height INTEGER NOT NULL CHECK(image_height > 0),
+    is_enabled INTEGER NOT NULL DEFAULT 1 CHECK(is_enabled IN (0, 1)),
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_activity_chat_stickers_activity_status
+    ON activity_chat_stickers(activity_id, is_enabled, sticker_id);
 CREATE TABLE IF NOT EXISTS activity_chat_messages (
     message_id INTEGER PRIMARY KEY AUTOINCREMENT,
     activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,
     activity_user_id INTEGER NOT NULL REFERENCES activity_users(id) ON DELETE CASCADE,
     body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 500),
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    message_type TEXT NOT NULL DEFAULT 'text' CHECK(message_type IN ('text', 'sticker')),
+    sticker_id INTEGER REFERENCES activity_chat_stickers(sticker_id)
 );
 CREATE INDEX IF NOT EXISTS idx_activity_chat_messages_cursor
     ON activity_chat_messages(activity_id, message_id);
@@ -193,6 +210,19 @@ def init_database(settings: Settings) -> None:
             connection.execute(
                 "ALTER TABLE activity_users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0 "
                 "CHECK(session_version >= 0)"
+            )
+        chat_message_columns = {
+            row["name"] for row in connection.execute("PRAGMA table_info(activity_chat_messages)").fetchall()
+        }
+        if "message_type" not in chat_message_columns:
+            connection.execute(
+                "ALTER TABLE activity_chat_messages ADD COLUMN message_type TEXT NOT NULL DEFAULT 'text' "
+                "CHECK(message_type IN ('text', 'sticker'))"
+            )
+        if "sticker_id" not in chat_message_columns:
+            connection.execute(
+                "ALTER TABLE activity_chat_messages ADD COLUMN sticker_id INTEGER "
+                "REFERENCES activity_chat_stickers(sticker_id)"
             )
         danmaku_columns = {
             row["name"] for row in connection.execute("PRAGMA table_info(activity_danmaku_settings)").fetchall()

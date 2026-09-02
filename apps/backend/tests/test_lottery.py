@@ -15,7 +15,9 @@ from app.modules.lottery.service import LotteryDrawError, draw_lottery
 def make_client(tmp_path: Path) -> tuple[TestClient, Settings]:
     settings = Settings(
         database_path=str(tmp_path / "lottery.db"),
+        media_root=str(tmp_path / "media"),
         jwt_secret="test-secret-at-least-thirty-two-bytes",
+        lottery_security_code="",
         superuser_username="root",
         superuser_password="secret-password",
     )

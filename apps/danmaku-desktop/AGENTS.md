@@ -32,3 +32,5 @@
   验证主进程类型。
 - 弹幕覆盖窗口关闭 `backgroundThrottling`，保证非聚焦透明窗口中的 CSS 弹幕动画和统一调度循环不被后台节流；
   会话设置透传 `entry_interval_seconds` 和 `max_wait_seconds`，实际入场与碰撞调度由 screen-web 渲染器负责。
+- `dist:win` 会先构建 `screen-web`，再把 `screen-web/dist` 写入 `release/win-unpacked/resources/screen-web`；
+  弹幕表情渲染变更后必须使用新生成的安装包，旧解压目录不会自动更新。

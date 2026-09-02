@@ -115,9 +115,13 @@ const overlaySource = fs.readFileSync(
   new URL("../src/components/realtime/DanmakuOverlay.vue", import.meta.url),
   "utf8",
 );
+const overlayStyles = fs.readFileSync(
+  new URL("../src/components/realtime/DanmakuOverlay.css", import.meta.url),
+  "utf8",
+);
 assert.doesNotMatch(overlaySource, /\bsetTimeout\b/);
 assert.doesNotMatch(overlaySource, /\bsetInterval\b/);
-assert.match(overlaySource, /animation:\s*danmaku-fly/);
+assert.match(overlayStyles, /animation:\s*danmaku-fly/);
 assert.match(overlaySource, /scheduler\.scheduleAt/);
 assert.match(overlaySource, /scheduler\.scheduleAfter/);
 assert.doesNotMatch(overlaySource, /scheduler\.subscribeFrame/);

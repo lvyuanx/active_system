@@ -50,6 +50,21 @@ export interface ActivityParticipant {
   is_muted: boolean;
 }
 export type ParticipantAction = "mute" | "unmute" | "deactivate" | "activate";
+export interface ChatSticker {
+  sticker_id: number;
+  name: string;
+  image_url: string;
+  mime: string;
+  width: number;
+  height: number;
+}
+export interface AdminChatSticker extends ChatSticker {
+  activity_id: string;
+  image_id: string;
+  size: number;
+  is_enabled: boolean;
+  created_at: string;
+}
 export interface DanmakuSettings {
   track_count: number;
   font_size: number;
@@ -232,6 +247,25 @@ export const changeActivityParticipant = (
   `/admin/activities/${activityId}/participants/${activityUserId}/${action}`,
   { method: "POST" },
 );
+export const listChatStickers = (activityId: string) =>
+  request<AdminChatSticker[]>(`/admin/activities/${activityId}/chat/stickers`);
+export const uploadChatSticker = (activityId: string, file: File, name?: string) => {
+  const body = new FormData();
+  body.append("file", file);
+  if (name) body.append("name", name);
+  return request<AdminChatSticker>(`/admin/activities/${activityId}/chat/stickers`, {
+    method: "POST",
+    body,
+  });
+};
+export const disableChatSticker = (activityId: string, stickerId: number) =>
+  request<AdminChatSticker>(`/admin/activities/${activityId}/chat/stickers/${stickerId}`, {
+    method: "DELETE",
+  });
+export const restoreChatSticker = (activityId: string, stickerId: number) =>
+  request<AdminChatSticker>(`/admin/activities/${activityId}/chat/stickers/${stickerId}/restore`, {
+    method: "POST",
+  });
 export const getDanmaku = (activityId: string) =>
   request<DanmakuAdminResponse>(`/admin/activities/${activityId}/danmaku`);
 export const updateDanmaku = (activityId: string, settings: DanmakuSettings) =>

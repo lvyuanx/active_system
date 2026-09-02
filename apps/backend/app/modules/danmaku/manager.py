@@ -45,7 +45,7 @@ class DanmakuConnectionManager:
     async def broadcast_message(self, activity_id: str, message: dict[str, Any]) -> None:
         summary = {
             key: message[key]
-            for key in ("message_id", "activity_id", "body", "created_at")
+            for key in ("message_id", "activity_id", "body", "created_at", "message_type", "sticker")
             if key in message
         }
         await self.broadcast(

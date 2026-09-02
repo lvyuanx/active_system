@@ -10,11 +10,14 @@ from app.core.config import Settings
 from app.core.database import transaction
 from app.modules.chat.manager import chat_manager
 from app.modules.chat.service import (
+    ChatMessage,
+    ChatInvalidStickerError,
     ChatMutedError,
     ChatParticipantInactiveError,
     ChatReadOnlyError,
     create_message,
 )
+from app.modules.chat.stickers import list_stickers
 from app.modules.danmaku.manager import danmaku_manager
 from app.modules.participants.router import ActivityPrincipal
 
@@ -25,6 +28,7 @@ TEST_USER_COUNT_MIN = 1
 TEST_AVATAR_COUNT = 20
 TEST_DELAY_SECONDS_MIN = 0.0
 TEST_DELAY_SECONDS_MAX = 60.0
+TEST_STICKER_PROBABILITY = 0.3
 TEST_MESSAGES = (
     "【弹幕测试】欢迎来到活动现场！",
     "【弹幕测试】这个设置效果很不错",
@@ -69,6 +73,35 @@ def _test_username(index: int) -> str:
 def _test_phone(activity_id: str, index: int) -> str:
     compact_id = activity_id.replace("-", "")[:16]
     return f"dmtest-{compact_id}-{index + 1}"
+
+
+def _select_test_payload(
+    activity_id: str,
+    settings: Settings,
+    message_index: int,
+) -> tuple[str, int | None]:
+    body = TEST_MESSAGES[message_index % len(TEST_MESSAGES)]
+    if random.random() >= TEST_STICKER_PROBABILITY:
+        return body, None
+    stickers = list_stickers(activity_id, settings, enabled_only=True)
+    if not stickers:
+        return body, None
+    return body, random.choice(stickers).sticker_id
+
+
+def _create_test_message(
+    activity_id: str,
+    principal: ActivityPrincipal,
+    message_index: int,
+    settings: Settings,
+) -> ChatMessage:
+    body, sticker_id = _select_test_payload(activity_id, settings, message_index)
+    if sticker_id is None:
+        return create_message(activity_id, principal, body, settings)
+    try:
+        return create_message(activity_id, principal, None, settings, sticker_id=sticker_id)
+    except ChatInvalidStickerError:
+        return create_message(activity_id, principal, body, settings)
 
 
 def ensure_test_users(
@@ -205,10 +238,10 @@ class DanmakuTestManager:
             try:
                 async with send_lock:
                     created = await asyncio.to_thread(
-                        create_message,
+                        _create_test_message,
                         activity_id,
                         principal,
-                        TEST_MESSAGES[message_index % len(TEST_MESSAGES)],
+                        message_index,
                         settings,
                     )
                     message = created.model_dump(mode="json")

@@ -1,4 +1,5 @@
 export const DANMAKU_GAP_PX = 8;
+export const DANMAKU_STICKER_HEIGHT_MULTIPLIER = 2.2;
 
 export type DanmakuMotion = {
   startedAt: number;
@@ -19,6 +20,7 @@ export type TextWidthMeasurer = (text: string) => number;
 
 const MIN_DURATION_MS = 1;
 const MIN_TEXT_WIDTH_PX = 1;
+const MAX_IMAGE_WIDTH_MULTIPLIER = 6;
 
 const finiteOr = (value: number, fallback: number) => (Number.isFinite(value) ? value : fallback);
 
@@ -26,6 +28,19 @@ export function measureDanmakuText(text: string, fontSize: number, measure: Text
   const fallback = Math.max(MIN_TEXT_WIDTH_PX, text.length * Math.max(1, fontSize) * 0.75);
   const measured = measure(text);
   return Number.isFinite(measured) && measured > 0 ? measured : fallback;
+}
+
+export function measureDanmakuImageWidth(width: number, height: number, fontSize: number): number {
+  const safeFontSize = Math.max(MIN_TEXT_WIDTH_PX, finiteOr(fontSize, MIN_TEXT_WIDTH_PX));
+  const stickerHeight = safeFontSize * DANMAKU_STICKER_HEIGHT_MULTIPLIER;
+  const safeWidth = finiteOr(width, 0);
+  const safeHeight = finiteOr(height, 0);
+  if (safeWidth <= 0 || safeHeight <= 0) return stickerHeight * MAX_IMAGE_WIDTH_MULTIPLIER;
+  const proportionalWidth = stickerHeight * (safeWidth / safeHeight);
+  return Math.max(
+    MIN_TEXT_WIDTH_PX,
+    Math.min(stickerHeight * MAX_IMAGE_WIDTH_MULTIPLIER, proportionalWidth),
+  );
 }
 
 export function isPendingMessageExpired(queuedAt: number, now: number, maxWaitMs: number): boolean {

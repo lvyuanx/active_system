@@ -7,6 +7,7 @@
     "dev": "vite --port 5173",
     "build": "vue-tsc --noEmit && vite build",
     "typecheck": "vue-tsc --noEmit",
+    "test:chat-stickers": "node scripts/test-chat-stickers.mjs",
     "test:lottery-image-race": "node scripts/test-lottery-image-race.mjs",
     "test:danmaku-settings": "node scripts/test-danmaku-settings.mjs"
   },

@@ -1,0 +1,3276 @@
+diff --git a/LEARNING.md b/LEARNING.md
+index 64a6bf2f9090c1f9c5903a5d5602a397f393d44a..7f18f6bc417c5890481c51f4ad4c1404af39f8bb 100644
+--- a/LEARNING.md
++++ b/LEARNING.md
+@@ -2,6 +2,16 @@
+ 
+ 已按任务持续记录经过验证的项目级经验。
+ 
++## 2026-09-01 聊天表情包
++
++- 在保留聊天表 `body` 非空约束的前提下，表情消息可以增加 `message_type/sticker_id`，并保存 `[表情] 名称` 作为旧客户端兼容占位；这样旧文本数据无需重建或迁移丢失。
++- 表情媒体必须与奖品媒体使用显式 namespace 和独立 MIME 白名单；共享随机 key、临时落盘和安全路径逻辑时，孤儿扫描也必须按 namespace 限定引用集合，避免误删其它业务媒体。
++- 弹幕图片的碰撞宽度应使用当前字体高度乘原始宽高比，并设置最大宽度；DOM/CSS 使用与纯测量函数相同的值，才能在图片和文字混排时保持轨道避让一致。
++- 软下架而非物理删除可以同时满足“从选择器隐藏”和“历史图片继续访问”，媒体清理必须把已下架但仍有消息引用的记录视为有效引用。
++- 多文件上传适合在前端拆成逐文件 multipart 请求并串行执行；单项失败可独立反馈，同时避免把多个资源绑定到一个不可回滚的复合事务。
++- 媒体路径安全不能只检查最终文件：`.tmp`、命名空间目录和扫描根都必须逐级拒绝符号链接；孤儿扫描遇到链接根应跳过，避免跟随链接访问或删除媒体根外文件。
++- 弹幕图片加载失败后仍需保持可读的兼容正文宽度；入队时使用图片占位宽度与正文测量宽度的较大值，能在不重排 CSS 动画的情况下保持碰撞和回退一致。
++
+ ## 2026-08-25 活动用户头像
+ 
+ - SQLite 旧表新增可空字段时，先用 `PRAGMA table_info` 检测列，再执行 `ALTER TABLE`；保留历史空值，避免启动时批量生成头像。
+diff --git a/MEMORY.md b/MEMORY.md
+index 6fcaaa888e004d55094b783e981b54834bb22045..1aa4c93583bd92ffb4e32a26645ba109d4acd226 100644
+--- a/MEMORY.md
++++ b/MEMORY.md
+@@ -2,6 +2,8 @@
+ 
+ ## 已完成
+ 
++- 完成 TASK-v1「聊天表情包端到端支持」实现与自动化验证：新增活动级表情库及 GIF 媒体、管理端批量上传/下架/恢复、移动端 sticker-only 聊天消息和弹幕图片滚动；后端 67 条测试、三端类型检查、生产构建、screen-web/admin-web 测试、管理端批量上传/下架/恢复和 390×844 移动端图片气泡/历史展示均已验证。1280×720 Electron 弹幕 bridge 和真实图片失败 DOM 场景仍为发布前现场风险。
++
+ - 确认采用 Monorepo。
+ - 确认后端采用 FastAPI 模块化单体。
+ - 确认通过 `activity_id` 实现活动数据隔离。
+diff --git a/README.md b/README.md
+index 3fb1b1c9ca95645774e895be0dd0f68ba574660d..cca509b1176f6f3bf1614fed9f65031a822ea1be 100644
+--- a/README.md
++++ b/README.md
+@@ -36,16 +36,17 @@ Electron 仅通过 `?danmaku-overlay=1` 加载透明弹幕渲染层。
+ 
+ 启动后端前复制 `.env.example` 为 `.env`，设置 `SUPERUSER_USERNAME`、`SUPERUSER_PASSWORD`、`LOTTERY_SECURITY_CODE` 和随机的 `JWT_SECRET`。
+ 可选设置独立的 `DANMAKU_TOKEN_SECRET`；为空时弹幕 token 使用 `JWT_SECRET` 派生。后端首次启动会初始化 SQLite 数据库和超级用户；只有该超级用户可以登录管理端。
+-奖品图片由管理员通过独立 multipart 接口上传，默认保存到 `MEDIA_ROOT=./data/media`，支持 JPEG、PNG、WebP，单文件上限 5 MiB；
+-Docker 部署使用持久化媒体卷，配置 JSON 不承载图片二进制。
++奖品图片和聊天表情包由管理员通过独立 multipart 接口上传，默认保存到 `MEDIA_ROOT=./data/media`；奖品支持 JPEG、PNG、WebP，
++聊天表情额外支持 GIF，单文件上限均为 5 MiB。Docker 部署使用持久化媒体卷，配置 JSON 和聊天消息均不承载图片二进制。
+ 
+ 登录后默认进入活动选择页。活动状态为“已关闭”“进行中”“已结束”：新建活动默认为已关闭，可在已关闭和进行中之间反复切换；管理员手动结束后不可再次开启或关闭。活动名称必填，描述、开始时间和结束时间可选，若同时填写时间则结束时间必须晚于开始时间。
+ 
+ 点击活动卡片进入活动管理页；活动列表卡片底部和活动管理首页的“活动入口”面板都提供“打开抽奖大屏”按钮，会在新标签页打开该活动的实时抽奖大屏。大屏地址由管理端 `VITE_SCREEN_WEB_BASE_URL` 配置（默认 `http://localhost:5174`），并自动附加当前活动的 `activity_id`。活动管理首页会生成用户端地址和二维码。二维码地址由管理端 `VITE_USER_WEB_BASE_URL` 配置（默认 `http://localhost:5175`）。用户端按活动收集用户名和手机号，手机号在同一活动内唯一；登录 token 按活动 ID 缓存，缓存有效时扫码可直接进入活动首页。
+ 
+ 登录活动后，用户端底部提供“首页 / 聊天 / 我的”三个入口。每个活动自动拥有聊天室：`open` 活动可发送
+-1–500 字符纯文本，`closed` 或 `ended` 活动可查看历史但只读。聊天消息通过 HTTP 游标接口读取，并使用
+-首帧认证的 WebSocket 实时广播；Nginx 已配置 WebSocket Upgrade。
++1–500 字符文本或点击发送活动表情，`closed` 或 `ended` 活动可查看历史但只读。表情包在管理端的活动级“聊天表情包”页面维护，
++移动端只显示当前活动启用的表情；聊天消息通过 HTTP 游标接口读取，并使用首帧认证的 WebSocket 实时广播。
++Nginx 已配置 WebSocket Upgrade。
+ 
+ 活动用户注册成功时会从二十款炭黑/哑金卡通 SVG 头像中随机分配一款；头像按活动和活动用户独立保存。
+ 历史用户在成功登录或调用 `/me` 时惰性补齐。聊天页采用微信式消息行：头像、真实用户名、时间和气泡按发送者左右对齐展示；
+@@ -79,7 +80,7 @@ Docker 部署使用持久化媒体卷，配置 JSON 不承载图片二进制。
+ 开启后每个带“弹幕测试用户”标识的活动用户都会独立发送消息，通过真实聊天室写入并广播，因此聊天室和弹幕投屏器都会收到这些消息；
+ 关闭按钮会停止继续发送。只有进行中的活动可以开启测试。
+ 
+-打开桌面工具后，粘贴 token、填写 API 地址并勾选一个或多个投屏显示器，弹幕会同步显示在所有选中的屏幕。弹幕窗口只显示聊天正文，使用透明、置顶和鼠标穿透窗口，
++打开桌面工具后，粘贴 token、填写 API 地址并勾选一个或多个投屏显示器，弹幕会同步显示在所有选中的屏幕。弹幕窗口显示聊天文字和表情图片/GIF，使用透明、置顶和鼠标穿透窗口，
+ 启动控制窗口默认尺寸为 680×720，页面默认不显示滚动条；弹幕覆盖层仍按目标显示器全屏显示。
+ 不会接管底层应用的鼠标操作。首次启动不会回放旧聊天；断线后会按消息 ID 补齐工具运行期间漏掉的新消息。
+ 
+diff --git a/WIKI.md b/WIKI.md
+index 8e99376ff37665bbdb34a2704d5743c32cf14bf0..06a1ca9e5f8b5d093df960766d41a3b4380d462c 100644
+--- a/WIKI.md
++++ b/WIKI.md
+@@ -40,6 +40,14 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
+ 聊天室每次发送都会重新检查参与用户的 active/muted 状态；禁言返回 `chat.error`/`muted`，停用后的现有连接返回未授权并关闭，
+ 聊天历史不会因管理操作删除。用户端收到未授权聊天错误后会清除当前活动 token 并停止重连，回到活动入口。
+ 
++### 聊天表情包
++
++`activity_chat_stickers` 按活动保存表情名称、随机媒体标识、存储 key、MIME、大小、宽高和启用状态。管理员通过
++`/admin/activities/{activity_id}/chat/stickers` 逐文件上传、下架和恢复，用户通过 `/activities/{activity_id}/chat/stickers`
++读取当前活动启用列表。聊天消息增加 `message_type` 和 `sticker_id`，表情消息的 `body` 保留 `[表情] 名称` 兼容占位；
++历史消息引用不会因下架而失效。图片使用 `/api/v1/activities/{activity_id}/chat/stickers/{sticker_id}/image?v={image_id}`
++公开版本化访问，允许大屏 `<img>` 无管理员凭证加载。
++
+ ## 活动弹幕
+ 
+ `activity_danmaku_settings` 以 `activity_id` 为主键保存轨道、字体、不透明度、飞行时长、同轨道入场间隔、碰撞避让队列最大等待时间、
+@@ -49,8 +57,9 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
+ `dm1.{activity_id}.{token_version}.{HMAC}`，HMAC 使用 `DANMAKU_TOKEN_SECRET`，为空时使用 `JWT_SECRET`；数据库不保存明文。
+ 轮换 token 会递增版本并断开该活动所有弹幕 WebSocket。
+ 
+-弹幕 HTTP/WS 只接受该只读 token，聊天发言成功后向弹幕通道发送 `message_id`、`activity_id`、`body` 和
+-`created_at`，不发送用户名或活动用户身份。设置保存会通过 `danmaku.settings.updated` 实时生效。现有聊天室协议保持不变。
++弹幕 HTTP/WS 只接受该只读 token，聊天发言成功后向弹幕通道发送 `message_id`、`activity_id`、`body`、`message_type`、
++可选 `sticker` 和 `created_at`，不发送用户名或活动用户身份。设置保存会通过 `danmaku.settings.updated` 实时生效。
++文本聊天室发送协议保持兼容，并新增独立 `sticker_id` 发送分支。
+ 
+ ## WebSocket 实时抽奖
+ 
+@@ -82,8 +91,8 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
+ ### 奖品图片媒体
+ 
+ `lottery_prizes` 的 `image_id`、`image_storage_key`、`image_mime` 和 `image_size` 均可为空，旧数据库启动时按列增量迁移。
+-媒体根目录由 `MEDIA_ROOT` 配置，奖品图片存于 `lottery-prizes/`，临时上传存于 `.tmp/`；服务端使用随机 key，
+-只接受真实 JPEG、PNG、WebP 且单文件不超过 5 MiB。
++媒体根目录由 `MEDIA_ROOT` 配置，奖品图片存于 `lottery-prizes/`，聊天表情存于 `chat-stickers/`，临时上传存于 `.tmp/` 对应命名空间；
++服务端使用随机 key，奖品只接受真实 JPEG、PNG、WebP，聊天表情额外接受 GIF，单文件均不超过 5 MiB。
+ 
+ 管理端图片通过独立 multipart 上传、删除和管理员读取接口处理，现有 lottery 配置 PUT 保持纯 JSON。
+ 公开配置、快照和开奖事件只包含 `/api/v1/activities/{activity_id}/lottery/prizes/{prize_id}/image?v={image_id}` 安全引用，
+@@ -124,7 +133,7 @@ Electron 主进程在内存保留 token、session 和 `displayIds`，预加载
+ 为每个选中显示器创建透明、置顶、不可聚焦并鼠标穿透的覆盖窗口。启动控制窗口默认 680×720，页面默认隐藏滚动条。
+ 首次连接不回放历史，重连按最后消息 ID 补齐；队列最多保留 200 条，溢出时丢弃最旧消息。
+ 普通 `screen-web` 入口继续显示活动数据大屏，只有 `?danmaku-overlay=1` 才进入 Electron 的透明弹幕渲染层。
+-恢复完成后的连续 WebSocket 消息直接携带四字段完整弹幕并进入渲染队列，不再为每条消息发起 HTTP 请求；ready、断线重连或
++恢复完成后的连续 WebSocket 消息直接携带文字或表情的完整弹幕并进入渲染队列，不再为每条消息发起 HTTP 请求；ready、断线重连或
+ 检测到 ID 缺口时，渲染器才从当前游标通过 HTTP 拉取，并把缓存的 WS 完整消息按消息 ID 合并去重，避免乱序导致遗漏。
+ 
+ 弹幕渲染器使用 `danmaku-layout.ts` 根据 Canvas 文本宽度、视口宽度、飞行时长和 8px 间距预测运动矩形；同轨道必须等上一条
+diff --git a/apps/admin-web/AGENTS.md b/apps/admin-web/AGENTS.md
+index 649e2671b9f30a4cf9180ac44069c32fbb259e17..27f208b08c9e4722a4105c41d15c39cf52f76505 100644
+--- a/apps/admin-web/AGENTS.md
++++ b/apps/admin-web/AGENTS.md
+@@ -10,6 +10,7 @@
+ - `src/router/index.ts`：登录路由和管理员路由守卫。
+ - `src/views/activity/`：单个活动管理页，展示活动移动端地址、二维码，并提供打开移动端和抽奖大屏的入口操作。
+ - `src/views/participants/`：活动参与者列表，以及禁言/解除禁言、停用/恢复操作。
++- `src/views/stickers/`：活动级聊天表情包批量上传、预览、下架和恢复。
+ - `src/views/danmaku/`：活动级弹幕配置、当前 token 复制和 token 轮换页面。
+ - `src/views/lottery/`：活动级奖项/奖品配置、奖品图片选择/预览/替换/移除、经过安全码验证并按奖品切换的按需分页名单弹窗、管理员 WebSocket 开奖控制、中奖历史和重置页面。
+ - `VITE_SCREEN_WEB_BASE_URL`：抽奖大屏地址基础 URL，默认 `http://localhost:5174`。
+@@ -29,6 +30,9 @@
+ 服务端失败时保留原图片并显示错误，不把图片二进制放入配置请求。
+ 保存期间忽略自发配置刷新及其早期异步响应；图片上传或移除失败会恢复待处理状态，允许再次保存重试。
+ 
++聊天表情包页面使用活动级管理员接口；多文件选择后逐个上传，单项失败不影响其它文件。表情图片使用公开版本化 URL
++预览；下架只切换启用状态，历史聊天消息和媒体资源继续保留，恢复后重新进入用户端选择器。
++
+ ## 视觉结构
+ 
+ 管理端采用克制的运营后台风格：活动配置页使用固定左侧导航、右侧独立顶栏和大面积内容画布；活动列表页使用状态统计带、分段筛选和带状态色的卡片网格；登录页与工作台共用品牌标识和语义色。活动首页、弹幕工具页和参与者页共同复用 `src/components/ActivitySidebar.vue`，返回活动列表按钮与菜单项使用统一的扁平按钮基础样式，视觉规则集中在全局活动壳样式中。移动端将配置页导航折叠为顶部菜单，内容面板改为单列。
+diff --git a/apps/admin-web/package.json b/apps/admin-web/package.json
+index 5ea9151a397d570aabc9da30c4112063ab4ee583..a94ef6868fd1c722ab312846a092b45b533d3db2 100644
+--- a/apps/admin-web/package.json
++++ b/apps/admin-web/package.json
+@@ -7,6 +7,7 @@
+     "dev": "vite --port 5173",
+     "build": "vue-tsc --noEmit && vite build",
+     "typecheck": "vue-tsc --noEmit",
++    "test:chat-stickers": "node scripts/test-chat-stickers.mjs",
+     "test:lottery-image-race": "node scripts/test-lottery-image-race.mjs",
+     "test:danmaku-settings": "node scripts/test-danmaku-settings.mjs"
+   },
+diff --git a/apps/admin-web/scripts/test-chat-stickers.mjs b/apps/admin-web/scripts/test-chat-stickers.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..15e070e3f484d22b45797e31bbac98620d6cf24d
+--- /dev/null
++++ b/apps/admin-web/scripts/test-chat-stickers.mjs
+@@ -0,0 +1,23 @@
++import assert from "node:assert/strict";
++import { readFile } from "node:fs/promises";
++
++const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
++const [client, router, sidebar, page] = await Promise.all([
++  read("../src/api/client.ts"),
++  read("../src/router/index.ts"),
++  read("../src/components/ActivitySidebar.vue"),
++  read("../src/views/stickers/index.vue"),
++]);
++
++assert.match(client, /uploadChatSticker/);
++assert.match(client, /disableChatSticker/);
++assert.match(client, /restoreChatSticker/);
++assert.match(router, /views\/stickers\/index\.vue/);
++assert.match(sidebar, /active === ['"]stickers['"]/);
++assert.match(sidebar, /goStickers/);
++assert.match(page, /multiple/);
++assert.match(page, /image\/gif/);
++assert.match(page, /for \(const item of items\) await uploadOne\(item\)/);
++assert.match(page, /历史消息仍会保留/);
++
++console.log("admin chat sticker tests passed");
+diff --git a/apps/admin-web/src/api/client.ts b/apps/admin-web/src/api/client.ts
+index 12e577cdf480ab5f6878471aae544689b1ddc063..27e066e6fd363ad57fce393dbbc57210246c9037 100644
+--- a/apps/admin-web/src/api/client.ts
++++ b/apps/admin-web/src/api/client.ts
+@@ -50,6 +50,21 @@ export interface ActivityParticipant {
+   is_muted: boolean;
+ }
+ export type ParticipantAction = "mute" | "unmute" | "deactivate" | "activate";
++export interface ChatSticker {
++  sticker_id: number;
++  name: string;
++  image_url: string;
++  mime: string;
++  width: number;
++  height: number;
++}
++export interface AdminChatSticker extends ChatSticker {
++  activity_id: string;
++  image_id: string;
++  size: number;
++  is_enabled: boolean;
++  created_at: string;
++}
+ export interface DanmakuSettings {
+   track_count: number;
+   font_size: number;
+@@ -232,6 +247,25 @@ export const changeActivityParticipant = (
+   `/admin/activities/${activityId}/participants/${activityUserId}/${action}`,
+   { method: "POST" },
+ );
++export const listChatStickers = (activityId: string) =>
++  request<AdminChatSticker[]>(`/admin/activities/${activityId}/chat/stickers`);
++export const uploadChatSticker = (activityId: string, file: File, name?: string) => {
++  const body = new FormData();
++  body.append("file", file);
++  if (name) body.append("name", name);
++  return request<AdminChatSticker>(`/admin/activities/${activityId}/chat/stickers`, {
++    method: "POST",
++    body,
++  });
++};
++export const disableChatSticker = (activityId: string, stickerId: number) =>
++  request<AdminChatSticker>(`/admin/activities/${activityId}/chat/stickers/${stickerId}`, {
++    method: "DELETE",
++  });
++export const restoreChatSticker = (activityId: string, stickerId: number) =>
++  request<AdminChatSticker>(`/admin/activities/${activityId}/chat/stickers/${stickerId}/restore`, {
++    method: "POST",
++  });
+ export const getDanmaku = (activityId: string) =>
+   request<DanmakuAdminResponse>(`/admin/activities/${activityId}/danmaku`);
+ export const updateDanmaku = (activityId: string, settings: DanmakuSettings) =>
+diff --git a/apps/admin-web/src/components/AGENTS.md b/apps/admin-web/src/components/AGENTS.md
+index 2ee806ba3ac94e2e7d3a0eb4836f68b877a8f916..9c93ee585fa0ac4c2f9ee5f631023c2676e693a1 100644
+--- a/apps/admin-web/src/components/AGENTS.md
++++ b/apps/admin-web/src/components/AGENTS.md
+@@ -7,11 +7,11 @@
+ ## 核心组件
+ 
+ - `ActivitySidebar.vue`：活动管理壳层的统一左侧菜单，包含品牌区、返回活动列表、当前活动摘要、
+-  首页/弹幕工具/实时抽奖/参与者导航、暂未开放入口和管理员退出操作。
++  首页/弹幕工具/实时抽奖/参与者/聊天表情包导航、暂未开放入口和管理员退出操作。
+ 
+ ## 复用方式
+ 
+-活动首页、弹幕工具页、实时抽奖页和参与者页传入 `activity`、`activityId`、`active` 和 `username`；组件内部统一处理路由跳转
++活动首页、弹幕工具页、实时抽奖页、参与者页和聊天表情包页传入 `activity`、`activityId`、`active` 和 `username`；组件内部统一处理路由跳转
+ 及退出登录，页面不再复制菜单 DOM。菜单视觉规则集中在管理端全局活动壳样式中。
+ 
+ ## 注意事项
+diff --git a/apps/admin-web/src/components/ActivitySidebar.vue b/apps/admin-web/src/components/ActivitySidebar.vue
+index b726be91304e4336daf781ddcc0c568ff227d476..ebefc121e8687702d773798405e1dcb1d76826ba 100644
+--- a/apps/admin-web/src/components/ActivitySidebar.vue
++++ b/apps/admin-web/src/components/ActivitySidebar.vue
+@@ -45,6 +45,14 @@
+       >
+         <span class="nav-icon">◌</span>参与者
+       </button>
++      <button
++        class="nav-item"
++        :class="{ 'nav-item--active': active === 'stickers' }"
++        type="button"
++        @click="goStickers"
++      >
++        <span class="nav-icon">☺</span>聊天表情包
++      </button>
+       <button class="nav-item nav-item--disabled" type="button" disabled>
+         <span class="nav-icon">▥</span>数据概览
+       </button>
+@@ -64,7 +72,7 @@ import { clearToken, type Activity } from "../api/client";
+ const props = defineProps<{
+   activity?: Activity;
+   activityId: string;
+-  active: "home" | "danmaku" | "lottery" | "participants";
++  active: "home" | "danmaku" | "lottery" | "participants" | "stickers";
+   username: string;
+ }>();
+ const router = useRouter();
+@@ -74,6 +82,7 @@ const goHome = () => router.push(`/activities/${props.activityId}`);
+ const goDanmaku = () => router.push(`/activities/${props.activityId}/danmaku`);
+ const goLottery = () => router.push(`/activities/${props.activityId}/lottery`);
+ const goParticipants = () => router.push(`/activities/${props.activityId}/participants`);
++const goStickers = () => router.push(`/activities/${props.activityId}/stickers`);
+ const logout = () => {
+   clearToken();
+   router.push("/login");
+diff --git a/apps/admin-web/src/router/index.ts b/apps/admin-web/src/router/index.ts
+index f0f27616171db30fb6b3b84139ab2a3fa0c0879a..3310eca799249777b89cf58a8b402c19cc55df38 100644
+--- a/apps/admin-web/src/router/index.ts
++++ b/apps/admin-web/src/router/index.ts
+@@ -26,6 +26,11 @@ const router = createRouter({
+       component: () => import("../views/participants/index.vue"),
+       meta: { requiresAuth: true },
+     },
++    {
++      path: "/activities/:activityId/stickers",
++      component: () => import("../views/stickers/index.vue"),
++      meta: { requiresAuth: true },
++    },
+     { path: "/:pathMatch(.*)*", redirect: "/" },
+   ],
+ });
+diff --git a/apps/admin-web/src/views/stickers/AGENTS.md b/apps/admin-web/src/views/stickers/AGENTS.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..86744761a656c5010feb943b1da446953112372c
+--- /dev/null
++++ b/apps/admin-web/src/views/stickers/AGENTS.md
+@@ -0,0 +1,21 @@
++# 聊天表情包管理页面说明
++
++## 模块职责
++
++`src/views/stickers/` 为超级管理员提供活动级聊天表情包的批量上传、预览、下架和恢复能力。
++
++## 主要流程
++
++页面先加载当前活动和管理员表情列表；文件选择器允许多选，前端按选择顺序逐个调用单文件 multipart 接口，
++每项独立展示预览、上传状态和错误。名称默认使用文件名去掉扩展名后的结果。已下架表情仍显示在管理员列表中，
++恢复操作只切换启用状态，不删除历史消息引用或媒体文件。
++
++## 依赖关系
++
++- 复用 `ActivitySidebar` 活动管理壳，并使用 `src/api/client.ts` 的表情接口和媒体 URL 解析。
++- 后端管理员接口要求超级用户 JWT，图片资源使用公开版本化 URL 预览。
++
++## 注意事项
++
++- 支持 JPG、PNG、WebP、GIF，单文件上限 5 MiB；前端校验只是提示，后端校验才是最终约束。
++- 批量上传失败项不能阻断其它文件；移动端只读取当前活动的启用表情。
+diff --git a/apps/admin-web/src/views/stickers/index.vue b/apps/admin-web/src/views/stickers/index.vue
+new file mode 100644
+index 0000000000000000000000000000000000000000..399d6f905e44f5c61da64da761663572cfea92e2
+--- /dev/null
++++ b/apps/admin-web/src/views/stickers/index.vue
+@@ -0,0 +1,455 @@
++<template>
++  <div class="activity-management">
++    <ActivitySidebar
++      :activity="activity"
++      :activity-id="activityId"
++      active="stickers"
++      :username="username"
++    />
++
++    <section class="workspace">
++      <header class="workspace-topbar">
++        <div class="breadcrumb">
++          <span>活动管理</span><b>/</b><span>聊天表情包</span><b>/</b>
++          <strong>{{ activity?.name || "加载中" }}</strong>
++        </div>
++        <span
++          class="workspace-status"
++          :class="activity ? `workspace-status--${activity.status}` : ''"
++        >
++          <i aria-hidden="true"></i>{{ activity ? statusLabel(activity.status) : "正在加载" }}
++        </span>
++      </header>
++
++      <main class="management-page">
++        <el-alert v-if="error" :title="error" type="error" show-icon class="page-alert" />
++        <el-skeleton v-if="loading" :rows="8" animated />
++
++        <template v-else-if="activity">
++          <section class="activity-titlebar">
++            <div>
++              <p class="eyebrow">CHAT STICKERS</p>
++              <h1>聊天表情包</h1>
++              <p class="activity-meta">当前活动独立维护，上传后移动端聊天即可使用</p>
++            </div>
++            <span class="status-badge" :class="`status-badge--${activity.status}`">
++              <i aria-hidden="true"></i>{{ statusLabel(activity.status) }}
++            </span>
++          </section>
++
++          <section class="content-surface sticker-surface">
++            <header class="content-heading">
++              <div><p class="eyebrow">STICKER LIBRARY</p><h2>表情库</h2></div>
++              <span class="content-hint">{{ enabledCount }} 个启用</span>
++            </header>
++
++            <div class="upload-bar">
++              <label class="upload-picker" :class="{ 'is-disabled': uploading }">
++                <span>{{ uploading ? "正在上传" : "选择表情包" }}</span>
++                <input
++                  type="file"
++                  multiple
++                  accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
++                  :disabled="uploading"
++                  @change="handleFiles"
++                />
++              </label>
++              <el-button :loading="refreshing" @click="loadStickers">刷新列表</el-button>
++              <p>支持 PNG、JPG、WebP、GIF，单文件不超过 5 MiB；名称默认取文件名。</p>
++            </div>
++
++            <ul v-if="uploadItems.length" class="upload-results" aria-live="polite">
++              <li v-for="item in uploadItems" :key="item.key" class="upload-result">
++                <div class="upload-result-preview">
++                  <img :src="item.previewUrl" :alt="`${item.name}预览`" />
++                </div>
++                <div class="upload-result-copy">
++                  <strong>{{ item.name }}</strong>
++                  <small>{{ item.file.name }} · {{ formatSize(item.file.size) }}</small>
++                </div>
++                <span class="upload-result-status" :class="`upload-result-status--${item.status}`">
++                  {{ uploadStatusLabel(item) }}
++                </span>
++              </li>
++            </ul>
++
++            <el-empty v-if="stickers.length === 0 && !uploading" description="还没有表情包，请先上传" />
++            <div v-else class="sticker-grid">
++              <article v-for="sticker in stickers" :key="sticker.sticker_id" class="sticker-card">
++                <div class="sticker-preview">
++                  <img
++                    v-if="!failedStickerIds.has(sticker.sticker_id)"
++                    :src="mediaURL(sticker.image_url) || undefined"
++                    :alt="`${sticker.name}预览`"
++                    @error="markStickerError(sticker.sticker_id)"
++                  />
++                  <span v-else>图片无法预览</span>
++                </div>
++                <div class="sticker-copy">
++                  <strong :title="sticker.name">{{ sticker.name }}</strong>
++                  <small>{{ mimeLabel(sticker.mime) }} · {{ formatSize(sticker.size) }}</small>
++                </div>
++                <div class="sticker-actions">
++                  <el-tag size="small" :type="sticker.is_enabled ? 'success' : 'info'">
++                    {{ sticker.is_enabled ? "已启用" : "已下架" }}
++                  </el-tag>
++                  <el-button
++                    text
++                    :type="sticker.is_enabled ? 'danger' : 'primary'"
++                    :loading="busyStickerIds.has(sticker.sticker_id)"
++                    @click="toggleSticker(sticker)"
++                  >
++                    {{ sticker.is_enabled ? "下架" : "恢复" }}
++                  </el-button>
++                </div>
++              </article>
++            </div>
++          </section>
++        </template>
++      </main>
++    </section>
++  </div>
++</template>
++
++<script setup lang="ts">
++import { computed, onBeforeUnmount, onMounted, ref } from "vue";
++import { ElMessage } from "element-plus";
++import { useRoute } from "vue-router";
++import {
++  disableChatSticker,
++  getActivity,
++  listChatStickers,
++  mediaURL,
++  restoreChatSticker,
++  uploadChatSticker,
++  type Activity,
++  type AdminChatSticker,
++} from "../../api/client";
++import ActivitySidebar from "../../components/ActivitySidebar.vue";
++
++const MAX_FILE_SIZE = 5 * 1024 * 1024;
++const ACCEPTED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
++const ACCEPTED_EXTENSIONS = /\.(jpe?g|png|webp|gif)$/i;
++const route = useRoute();
++const activityId = String(route.params.activityId);
++const username = localStorage.getItem("active_admin_username") || "超级用户";
++const activity = ref<Activity>();
++const stickers = ref<AdminChatSticker[]>([]);
++const loading = ref(true);
++const refreshing = ref(false);
++const uploading = ref(false);
++const error = ref("");
++const failedStickerIds = ref(new Set<number>());
++const busyStickerIds = ref(new Set<number>());
++
++type UploadStatus = "pending" | "uploading" | "success" | "error";
++type UploadItem = {
++  key: string;
++  file: File;
++  name: string;
++  previewUrl: string;
++  status: UploadStatus;
++  message?: string;
++};
++const uploadItems = ref<UploadItem[]>([]);
++
++const statusLabel = (status: Activity["status"]) =>
++  ({ closed: "已关闭", open: "进行中", ended: "已结束" })[status];
++const enabledCount = computed(() => stickers.value.filter((sticker) => sticker.is_enabled).length);
++const uploadStatusLabel = (item: UploadItem) => ({
++  pending: "等待上传",
++  uploading: "上传中",
++  success: "已上传",
++  error: item.message || "上传失败",
++}[item.status]);
++const formatSize = (size: number) => {
++  if (size < 1024) return `${size} B`;
++  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KiB`;
++  return `${(size / (1024 * 1024)).toFixed(1)} MiB`;
++};
++const fileStem = (filename: string) => filename.replace(/\.[^.]+$/, "").trim();
++const mimeLabel = (mime: string) => ({
++  "image/jpeg": "JPG",
++  "image/png": "PNG",
++  "image/webp": "WebP",
++  "image/gif": "GIF",
++}[mime] || mime);
++const loadStickers = async () => {
++  refreshing.value = true;
++  error.value = "";
++  try {
++    stickers.value = await listChatStickers(activityId);
++  } catch (err) {
++    error.value = err instanceof Error ? err.message : "表情包列表加载失败";
++  } finally {
++    refreshing.value = false;
++  }
++};
++const load = async () => {
++  loading.value = true;
++  error.value = "";
++  try {
++    const currentActivity = await getActivity(activityId);
++    activity.value = currentActivity;
++    await loadStickers();
++  } catch (err) {
++    error.value = err instanceof Error ? err.message : "聊天表情包加载失败";
++  } finally {
++    loading.value = false;
++  }
++};
++const validateFile = (file: File) => {
++  if (!ACCEPTED_EXTENSIONS.test(file.name)
++    || (file.type && !ACCEPTED_MIME_TYPES.has(file.type))) {
++    return "仅支持 JPG、PNG、WebP 或 GIF 图片";
++  }
++  if (file.size > MAX_FILE_SIZE) return "图片大小不能超过 5 MiB";
++  return "";
++};
++const uploadOne = async (item: UploadItem) => {
++  const validationError = validateFile(item.file);
++  if (validationError) {
++    item.status = "error";
++    item.message = validationError;
++    return;
++  }
++  item.status = "uploading";
++  item.message = undefined;
++  try {
++    await uploadChatSticker(activityId, item.file, item.name);
++    item.status = "success";
++  } catch (err) {
++    item.status = "error";
++    item.message = err instanceof Error ? err.message : "上传失败，请重试";
++  }
++};
++const handleFiles = async (event: Event) => {
++  const input = event.target as HTMLInputElement;
++  const files = [...(input.files || [])];
++  input.value = "";
++  if (!files.length) return;
++  const items = files.map((file, index) => ({
++    key: `${Date.now()}-${index}-${file.name}`,
++    file,
++    name: fileStem(file.name) || "未命名表情",
++    previewUrl: URL.createObjectURL(file),
++    status: "pending" as UploadStatus,
++  }));
++  uploadItems.value = items;
++  uploading.value = true;
++  for (const item of items) await uploadOne(item);
++  uploading.value = false;
++  if (items.some((item) => item.status === "success")) await loadStickers();
++  if (items.some((item) => item.status === "error")) ElMessage.warning("部分表情包上传失败，请查看逐项结果");
++  else ElMessage.success(`已上传 ${items.length} 个表情包`);
++};
++const toggleSticker = async (sticker: AdminChatSticker) => {
++  busyStickerIds.value = new Set(busyStickerIds.value).add(sticker.sticker_id);
++  try {
++    const updated = sticker.is_enabled
++      ? await disableChatSticker(activityId, sticker.sticker_id)
++      : await restoreChatSticker(activityId, sticker.sticker_id);
++    stickers.value = stickers.value.map((item) => (
++      item.sticker_id === updated.sticker_id ? updated : item
++    ));
++    ElMessage.success(updated.is_enabled ? "表情包已恢复" : "表情包已下架，历史消息仍会保留");
++  } catch (err) {
++    ElMessage.error(err instanceof Error ? err.message : "表情状态更新失败");
++  } finally {
++    const next = new Set(busyStickerIds.value);
++    next.delete(sticker.sticker_id);
++    busyStickerIds.value = next;
++  }
++};
++const markStickerError = (stickerId: number) => {
++  failedStickerIds.value = new Set(failedStickerIds.value).add(stickerId);
++};
++
++onMounted(load);
++onBeforeUnmount(() => uploadItems.value.forEach((item) => URL.revokeObjectURL(item.previewUrl)));
++</script>
++
++<style scoped>
++.activity-titlebar {
++  display: flex;
++  align-items: flex-end;
++  justify-content: space-between;
++  gap: 24px;
++  margin: 0 8px 22px;
++}
++
++.activity-titlebar h1,
++.content-heading h2 {
++  margin: 0;
++}
++
++.activity-titlebar h1 { font-size: 27px; }
++.content-heading h2 { font-size: 22px; }
++
++.activity-meta {
++  margin: 9px 0 0;
++  color: #849089;
++  font: 12px Consolas, monospace;
++}
++
++.status-badge {
++  display: inline-flex;
++  align-items: center;
++  gap: 6px;
++  color: #21588f;
++  font-size: 12px;
++  font-weight: 650;
++  white-space: nowrap;
++}
++
++.status-badge i {
++  width: 7px;
++  height: 7px;
++  background: #2e73b8;
++  border-radius: 50%;
++}
++
++.status-badge--open { color: #0f7656; }
++.status-badge--open i { background: #159a70; }
++.status-badge--ended { color: #a8403b; }
++.status-badge--ended i { background: #d35c55; }
++
++.sticker-surface {
++  min-height: 540px;
++  padding: 28px 30px 30px;
++  background: #fff;
++  border: 1px solid #dfe5e2;
++  border-radius: 12px;
++  box-shadow: 0 8px 26px rgb(31 48 41 / 5%);
++}
++
++.content-heading {
++  display: flex;
++  align-items: flex-end;
++  justify-content: space-between;
++  gap: 16px;
++  margin-bottom: 24px;
++}
++
++.content-hint,
++.upload-bar p {
++  color: #849089;
++  font-size: 12px;
++}
++
++.upload-bar {
++  display: flex;
++  align-items: center;
++  flex-wrap: wrap;
++  gap: 10px;
++  padding-bottom: 20px;
++  border-bottom: 1px solid #e7ece9;
++}
++
++.upload-bar p { flex: 1 1 100%; margin: 0; }
++
++.upload-picker {
++  display: inline-flex;
++  align-items: center;
++  min-height: 32px;
++  padding: 0 12px;
++  color: #fff;
++  background: #147d64;
++  border-radius: 5px;
++  cursor: pointer;
++  font-size: 13px;
++}
++
++.upload-picker input { display: none; }
++.upload-picker.is-disabled { opacity: 0.6; cursor: not-allowed; }
++
++.upload-results {
++  display: grid;
++  gap: 8px;
++  margin: 18px 0 24px;
++  padding: 0;
++  list-style: none;
++}
++
++.upload-result {
++  display: flex;
++  align-items: center;
++  gap: 10px;
++  min-width: 0;
++  padding: 8px 10px;
++  border: 1px solid #e7ece9;
++  border-radius: 8px;
++  background: #fbfcfb;
++}
++
++.upload-result-preview {
++  display: grid;
++  flex: 0 0 42px;
++  width: 42px;
++  height: 42px;
++  place-items: center;
++  overflow: hidden;
++  border-radius: 6px;
++  background: #eef4f1;
++}
++
++.upload-result-preview img { width: 100%; height: 100%; object-fit: contain; }
++.upload-result-copy { display: grid; min-width: 0; gap: 3px; }
++.upload-result-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.upload-result-copy small { color: #849089; font-size: 11px; }
++.upload-result-status { margin-left: auto; font-size: 12px; white-space: nowrap; }
++.upload-result-status--success { color: #0f7656; }
++.upload-result-status--error { color: #b33c35; }
++.upload-result-status--uploading { color: #b16c2b; }
++
++.sticker-grid {
++  display: grid;
++  grid-template-columns: repeat(4, minmax(0, 1fr));
++  gap: 14px;
++}
++
++.sticker-card {
++  display: grid;
++  grid-template-columns: 72px minmax(0, 1fr);
++  gap: 10px;
++  padding: 12px;
++  border: 1px solid #e1e9e5;
++  border-radius: 9px;
++  background: #fbfcfb;
++}
++
++.sticker-preview {
++  display: grid;
++  grid-row: span 2;
++  width: 72px;
++  height: 72px;
++  place-items: center;
++  overflow: hidden;
++  color: #849089;
++  background: #eef4f1;
++  border-radius: 7px;
++  font-size: 10px;
++  text-align: center;
++}
++
++.sticker-preview img { width: 100%; height: 100%; object-fit: contain; }
++.sticker-copy { display: grid; min-width: 0; gap: 5px; align-content: center; }
++.sticker-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.sticker-copy small { color: #849089; font-size: 11px; }
++.sticker-actions { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
++
++@media (max-width: 1100px) {
++  .sticker-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
++}
++
++@media (max-width: 800px) {
++  .activity-titlebar { align-items: flex-start; flex-direction: column; }
++  .sticker-surface { padding: 22px 18px; }
++  .sticker-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
++  .workspace-status { display: none; }
++}
++
++@media (max-width: 520px) {
++  .sticker-grid { grid-template-columns: 1fr; }
++}
++</style>
+diff --git a/apps/backend/AGENTS.md b/apps/backend/AGENTS.md
+index c543f7f9d1506f32ca233ebb7f984f5adf564593..2edd7f0399eaccb5954364d206c9c9b7eb322643 100644
+--- a/apps/backend/AGENTS.md
++++ b/apps/backend/AGENTS.md
+@@ -25,9 +25,9 @@
+ - `app/modules/participants/router.py`：活动公开详情、活动用户注册/登录、token 校验和用户身份接口。
+ - `app/modules/participants/admin_router.py`：超级用户使用的参与者列表、禁言/解除禁言和停用/恢复接口。
+ - `app/modules/participants/avatar.py`：活动用户头像范围校验、安全随机分配和空值惰性补齐。
+-- `app/modules/chat/`：活动聊天室历史消息、游标查询、WebSocket 认证和广播。
++- `app/modules/chat/`：活动聊天室历史消息、活动级表情库、游标查询、WebSocket 认证和广播。
+ - `app/modules/danmaku/`：活动弹幕配置、版本化 HMAC token、只读会话和独立实时广播。
+-- `app/modules/files/`：奖品图片临时存储、真实 MIME 校验、随机 key、原子落盘和孤儿清理；根目录由 `MEDIA_ROOT` 配置。
++- `app/modules/files/`：按命名空间管理奖品图片和聊天表情媒体的临时存储、真实 MIME 校验、随机 key、原子落盘和孤儿清理；根目录由 `MEDIA_ROOT` 配置。
+ - `app/modules/lottery/`：活动抽奖配置、按奖品隔离的分页名单和单行规则更新、事务开奖、request_id 幂等、管理员/公开 WebSocket 和安全快照广播；图片变更提交后广播最新安全配置。
+ 
+ ## 活动状态
+diff --git a/apps/backend/app/api/router.py b/apps/backend/app/api/router.py
+index 3e8e002cfe085c3a2f1aa680537ffda93eb249df..551f3d9d72ef307eea0daaf739500234d77092ff 100644
+--- a/apps/backend/app/api/router.py
++++ b/apps/backend/app/api/router.py
+@@ -3,7 +3,7 @@ from fastapi import APIRouter
+ from app.modules.activities import router as activities_router
+ from app.modules.auth import router as auth_router
+ from app.modules.participants import admin_router as participants_admin_router, router as participants_router
+-from app.modules.chat import router as chat_router
++from app.modules.chat import admin_router as chat_admin_router, router as chat_router
+ from app.modules.danmaku import admin_router as danmaku_admin_router
+ from app.modules.danmaku import router as danmaku_router
+ from app.modules.lottery import router as lottery_router
+@@ -14,6 +14,7 @@ api_router.include_router(activities_router)
+ api_router.include_router(participants_router)
+ api_router.include_router(participants_admin_router)
+ api_router.include_router(chat_router)
++api_router.include_router(chat_admin_router)
+ api_router.include_router(danmaku_admin_router)
+ api_router.include_router(danmaku_router)
+ api_router.include_router(lottery_router.admin_router)
+diff --git a/apps/backend/app/core/database.py b/apps/backend/app/core/database.py
+index e8e9877de5e6508084d338cdf8a28191e0bb612a..99d9c96a0c87731ee089acca831566a24b6d4f19 100644
+--- a/apps/backend/app/core/database.py
++++ b/apps/backend/app/core/database.py
+@@ -113,12 +113,29 @@ CREATE INDEX IF NOT EXISTS idx_lottery_draws_activity
+     ON lottery_draws(activity_id, draw_id);
+ CREATE INDEX IF NOT EXISTS idx_lottery_draws_prize
+     ON lottery_draws(activity_id, prize_id, draw_id);
++CREATE TABLE IF NOT EXISTS activity_chat_stickers (
++    sticker_id INTEGER PRIMARY KEY AUTOINCREMENT,
++    activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,
++    name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 100),
++    image_id TEXT NOT NULL UNIQUE,
++    image_storage_key TEXT NOT NULL UNIQUE,
++    image_mime TEXT NOT NULL,
++    image_size INTEGER NOT NULL CHECK(image_size BETWEEN 1 AND 5242880),
++    image_width INTEGER NOT NULL CHECK(image_width > 0),
++    image_height INTEGER NOT NULL CHECK(image_height > 0),
++    is_enabled INTEGER NOT NULL DEFAULT 1 CHECK(is_enabled IN (0, 1)),
++    created_at TEXT NOT NULL
++);
++CREATE INDEX IF NOT EXISTS idx_activity_chat_stickers_activity_status
++    ON activity_chat_stickers(activity_id, is_enabled, sticker_id);
+ CREATE TABLE IF NOT EXISTS activity_chat_messages (
+     message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+     activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,
+     activity_user_id INTEGER NOT NULL REFERENCES activity_users(id) ON DELETE CASCADE,
+     body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 500),
+-    created_at TEXT NOT NULL
++    created_at TEXT NOT NULL,
++    message_type TEXT NOT NULL DEFAULT 'text' CHECK(message_type IN ('text', 'sticker')),
++    sticker_id INTEGER REFERENCES activity_chat_stickers(sticker_id)
+ );
+ CREATE INDEX IF NOT EXISTS idx_activity_chat_messages_cursor
+     ON activity_chat_messages(activity_id, message_id);
+@@ -194,6 +211,19 @@ def init_database(settings: Settings) -> None:
+                 "ALTER TABLE activity_users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0 "
+                 "CHECK(session_version >= 0)"
+             )
++        chat_message_columns = {
++            row["name"] for row in connection.execute("PRAGMA table_info(activity_chat_messages)").fetchall()
++        }
++        if "message_type" not in chat_message_columns:
++            connection.execute(
++                "ALTER TABLE activity_chat_messages ADD COLUMN message_type TEXT NOT NULL DEFAULT 'text' "
++                "CHECK(message_type IN ('text', 'sticker'))"
++            )
++        if "sticker_id" not in chat_message_columns:
++            connection.execute(
++                "ALTER TABLE activity_chat_messages ADD COLUMN sticker_id INTEGER "
++                "REFERENCES activity_chat_stickers(sticker_id)"
++            )
+         danmaku_columns = {
+             row["name"] for row in connection.execute("PRAGMA table_info(activity_danmaku_settings)").fetchall()
+         }
+diff --git a/apps/backend/app/main.py b/apps/backend/app/main.py
+index 5b616b152db091d4c8b55328fc7791560abcec88..531757fa6f904f7f9ec6dc6d9bd998b3c9197e80 100644
+--- a/apps/backend/app/main.py
++++ b/apps/backend/app/main.py
+@@ -7,6 +7,7 @@ from app.api.router import api_router
+ from app.core.config import get_settings
+ from app.modules.auth import ensure_superuser
+ from app.modules.danmaku.testing import danmaku_test_manager
++from app.modules.chat.stickers import scan_chat_sticker_media
+ from app.modules.lottery.media_service import scan_lottery_media
+ 
+ settings = get_settings()
+@@ -16,6 +17,7 @@ settings = get_settings()
+ async def lifespan(_: FastAPI):
+     ensure_superuser(settings)
+     scan_lottery_media(settings)
++    scan_chat_sticker_media(settings)
+     try:
+         yield
+     finally:
+diff --git a/apps/backend/app/modules/chat/AGENTS.md b/apps/backend/app/modules/chat/AGENTS.md
+index 73a8d6df350fc734705d728794743b29bd0e227b..086051c0945f048bbbfc39f8e237ca7ee7cfc934 100644
+--- a/apps/backend/app/modules/chat/AGENTS.md
++++ b/apps/backend/app/modules/chat/AGENTS.md
+@@ -2,22 +2,29 @@
+ 
+ ## 模块简介
+ 
+-`chat` 为活动参与用户提供按 `activity_id` 隔离的持久化纯文本聊天室。
++`chat` 为活动参与用户提供按 `activity_id` 隔离的持久化聊天室和活动级表情包能力。
+ 
+ ## 主要职责
+ 
+-- `service.py` 负责活动用户授权后的消息游标查询、活动状态/参与者状态校验和 SQLite 持久化。
+-- `router.py` 提供历史消息 HTTP 接口和首帧认证的 WebSocket 协议。
++- `service.py` 负责活动用户授权后的消息游标查询、文本/表情消息状态校验和 SQLite 持久化。
++- `stickers.py` 负责表情库 CRUD、媒体绑定、启用状态和版本化公开图片文件。
++- `router.py` 提供表情库/图片 HTTP 接口、历史消息 HTTP 接口和首帧认证的 WebSocket 协议。
+ - `manager.py` 维护单进程活动房间连接并广播新消息。
+ 
+ ## 数据流与接口
+ 
+ 消息写入 `activity_chat_messages`，通过 `activity_user_id` 关联参与用户；HTTP 读取支持 `before_id` 和
+-`after_id` 游标，WebSocket 在持久化成功后广播 `message.created`。同一时刻还会向 `danmaku` 模块广播仅包含
+-消息 ID、活动 ID、正文和创建时间的摘要。弹幕测试也调用同一持久化与广播链路，只是使用带“弹幕测试用户”标记的活动用户身份。
++`after_id` 游标，WebSocket 在持久化成功后广播 `message.created`。文字消息使用 `body`，表情消息额外保存
++`message_type=sticker` 和 `sticker_id`，并用 `[表情] 名称` 作为旧客户端兼容正文。同一时刻还会向 `danmaku`
++模块广播不含发送者身份但包含表情资源摘要的消息。弹幕测试继续调用同一持久化与广播链路。
++
++管理员通过 `/admin/activities/{activity_id}/chat/stickers` 批量逐文件上传、下架和恢复表情；活动用户通过
++`/activities/{activity_id}/chat/stickers` 读取启用列表。公开图片使用带 `image_id` 版本参数的活动级 URL，
++允许历史消息在表情下架后继续显示。
+ 只有 `open` 活动且参与用户处于 active、未 muted 状态时可发言；禁言发送返回 `chat.error` 的 `muted`，停用后的现有连接
+ 返回 `unauthorized` 并关闭。
+ 
+ ## 注意事项
+ 
+-身份必须使用参与用户稳定 ID，不按用户名推断发送者。当前房间广播为进程内实现，多副本部署时需要接入共享消息总线。
++身份必须使用参与用户稳定 ID，不按用户名推断发送者。表情发送只能单独携带 `sticker_id`，不能和文字混合；
++只有当前活动启用的表情可以发送。当前房间广播为进程内实现，多副本部署时需要接入共享消息总线。
+diff --git a/apps/backend/app/modules/chat/__init__.py b/apps/backend/app/modules/chat/__init__.py
+index 523f2b276069e38a1e5cf074c56eb74579976af4..c150f6a95a67b3d8654ccb8d940bbfe4f36f1b44 100644
+--- a/apps/backend/app/modules/chat/__init__.py
++++ b/apps/backend/app/modules/chat/__init__.py
+@@ -1,3 +1,3 @@
+-from app.modules.chat.router import router
++from app.modules.chat.router import admin_router, router
+ 
+-__all__ = ["router"]
++__all__ = ["admin_router", "router"]
+diff --git a/apps/backend/app/modules/chat/router.py b/apps/backend/app/modules/chat/router.py
+index 4a5cad36e124fdc3345ea7942e795ff76b5cecd8..e182682acb20a710db0dd3d6e6eec01f2294c448 100644
+--- a/apps/backend/app/modules/chat/router.py
++++ b/apps/backend/app/modules/chat/router.py
+@@ -3,24 +3,150 @@ from json import JSONDecodeError
+ from typing import Annotated
+ 
+ import jwt
+-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
++from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, WebSocket
++from fastapi import WebSocketDisconnect, status
+ from fastapi.security import HTTPAuthorizationCredentials
++from fastapi.responses import FileResponse
+ 
+ from app.core.config import Settings, get_settings
+ from app.modules.chat.manager import chat_manager
+ from app.modules.chat.service import (
+     ChatMessagePage,
++    ChatInvalidStickerError,
+     ChatMutedError,
+     ChatParticipantInactiveError,
+     ChatReadOnlyError,
+     create_message,
+     list_messages,
+ )
++from app.modules.chat.stickers import (
++    ChatSticker,
++    ChatStickerAdminResponse,
++    ChatStickerError,
++    create_sticker,
++    get_sticker_image_file,
++    list_stickers,
++    set_sticker_enabled,
++)
++from app.modules.files.service import MediaError
+ from app.modules.danmaku.manager import danmaku_manager
++from app.modules.auth import require_superuser
+ from app.modules.participants.router import ActivityPrincipal, bearer, get_activity_principal
+ 
+ 
+ router = APIRouter(prefix="/activities", tags=["chat"])
++admin_router = APIRouter(prefix="/admin/activities", tags=["chat-admin"])
++
++
++def _sticker_http_error(error: ChatStickerError) -> HTTPException:
++    if error.code in {"sticker_not_found", "image_not_found"}:
++        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error.detail)
++    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=error.detail)
++
++
++def _media_http_error(error: MediaError) -> HTTPException:
++    if error.code == "image_too_large":
++        return HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=error.detail)
++    if error.code == "storage_error":
++        return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error.detail)
++    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=error.detail)
++
++
++@admin_router.get("/{activity_id}/chat/stickers", response_model=list[ChatStickerAdminResponse])
++def get_admin_stickers(
++    activity_id: str,
++    _: str = Depends(require_superuser),
++    settings: Settings = Depends(get_settings),
++) -> list[ChatStickerAdminResponse]:
++    try:
++        return list_stickers(activity_id, settings, enabled_only=False)  # type: ignore[return-value]
++    except ChatStickerError as error:
++        raise _sticker_http_error(error) from error
++
++
++@admin_router.post(
++    "/{activity_id}/chat/stickers",
++    response_model=ChatStickerAdminResponse,
++    status_code=status.HTTP_201_CREATED,
++)
++async def upload_admin_sticker(
++    activity_id: str,
++    file: UploadFile = File(...),
++    name: str | None = Form(None),
++    _: str = Depends(require_superuser),
++    settings: Settings = Depends(get_settings),
++) -> ChatStickerAdminResponse:
++    try:
++        return await create_sticker(activity_id, file, settings, name)
++    except ChatStickerError as error:
++        raise _sticker_http_error(error) from error
++    except MediaError as error:
++        raise _media_http_error(error) from error
++
++
++@admin_router.delete(
++    "/{activity_id}/chat/stickers/{sticker_id}",
++    response_model=ChatStickerAdminResponse,
++)
++def disable_admin_sticker(
++    activity_id: str,
++    sticker_id: int,
++    _: str = Depends(require_superuser),
++    settings: Settings = Depends(get_settings),
++) -> ChatStickerAdminResponse:
++    try:
++        return set_sticker_enabled(activity_id, sticker_id, settings, enabled=False)
++    except ChatStickerError as error:
++        raise _sticker_http_error(error) from error
++
++
++@admin_router.post(
++    "/{activity_id}/chat/stickers/{sticker_id}/restore",
++    response_model=ChatStickerAdminResponse,
++)
++def restore_admin_sticker(
++    activity_id: str,
++    sticker_id: int,
++    _: str = Depends(require_superuser),
++    settings: Settings = Depends(get_settings),
++) -> ChatStickerAdminResponse:
++    try:
++        return set_sticker_enabled(activity_id, sticker_id, settings, enabled=True)
++    except ChatStickerError as error:
++        raise _sticker_http_error(error) from error
++
++
++@router.get("/{activity_id}/chat/stickers", response_model=list[ChatSticker])
++def get_activity_stickers(
++    activity_id: str,
++    _: ActivityPrincipal = Depends(get_activity_principal),
++    settings: Settings = Depends(get_settings),
++) -> list[ChatSticker]:
++    try:
++        return list_stickers(activity_id, settings, enabled_only=True)  # type: ignore[return-value]
++    except ChatStickerError as error:
++        raise _sticker_http_error(error) from error
++
++
++@router.get("/{activity_id}/chat/stickers/{sticker_id}/image")
++def get_public_sticker_image(
++    activity_id: str,
++    sticker_id: int,
++    version: Annotated[str, Query(alias="v", min_length=1, max_length=100)],
++    settings: Settings = Depends(get_settings),
++) -> FileResponse:
++    try:
++        image = get_sticker_image_file(activity_id, sticker_id, version, settings)
++    except ChatStickerError as error:
++        raise _sticker_http_error(error) from error
++    return FileResponse(
++        image.path,
++        media_type=image.mime,
++        headers={
++            "Cache-Control": "public, max-age=31536000, immutable",
++            "X-Content-Type-Options": "nosniff",
++        },
++    )
+ 
+ 
+ @router.get("/{activity_id}/chat/messages", response_model=ChatMessagePage)
+@@ -103,12 +229,26 @@ async def chat_websocket(activity_id: str, websocket: WebSocket, settings: Setti
+             if not isinstance(message, dict) or message.get("type") != "message.send":
+                 await _send_error(websocket, "protocol_error", "不支持的消息类型")
+                 continue
+-            body = message.get("body")
+-            if not isinstance(body, str):
+-                await _send_error(websocket, "invalid_body", "消息正文必须是文本")
+-                continue
++            sticker_id = message.get("sticker_id")
++            if sticker_id is not None:
++                if "body" in message or isinstance(sticker_id, bool) or not isinstance(sticker_id, int):
++                    await _send_error(websocket, "invalid_sticker", "表情消息不能同时发送文字")
++                    continue
++                body = None
++            else:
++                body = message.get("body")
++                if not isinstance(body, str):
++                    await _send_error(websocket, "invalid_body", "消息正文必须是文本")
++                    continue
+             try:
+-                created = await asyncio.to_thread(create_message, activity_id, principal, body, settings)
++                created = await asyncio.to_thread(
++                    create_message,
++                    activity_id,
++                    principal,
++                    body,
++                    settings,
++                    sticker_id=sticker_id,
++                )
+             except ChatReadOnlyError:
+                 await _send_error(websocket, "read_only", "当前活动暂不可发言")
+                 continue
+@@ -119,6 +259,9 @@ async def chat_websocket(activity_id: str, websocket: WebSocket, settings: Setti
+                 await _send_error(websocket, "unauthorized", "活动登录已失效")
+                 await websocket.close(code=1008)
+                 return
++            except ChatInvalidStickerError:
++                await _send_error(websocket, "invalid_sticker", "表情不存在、已下架或不属于当前活动")
++                continue
+             except ValueError as error:
+                 await _send_error(websocket, "invalid_body", str(error))
+                 continue
+diff --git a/apps/backend/app/modules/chat/service.py b/apps/backend/app/modules/chat/service.py
+index db42145f84d11c5b5e380aa4c69b8dc9b4b60771..71ac56d0b8cb691db75465d69c41e0c75a192bff 100644
+--- a/apps/backend/app/modules/chat/service.py
++++ b/apps/backend/app/modules/chat/service.py
+@@ -1,5 +1,6 @@
+ from datetime import datetime, timezone
+ import sqlite3
++from typing import Literal
+ 
+ from fastapi import HTTPException, status
+ from pydantic import BaseModel, Field
+@@ -7,6 +8,7 @@ from pydantic import BaseModel, Field
+ from app.core.config import Settings
+ from app.core.database import transaction
+ from app.modules.participants.router import ActivityPrincipal
++from app.modules.chat.stickers import ChatSticker, sticker_from_message_row
+ 
+ 
+ class ChatMessage(BaseModel):
+@@ -16,6 +18,8 @@ class ChatMessage(BaseModel):
+     sender_username: str
+     body: str
+     created_at: datetime
++    message_type: Literal["text", "sticker"] = "text"
++    sticker: ChatSticker | None = None
+ 
+ 
+ class ChatMessagePage(BaseModel):
+@@ -39,7 +43,24 @@ class ChatParticipantInactiveError(Exception):
+     pass
+ 
+ 
++class ChatInvalidStickerError(Exception):
++    pass
++
++
++def _message_select() -> str:
++    return (
++        "SELECT m.*, u.username, s.name AS sticker_name, s.image_id AS sticker_image_id, "
++        "s.image_mime AS sticker_image_mime, s.image_width AS sticker_image_width, "
++        "s.image_height AS sticker_image_height "
++        "FROM activity_chat_messages m "
++        "JOIN activity_users u ON u.id = m.activity_user_id "
++        "LEFT JOIN activity_chat_stickers s "
++        "ON s.sticker_id = m.sticker_id AND s.activity_id = m.activity_id "
++    )
++
++
+ def _message_from_row(row: sqlite3.Row) -> ChatMessage:
++    message_type = str(row["message_type"] or "text")
+     return ChatMessage(
+         message_id=int(row["message_id"]),
+         activity_id=str(row["activity_id"]),
+@@ -47,6 +68,8 @@ def _message_from_row(row: sqlite3.Row) -> ChatMessage:
+         sender_username=str(row["username"]),
+         body=str(row["body"]),
+         created_at=datetime.fromisoformat(str(row["created_at"])),
++        message_type=message_type if message_type in {"text", "sticker"} else "text",
++        sticker=sticker_from_message_row(row) if message_type == "sticker" else None,
+     )
+ 
+ 
+@@ -66,9 +89,8 @@ def list_messages(
+     with transaction(settings) as connection:
+         if before_id is not None:
+             rows = connection.execute(
+-                "SELECT m.*, u.username FROM activity_chat_messages m "
+-                "JOIN activity_users u ON u.id = m.activity_user_id "
+-                "WHERE m.activity_id = ? AND m.message_id < ? "
++                _message_select()
++                + "WHERE m.activity_id = ? AND m.message_id < ? "
+                 "ORDER BY m.message_id DESC LIMIT ?",
+                 (activity_id, before_id, limit + 1),
+             ).fetchall()
+@@ -76,9 +98,8 @@ def list_messages(
+             rows = list(reversed(rows[:limit]))
+         elif after_id is not None:
+             rows = connection.execute(
+-                "SELECT m.*, u.username FROM activity_chat_messages m "
+-                "JOIN activity_users u ON u.id = m.activity_user_id "
+-                "WHERE m.activity_id = ? AND m.message_id > ? "
++                _message_select()
++                + "WHERE m.activity_id = ? AND m.message_id > ? "
+                 "ORDER BY m.message_id ASC LIMIT ?",
+                 (activity_id, after_id, limit + 1),
+             ).fetchall()
+@@ -86,9 +107,8 @@ def list_messages(
+             rows = rows[:limit]
+         else:
+             rows = connection.execute(
+-                "SELECT m.*, u.username FROM activity_chat_messages m "
+-                "JOIN activity_users u ON u.id = m.activity_user_id "
+-                "WHERE m.activity_id = ? ORDER BY m.message_id DESC LIMIT ?",
++                _message_select()
++                + "WHERE m.activity_id = ? ORDER BY m.message_id DESC LIMIT ?",
+                 (activity_id, limit + 1),
+             ).fetchall()
+             has_more = len(rows) > limit
+@@ -99,12 +119,26 @@ def list_messages(
+ def create_message(
+     activity_id: str,
+     principal: ActivityPrincipal,
+-    body: str,
++    body: str | None,
+     settings: Settings,
++    *,
++    sticker_id: int | None = None,
+ ) -> ChatMessage:
+-    body = body.strip()
+-    if not 1 <= len(body) <= 500:
+-        raise ValueError("消息长度必须为 1 至 500 个字符")
++    if sticker_id is not None:
++        if (
++            body is not None
++            or isinstance(sticker_id, bool)
++            or not isinstance(sticker_id, int)
++            or sticker_id < 1
++        ):
++            raise ChatInvalidStickerError
++        normalized_body: str | None = None
++    else:
++        if not isinstance(body, str):
++            raise ValueError("消息正文必须是文本")
++        normalized_body = body.strip()
++        if not 1 <= len(normalized_body) <= 500:
++            raise ValueError("消息长度必须为 1 至 500 个字符")
+     if principal.activity_id != activity_id:
+         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="不能访问其他活动")
+     with transaction(settings) as connection:
+@@ -123,15 +157,34 @@ def create_message(
+             raise ChatReadOnlyError
+         if bool(participant["is_muted"]):
+             raise ChatMutedError
++        sticker = None
++        if sticker_id is not None:
++            sticker = connection.execute(
++                """SELECT sticker_id, name FROM activity_chat_stickers
++                   WHERE activity_id = ? AND sticker_id = ? AND is_enabled = 1""",
++                (activity_id, sticker_id),
++            ).fetchone()
++            if not sticker:
++                raise ChatInvalidStickerError
++            normalized_body = f"[表情] {sticker['name']}"
+         now = datetime.now(timezone.utc).isoformat()
+         cursor = connection.execute(
+-            "INSERT INTO activity_chat_messages(activity_id, activity_user_id, body, created_at) "
+-            "VALUES (?, ?, ?, ?)",
+-            (activity_id, principal.activity_user_id, body, now),
++            """INSERT INTO activity_chat_messages(
++                activity_id, activity_user_id, body, created_at, message_type, sticker_id
++            ) VALUES (?, ?, ?, ?, ?, ?)""",
++            (
++                activity_id,
++                principal.activity_user_id,
++                normalized_body,
++                now,
++                "sticker" if sticker_id is not None else "text",
++                sticker_id,
++            ),
+         )
+         row = connection.execute(
+-            "SELECT m.*, u.username FROM activity_chat_messages m "
+-            "JOIN activity_users u ON u.id = m.activity_user_id WHERE m.message_id = ?",
++            _message_select() + "WHERE m.message_id = ?",
+             (cursor.lastrowid,),
+         ).fetchone()
++        if not row:
++            raise RuntimeError("聊天消息创建失败")
+     return _message_from_row(row)
+diff --git a/apps/backend/app/modules/chat/stickers.py b/apps/backend/app/modules/chat/stickers.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..782745f33b1b3b1557c0aefa690d05db32732c87
+--- /dev/null
++++ b/apps/backend/app/modules/chat/stickers.py
+@@ -0,0 +1,266 @@
++"""活动聊天表情库、媒体绑定和版本化公开图片服务。"""
++
++from dataclasses import dataclass
++from datetime import datetime, timezone
++import logging
++from pathlib import Path
++import sqlite3
++from urllib.parse import quote
++
++from fastapi import HTTPException, status
++from fastapi import UploadFile
++from pydantic import BaseModel, Field
++
++from app.core.config import Settings
++from app.core.database import transaction
++from app.modules.files.service import (
++    CHAT_STICKERS_NAMESPACE,
++    MediaError,
++    StoredMedia,
++    remove_storage_key,
++    scan_orphan_files,
++    storage_path,
++    store_uploaded_image,
++)
++
++
++logger = logging.getLogger(__name__)
++
++
++class ChatSticker(BaseModel):
++    sticker_id: int
++    name: str
++    image_url: str
++    mime: str
++    width: int = Field(gt=0)
++    height: int = Field(gt=0)
++
++
++class ChatStickerAdminResponse(ChatSticker):
++    activity_id: str
++    image_id: str
++    size: int = Field(gt=0)
++    is_enabled: bool
++    created_at: datetime
++
++
++class ChatStickerError(Exception):
++    """可安全映射到 HTTP 响应的表情业务错误。"""
++
++    def __init__(self, code: str, detail: str) -> None:
++        self.code = code
++        self.detail = detail
++        super().__init__(detail)
++
++
++@dataclass(frozen=True)
++class ChatStickerFile:
++    image_id: str
++    mime: str
++    path: Path
++
++
++def sticker_image_url(activity_id: str, sticker_id: int, image_id: str) -> str:
++    safe_activity_id = quote(activity_id, safe="")
++    safe_image_id = quote(image_id, safe="")
++    return (
++        f"/api/v1/activities/{safe_activity_id}/chat/stickers/{sticker_id}/image"
++        f"?v={safe_image_id}"
++    )
++
++
++def _select_sticker_row(connection: sqlite3.Connection, activity_id: str, sticker_id: int) -> sqlite3.Row | None:
++    return connection.execute(
++        """SELECT sticker_id, activity_id, name, image_id, image_storage_key, image_mime, image_size,
++                  image_width, image_height, is_enabled, created_at
++           FROM activity_chat_stickers
++           WHERE activity_id = ? AND sticker_id = ?""",
++        (activity_id, sticker_id),
++    ).fetchone()
++
++
++def _require_activity(connection: sqlite3.Connection, activity_id: str) -> None:
++    if not connection.execute(
++        "SELECT activity_id FROM activities WHERE activity_id = ?", (activity_id,)
++    ).fetchone():
++        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="活动不存在")
++
++
++def _require_sticker(connection: sqlite3.Connection, activity_id: str, sticker_id: int) -> sqlite3.Row:
++    row = _select_sticker_row(connection, activity_id, sticker_id)
++    if not row:
++        raise ChatStickerError("sticker_not_found", "表情不存在或不属于当前活动")
++    return row
++
++
++def _sticker_from_row(row: sqlite3.Row, *, public: bool = True) -> ChatSticker | ChatStickerAdminResponse:
++    image_id = str(row["image_id"])
++    common = {
++        "sticker_id": int(row["sticker_id"]),
++        "name": str(row["name"]),
++        "image_url": sticker_image_url(str(row["activity_id"]), int(row["sticker_id"]), image_id),
++        "mime": str(row["image_mime"]),
++        "width": int(row["image_width"]),
++        "height": int(row["image_height"]),
++    }
++    if public:
++        return ChatSticker(**common)
++    return ChatStickerAdminResponse(
++        **common,
++        activity_id=str(row["activity_id"]),
++        image_id=image_id,
++        size=int(row["image_size"]),
++        is_enabled=bool(row["is_enabled"]),
++        created_at=datetime.fromisoformat(str(row["created_at"])),
++    )
++
++
++def sticker_from_message_row(row: sqlite3.Row) -> ChatSticker | None:
++    """从消息查询的左连接字段构造历史表情，允许表情已软下架。"""
++
++    fields = (
++        row["sticker_id"],
++        row["sticker_name"],
++        row["sticker_image_id"],
++        row["sticker_image_mime"],
++        row["sticker_image_width"],
++        row["sticker_image_height"],
++    )
++    if any(value is None for value in fields):
++        return None
++    return ChatSticker(
++        sticker_id=int(row["sticker_id"]),
++        name=str(row["sticker_name"]),
++        image_url=sticker_image_url(
++            str(row["activity_id"]),
++            int(row["sticker_id"]),
++            str(row["sticker_image_id"]),
++        ),
++        mime=str(row["sticker_image_mime"]),
++        width=int(row["sticker_image_width"]),
++        height=int(row["sticker_image_height"]),
++    )
++
++
++def list_stickers(
++    activity_id: str,
++    settings: Settings,
++    *,
++    enabled_only: bool,
++) -> list[ChatSticker | ChatStickerAdminResponse]:
++    with transaction(settings) as connection:
++        _require_activity(connection, activity_id)
++        enabled_clause = " AND is_enabled = 1" if enabled_only else ""
++        rows = connection.execute(
++            "SELECT sticker_id, activity_id, name, image_id, image_storage_key, image_mime, image_size, "
++            "image_width, image_height, is_enabled, created_at "
++            f"FROM activity_chat_stickers WHERE activity_id = ?{enabled_clause} ORDER BY sticker_id ASC",
++            (activity_id,),
++        ).fetchall()
++    return [_sticker_from_row(row, public=enabled_only) for row in rows]
++
++
++def _default_sticker_name(filename: str) -> str:
++    return Path(filename).stem.strip()
++
++
++async def create_sticker(
++    activity_id: str,
++    upload: UploadFile,
++    settings: Settings,
++    name: str | None = None,
++) -> ChatStickerAdminResponse:
++    with transaction(settings) as connection:
++        _require_activity(connection, activity_id)
++    sticker_name = (name or "").strip() or _default_sticker_name(upload.filename or "")
++    if not 1 <= len(sticker_name) <= 100:
++        raise ChatStickerError("invalid_name", "表情名称长度必须为 1 至 100 个字符")
++
++    stored = await store_uploaded_image(upload, settings, namespace=CHAT_STICKERS_NAMESPACE)
++    try:
++        now = datetime.now(timezone.utc).isoformat()
++        with transaction(settings) as connection:
++            connection.execute("BEGIN IMMEDIATE")
++            _require_activity(connection, activity_id)
++            cursor = connection.execute(
++                """INSERT INTO activity_chat_stickers(
++                    activity_id, name, image_id, image_storage_key, image_mime, image_size,
++                    image_width, image_height, is_enabled, created_at
++                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)""",
++                (
++                    activity_id,
++                    sticker_name,
++                    stored.image_id,
++                    stored.storage_key,
++                    stored.mime,
++                    stored.size,
++                    stored.width,
++                    stored.height,
++                    now,
++                ),
++            )
++            row = _select_sticker_row(connection, activity_id, int(cursor.lastrowid))
++            if not row:
++                raise ChatStickerError("sticker_create_failed", "表情创建失败")
++    except Exception:
++        remove_storage_key(settings, stored.storage_key, namespace=CHAT_STICKERS_NAMESPACE)
++        raise
++    scan_chat_sticker_media(settings)
++    return _sticker_from_row(row, public=False)  # type: ignore[return-value]
++
++
++def set_sticker_enabled(
++    activity_id: str,
++    sticker_id: int,
++    settings: Settings,
++    *,
++    enabled: bool,
++) -> ChatStickerAdminResponse:
++    with transaction(settings) as connection:
++        connection.execute("BEGIN IMMEDIATE")
++        row = _require_sticker(connection, activity_id, sticker_id)
++        connection.execute(
++            "UPDATE activity_chat_stickers SET is_enabled = ? WHERE activity_id = ? AND sticker_id = ?",
++            (int(enabled), activity_id, sticker_id),
++        )
++        updated = _select_sticker_row(connection, activity_id, sticker_id)
++        if not updated:
++            raise ChatStickerError("sticker_update_failed", "表情状态更新失败")
++    scan_chat_sticker_media(settings)
++    return _sticker_from_row(updated, public=False)  # type: ignore[return-value]
++
++
++def get_sticker_image_file(
++    activity_id: str,
++    sticker_id: int,
++    requested_image_id: str,
++    settings: Settings,
++) -> ChatStickerFile:
++    with transaction(settings) as connection:
++        row = _require_sticker(connection, activity_id, sticker_id)
++    image_id = str(row["image_id"])
++    if requested_image_id != image_id:
++        raise ChatStickerError("image_not_found", "图片不存在")
++    storage_key = str(row["image_storage_key"])
++    try:
++        path = storage_path(settings, storage_key, namespace=CHAT_STICKERS_NAMESPACE)
++    except MediaError as error:
++        logger.warning("表情图片存储标识无效")
++        raise ChatStickerError("image_not_found", "图片不存在") from error
++    if not path.is_file() or path.is_symlink():
++        raise ChatStickerError("image_not_found", "图片不存在")
++    return ChatStickerFile(image_id=image_id, mime=str(row["image_mime"]), path=path)
++
++
++def scan_chat_sticker_media(settings: Settings, *, grace_seconds: int = 300) -> list[str]:
++    with transaction(settings) as connection:
++        rows = connection.execute(
++            "SELECT image_storage_key FROM activity_chat_stickers WHERE image_storage_key IS NOT NULL"
++        ).fetchall()
++    references = {str(row["image_storage_key"]) for row in rows}
++    return scan_orphan_files(
++        settings,
++        references,
++        namespace=CHAT_STICKERS_NAMESPACE,
++        grace_seconds=grace_seconds,
++    )
+diff --git a/apps/backend/app/modules/danmaku/AGENTS.md b/apps/backend/app/modules/danmaku/AGENTS.md
+index c21a8dc300bb7b0ed1c8053395ca0e4a3c1d538b..39af9663a3cea2ef5b316cb23db1a3ad697fea0a 100644
+--- a/apps/backend/app/modules/danmaku/AGENTS.md
++++ b/apps/backend/app/modules/danmaku/AGENTS.md
+@@ -18,7 +18,7 @@
+ `max_wait_seconds` 默认 1.5 秒且限制在 0.5–5.0 秒。旧数据库初始化时只增量增加缺失列，既有活动使用默认值。token 格式绑定活动 ID
+ 和当前版本，数据库仅保存版本；
+ 重新生成 token 会递增版本并关闭活动的现有弹幕连接；manager 同时记录最低有效版本，因此轮换与连接加入房间
+-交错时，旧版本也不能在关闭广播之后重新加入。聊天模块在消息成功落库后调用 `broadcast_message`，只传递正文摘要。
++交错时，旧版本也不能在关闭广播之后重新加入。聊天模块在消息成功落库后调用 `broadcast_message`，传递文字或表情摘要但不暴露发送者身份。
+ 
+ 管理员开启弹幕测试后，`testing.py` 按启动请求中的 `user_count` 复用或创建至少 1 个带固定标记的测试用户，并为每个用户
+ 启动独立发送循环。每个循环调用聊天 service 写入 `activity_chat_messages`，再同时广播标准聊天室事件和弹幕正文摘要，
+diff --git a/apps/backend/app/modules/danmaku/manager.py b/apps/backend/app/modules/danmaku/manager.py
+index 5b01919c02b6c0c8ec4023c5e5744c7756aed4b9..2787d000a64e4f90a171dd42ad754238eab0561c 100644
+--- a/apps/backend/app/modules/danmaku/manager.py
++++ b/apps/backend/app/modules/danmaku/manager.py
+@@ -45,7 +45,7 @@ class DanmakuConnectionManager:
+     async def broadcast_message(self, activity_id: str, message: dict[str, Any]) -> None:
+         summary = {
+             key: message[key]
+-            for key in ("message_id", "activity_id", "body", "created_at")
++            for key in ("message_id", "activity_id", "body", "created_at", "message_type", "sticker")
+             if key in message
+         }
+         await self.broadcast(
+diff --git a/apps/backend/app/modules/danmaku/service.py b/apps/backend/app/modules/danmaku/service.py
+index 2960f72441662e217159a6177ca0b400b27136f5..2416212a398cc4a83476dab3bb5fbd7c362d7e4f 100644
+--- a/apps/backend/app/modules/danmaku/service.py
++++ b/apps/backend/app/modules/danmaku/service.py
+@@ -4,12 +4,14 @@ import hashlib
+ import hmac
+ import re
+ import sqlite3
++from typing import Literal
+ 
+ from fastapi import HTTPException, status
+ from pydantic import BaseModel, Field, field_validator, model_validator
+ 
+ from app.core.config import Settings
+ from app.core.database import transaction
++from app.modules.chat.stickers import ChatSticker, sticker_from_message_row
+ 
+ 
+ DEFAULT_DANMAKU_SETTINGS = {
+@@ -82,6 +84,8 @@ class DanmakuMessage(BaseModel):
+     activity_id: str
+     body: str
+     created_at: datetime
++    message_type: Literal["text", "sticker"] = "text"
++    sticker: ChatSticker | None = None
+ 
+ 
+ class DanmakuMessagePage(BaseModel):
+@@ -301,8 +305,14 @@ def list_danmaku_messages(
+ ) -> DanmakuMessagePage:
+     with transaction(settings) as connection:
+         rows = connection.execute(
+-            """SELECT message_id, activity_id, body, created_at FROM activity_chat_messages
+-            WHERE activity_id = ? AND message_id > ? ORDER BY message_id ASC LIMIT ?""",
++            """SELECT m.message_id, m.activity_id, m.body, m.created_at, m.message_type, m.sticker_id,
++                      s.name AS sticker_name, s.image_id AS sticker_image_id, s.image_mime AS sticker_image_mime,
++                      s.image_width AS sticker_image_width, s.image_height AS sticker_image_height
++               FROM activity_chat_messages m
++               LEFT JOIN activity_chat_stickers s
++                 ON s.sticker_id = m.sticker_id AND s.activity_id = m.activity_id
++               WHERE m.activity_id = ? AND m.message_id > ?
++               ORDER BY m.message_id ASC LIMIT ?""",
+             (principal.activity_id, after_id, limit + 1),
+         ).fetchall()
+     has_more = len(rows) > limit
+@@ -313,6 +323,8 @@ def list_danmaku_messages(
+                 activity_id=str(row["activity_id"]),
+                 body=str(row["body"]),
+                 created_at=datetime.fromisoformat(str(row["created_at"])),
++                message_type=str(row["message_type"] or "text"),
++                sticker=sticker_from_message_row(row) if str(row["message_type"] or "text") == "sticker" else None,
+             )
+             for row in rows[:limit]
+         ],
+diff --git a/apps/backend/app/modules/files/AGENTS.md b/apps/backend/app/modules/files/AGENTS.md
+index 77f9346f0c71e796ece8da739181bf7992149ce6..fbe4cb8bf56ab3f386156ff1c546d6383929ba76 100644
+--- a/apps/backend/app/modules/files/AGENTS.md
++++ b/apps/backend/app/modules/files/AGENTS.md
+@@ -2,17 +2,17 @@
+ 
+ ## 模块职责
+ 
+-`files` 的 `service.py` 提供奖品图片的临时分块写入、真实图片格式校验、随机存储标识、原子落盘、安全路径解析和孤儿文件清理。
+-该模块不理解奖品业务，由 lottery 模块传入数据库引用集合。
++`files` 的 `service.py` 提供图片/表情媒体的临时分块写入、真实图片格式校验、随机存储标识、原子落盘、安全路径解析和孤儿文件清理。
++该模块不理解聊天或奖品业务，由上层模块传入命名空间和数据库引用集合。
+ 
+ ## 存储约定
+ 
+ - 根目录由 `Settings.media_root` 配置，默认 `./data/media`。
+-- 正式文件位于 `lottery-prizes/`，临时文件位于 `.tmp/`。
+-- 只接受 JPEG、PNG、WebP，单文件上限 5 MiB；文件名不参与存储路径。
+-- 读取拒绝越界路径和符号链接，清理不跟随符号链接。
++- 正式文件按命名空间保存：奖品使用 `lottery-prizes/`，聊天表情使用 `chat-stickers/`；临时文件位于 `.tmp/` 下对应命名空间。
++- 奖品只接受 JPEG、PNG、WebP；聊天表情额外接受 GIF；单文件上限均为 5 MiB，文件名不参与存储路径。
++- 读取和临时写入都会逐级拒绝媒体根下的命名空间、`.tmp` 父目录及文件符号链接；清理遇到链接扫描根时跳过且不跟随。
+ 
+ ## 数据流
+ 
+-上传先分块写临时文件并用 Pillow 校验扩展名、声明 MIME 和真实格式，之后原子移动到随机 key。
+-lottery 在数据库事务提交后绑定 key；替换、删除和启动/操作后的孤儿扫描负责回收无引用文件。
++上传先分块写临时文件并用 Pillow 校验扩展名、声明 MIME、真实格式和宽高，之后原子移动到随机 key。
++业务模块在数据库事务提交后绑定 key；启动和业务操作后的按命名空间孤儿扫描负责回收无引用文件。
+diff --git a/apps/backend/app/modules/files/service.py b/apps/backend/app/modules/files/service.py
+index ffecd9315a87895c3ecbc134ba2a2d5a2998ce9a..40801f30079437bb9fd393239ee6b4cadaaadb50 100644
+--- a/apps/backend/app/modules/files/service.py
++++ b/apps/backend/app/modules/files/service.py
+@@ -16,16 +16,27 @@ from app.core.config import Settings
+ logger = logging.getLogger(__name__)
+ 
+ MAX_IMAGE_SIZE = 5 * 1024 * 1024
++LOTTERY_PRIZES_NAMESPACE = "lottery-prizes"
++CHAT_STICKERS_NAMESPACE = "chat-stickers"
+ ALLOWED_IMAGE_TYPES = {
+     ".jpg": ("image/jpeg", "jpg"),
+     ".jpeg": ("image/jpeg", "jpg"),
+     ".png": ("image/png", "png"),
+     ".webp": ("image/webp", "webp"),
+ }
++CHAT_STICKER_IMAGE_TYPES = {
++    **ALLOWED_IMAGE_TYPES,
++    ".gif": ("image/gif", "gif"),
++}
++NAMESPACE_IMAGE_TYPES = {
++    LOTTERY_PRIZES_NAMESPACE: ALLOWED_IMAGE_TYPES,
++    CHAT_STICKERS_NAMESPACE: CHAT_STICKER_IMAGE_TYPES,
++}
+ SUPPORTED_PILLOW_FORMATS = {
+     "JPEG": "image/jpeg",
+     "PNG": "image/png",
+     "WEBP": "image/webp",
++    "GIF": "image/gif",
+ }
+ 
+ 
+@@ -45,44 +56,95 @@ class StoredMedia:
+     mime: str
+     size: int
+     path: Path
++    width: int
++    height: int
+ 
+ 
+ def media_root(settings: Settings) -> Path:
+     return Path(settings.media_root).expanduser().resolve()
+ 
+ 
+-def prize_media_root(settings: Settings) -> Path:
+-    root = media_root(settings) / "lottery-prizes"
++def _assert_no_symlink_components(root: Path, target: Path, detail: str) -> None:
++    try:
++        relative_parts = target.relative_to(root).parts
++    except ValueError as error:
++        raise MediaError("invalid_storage_key", detail) from error
++    current = root
++    for part in relative_parts:
++        current /= part
++        if current.is_symlink():
++            raise MediaError("invalid_storage_key", detail)
++
++
++def media_namespace_root(settings: Settings, namespace: str) -> Path:
++    if namespace not in NAMESPACE_IMAGE_TYPES:
++        raise MediaError("invalid_namespace", "媒体命名空间无效")
++    media_root_path = media_root(settings)
++    root = media_root_path / namespace
++    _assert_no_symlink_components(media_root_path, root, "媒体命名空间无效")
++    if root.exists() and not root.is_dir():
++        raise MediaError("invalid_storage_key", "媒体命名空间无效")
+     root.mkdir(parents=True, exist_ok=True)
++    _assert_no_symlink_components(media_root_path, root, "媒体命名空间无效")
++    if not root.is_dir():
++        raise MediaError("invalid_storage_key", "媒体命名空间无效")
+     return root
+ 
+ 
+-def temporary_media_root(settings: Settings) -> Path:
+-    root = media_root(settings) / ".tmp"
++def prize_media_root(settings: Settings) -> Path:
++    return media_namespace_root(settings, LOTTERY_PRIZES_NAMESPACE)
++
++
++def chat_sticker_media_root(settings: Settings) -> Path:
++    return media_namespace_root(settings, CHAT_STICKERS_NAMESPACE)
++
++
++def temporary_media_root(settings: Settings, namespace: str = LOTTERY_PRIZES_NAMESPACE) -> Path:
++    if namespace not in NAMESPACE_IMAGE_TYPES:
++        raise MediaError("invalid_namespace", "媒体命名空间无效")
++    media_root_path = media_root(settings)
++    root = media_root_path / ".tmp"
++    if namespace != LOTTERY_PRIZES_NAMESPACE:
++        root = root / namespace
++    _assert_no_symlink_components(media_root_path, root, "临时媒体目录无效")
++    if root.exists() and not root.is_dir():
++        raise MediaError("invalid_storage_key", "临时媒体目录无效")
+     root.mkdir(parents=True, exist_ok=True)
++    _assert_no_symlink_components(media_root_path, root, "临时媒体目录无效")
++    if not root.is_dir():
++        raise MediaError("invalid_storage_key", "临时媒体目录无效")
+     return root
+ 
+ 
+-def _safe_storage_key(storage_key: str) -> tuple[str, ...]:
++def _safe_storage_key(storage_key: str, namespace: str = LOTTERY_PRIZES_NAMESPACE) -> tuple[str, ...]:
++    if namespace not in NAMESPACE_IMAGE_TYPES:
++        raise MediaError("invalid_namespace", "媒体命名空间无效")
+     if not storage_key or "\\" in storage_key or "\x00" in storage_key:
+         raise MediaError("invalid_storage_key", "图片资源不存在")
+     path = PurePosixPath(storage_key)
+-    if path.is_absolute() or ".." in path.parts or path.parts[:1] != ("lottery-prizes",):
++    if path.is_absolute() or ".." in path.parts or path.parts[:1] != (namespace,):
+         raise MediaError("invalid_storage_key", "图片资源不存在")
+     if len(path.parts) != 2 or not path.parts[1]:
+         raise MediaError("invalid_storage_key", "图片资源不存在")
+     return path.parts
+ 
+ 
+-def storage_path(settings: Settings, storage_key: str) -> Path:
+-    parts = _safe_storage_key(storage_key)
++def storage_path(
++    settings: Settings,
++    storage_key: str,
++    *,
++    namespace: str = LOTTERY_PRIZES_NAMESPACE,
++) -> Path:
++    parts = _safe_storage_key(storage_key, namespace)
+     root = media_root(settings)
+-    unresolved = root / Path(*parts)
++    namespace_root = root / namespace
++    _assert_no_symlink_components(root, namespace_root, "图片资源不存在")
++    unresolved = namespace_root / parts[1]
+     if unresolved.is_symlink():
+         raise MediaError("invalid_storage_key", "图片资源不存在")
+     candidate = unresolved.resolve()
+     try:
+-        candidate.relative_to(root)
++        candidate.relative_to(namespace_root)
+     except ValueError as error:
+         raise MediaError("invalid_storage_key", "图片资源不存在") from error
+     if candidate.is_symlink():
+@@ -90,11 +152,16 @@ def storage_path(settings: Settings, storage_key: str) -> Path:
+     return candidate
+ 
+ 
+-def remove_storage_key(settings: Settings, storage_key: str | None) -> bool:
++def remove_storage_key(
++    settings: Settings,
++    storage_key: str | None,
++    *,
++    namespace: str = LOTTERY_PRIZES_NAMESPACE,
++) -> bool:
+     if not storage_key:
+         return True
+     try:
+-        path = storage_path(settings, storage_key)
++        path = storage_path(settings, storage_key, namespace=namespace)
+     except MediaError:
+         logger.warning("拒绝清理非法媒体标识")
+         return False
+@@ -107,8 +174,20 @@ def remove_storage_key(settings: Settings, storage_key: str | None) -> bool:
+         return False
+ 
+ 
+-def _validate_image_file(path: Path, extension: str, declared_mime: str | None) -> str:
+-    expected_mime = ALLOWED_IMAGE_TYPES[extension][0]
++def _allowed_image_types(namespace: str) -> dict[str, tuple[str, str]]:
++    try:
++        return NAMESPACE_IMAGE_TYPES[namespace]
++    except KeyError as error:
++        raise MediaError("invalid_namespace", "媒体命名空间无效") from error
++
++
++def _validate_image_file_details(
++    path: Path,
++    extension: str,
++    declared_mime: str | None,
++    allowed_image_types: dict[str, tuple[str, str]],
++) -> tuple[str, int, int]:
++    expected_mime = allowed_image_types[extension][0]
+     if declared_mime != expected_mime:
+         raise MediaError("image_mime_mismatch", "图片扩展名与声明类型不一致")
+     try:
+@@ -117,6 +196,7 @@ def _validate_image_file(path: Path, extension: str, declared_mime: str | None)
+             with Image.open(path) as image:
+                 image_format = image.format or ""
+                 actual_mime = SUPPORTED_PILLOW_FORMATS.get(image_format)
++                width, height = image.size
+                 image.verify()
+     except (
+         UnidentifiedImageError,
+@@ -125,24 +205,44 @@ def _validate_image_file(path: Path, extension: str, declared_mime: str | None)
+         OSError,
+         ValueError,
+         SyntaxError,
++        EOFError,
+     ) as error:
+         raise MediaError("invalid_image", "文件不是可识别的图片") from error
+     if actual_mime != expected_mime:
+         raise MediaError("image_mime_mismatch", "图片真实格式与扩展名不一致")
+-    return expected_mime
++    if width <= 0 or height <= 0:
++        raise MediaError("invalid_image", "文件不是可识别的图片")
++    return expected_mime, width, height
++
++
++def _validate_image_file(
++    path: Path,
++    extension: str,
++    declared_mime: str | None,
++    allowed_image_types: dict[str, tuple[str, str]] = ALLOWED_IMAGE_TYPES,
++) -> str:
++    return _validate_image_file_details(path, extension, declared_mime, allowed_image_types)[0]
+ 
+ 
+-async def store_uploaded_image(upload: UploadFile, settings: Settings) -> StoredMedia:
++async def store_uploaded_image(
++    upload: UploadFile,
++    settings: Settings,
++    *,
++    namespace: str = LOTTERY_PRIZES_NAMESPACE,
++) -> StoredMedia:
+     """分块写入临时文件，校验真实格式后原子移动到随机文件名。"""
+ 
++    allowed_image_types = _allowed_image_types(namespace)
++    media_namespace_root(settings, namespace)
+     filename = upload.filename or ""
+     if "\x00" in filename:
+         raise MediaError("invalid_image", "图片文件名无效")
+     extension = Path(filename).suffix.lower()
+-    if extension not in ALLOWED_IMAGE_TYPES:
+-        raise MediaError("unsupported_image_type", "仅支持 JPG、PNG 或 WebP 图片")
++    if extension not in allowed_image_types:
++        supported = "JPG、PNG、WebP" if namespace == LOTTERY_PRIZES_NAMESPACE else "JPG、PNG、WebP 或 GIF"
++        raise MediaError("unsupported_image_type", f"仅支持 {supported} 图片")
+ 
+-    temporary_root = temporary_media_root(settings)
++    temporary_root = temporary_media_root(settings, namespace)
+     temporary_path = temporary_root / f"{uuid4().hex}.upload"
+     size = 0
+     try:
+@@ -156,14 +256,19 @@ async def store_uploaded_image(upload: UploadFile, settings: Settings) -> Stored
+                 if size > MAX_IMAGE_SIZE:
+                     raise MediaError("image_too_large", "图片大小不能超过 5 MiB")
+                 target.write(chunk)
+-        mime = _validate_image_file(temporary_path, extension, upload.content_type)
++        mime, width, height = _validate_image_file_details(
++            temporary_path,
++            extension,
++            upload.content_type,
++            allowed_image_types,
++        )
+         image_id = uuid4().hex
+-        stored_extension = ALLOWED_IMAGE_TYPES[extension][1]
+-        storage_key = f"lottery-prizes/{image_id}.{stored_extension}"
+-        final_path = storage_path(settings, storage_key)
++        stored_extension = allowed_image_types[extension][1]
++        storage_key = f"{namespace}/{image_id}.{stored_extension}"
++        final_path = storage_path(settings, storage_key, namespace=namespace)
+         final_path.parent.mkdir(parents=True, exist_ok=True)
+         temporary_path.replace(final_path)
+-        return StoredMedia(image_id, storage_key, mime, size, final_path)
++        return StoredMedia(image_id, storage_key, mime, size, final_path, width, height)
+     except MediaError:
+         raise
+     except OSError as error:
+@@ -180,21 +285,33 @@ def scan_orphan_files(
+     settings: Settings,
+     referenced_storage_keys: set[str],
+     *,
++    namespace: str = LOTTERY_PRIZES_NAMESPACE,
+     grace_seconds: int = 300,
+ ) -> list[str]:
+     """清理过期临时文件和未被数据库引用的媒体文件。"""
+ 
+     root = media_root(settings)
+     now = time.time()
++    _allowed_image_types(namespace)
+     normalized_keys: set[str] = set()
+     for key in referenced_storage_keys:
+         try:
+-            normalized_keys.add("/".join(_safe_storage_key(key)))
++            normalized_keys.add("/".join(_safe_storage_key(key, namespace)))
+         except MediaError:
+             logger.warning("数据库中存在非法媒体标识，跳过该引用")
+     cleaned: list[str] = []
+-    scan_roots = [root / "lottery-prizes", root / ".tmp"]
++    namespace_root = root / namespace
++    try:
++        _assert_no_symlink_components(root, namespace_root, "媒体命名空间无效")
++        temporary_root = temporary_media_root(settings, namespace)
++    except MediaError:
++        logger.warning("媒体扫描根目录包含符号链接，跳过本次孤儿扫描")
++        return cleaned
++    scan_roots = [namespace_root, temporary_root]
+     for scan_root in scan_roots:
++        if scan_root.is_symlink():
++            logger.warning("媒体扫描根目录是符号链接，跳过该目录")
++            continue
+         if not scan_root.exists():
+             continue
+         try:
+diff --git a/apps/backend/tests/test_chat_stickers.py b/apps/backend/tests/test_chat_stickers.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..9574190186d67b6ccf4bb1d5f1ef667c2b7b7d48
+--- /dev/null
++++ b/apps/backend/tests/test_chat_stickers.py
+@@ -0,0 +1,425 @@
++from io import BytesIO
++import os
++from pathlib import Path
++import sqlite3
++import time
++
++import pytest
++from fastapi.testclient import TestClient
++from PIL import Image
++
++from app.core.config import Settings, get_settings
++from app.core.database import init_database
++from app.core.security import create_access_token
++from app.main import app
++
++from .test_chat import admin_headers, create_activity, make_client, open_activity, register_user
++
++
++def image_bytes(image_format: str = "PNG") -> bytes:
++    output = BytesIO()
++    first = Image.new("RGBA", (32, 20), (210, 160, 60, 255))
++    if image_format == "GIF":
++        second = Image.new("RGBA", (32, 20), (60, 160, 210, 255))
++        first.save(
++            output,
++            format=image_format,
++            save_all=True,
++            append_images=[second],
++            duration=40,
++            loop=0,
++        )
++    elif image_format == "JPEG":
++        first.convert("RGB").save(output, format=image_format)
++    else:
++        first.save(output, format=image_format)
++    return output.getvalue()
++
++
++def upload_sticker(
++    client: TestClient,
++    activity_id: str,
++    headers: dict[str, str],
++    filename: str,
++    content: bytes,
++    mime: str,
++):
++    response = client.post(
++        f"/api/v1/admin/activities/{activity_id}/chat/stickers",
++        headers=headers,
++        files={"file": (filename, content, mime)},
++    )
++    assert response.status_code == 201, response.text
++    return response.json()
++
++
++def test_sticker_uploads_formats_lists_and_activity_isolation(tmp_path: Path) -> None:
++    client, settings = make_client(tmp_path)
++    settings.media_root = str(tmp_path / "media")
++    try:
++        activity_id, headers = create_activity(client, name="表情活动")
++        other_activity_id, other_headers = create_activity(client, name="其它活动")
++        png = upload_sticker(client, activity_id, headers, "开心.png", image_bytes(), "image/png")
++        gif = upload_sticker(client, activity_id, headers, "动图.gif", image_bytes("GIF"), "image/gif")
++        jpeg = upload_sticker(client, activity_id, headers, "照片.jpg", image_bytes("JPEG"), "image/jpeg")
++
++        assert png["name"] == "开心"
++        assert png["width"] == 32
++        assert png["height"] == 20
++        assert gif["mime"] == "image/gif"
++        assert gif["name"] == "动图"
++        assert jpeg["mime"] == "image/jpeg"
++        assert client.get(png["image_url"]).status_code == 200
++        assert client.get(gif["image_url"]).headers["content-type"] == "image/gif"
++        assert client.get(f"{png['image_url'].split('?', 1)[0]}?v=stale").status_code == 404
++
++        admin_list = client.get(
++            f"/api/v1/admin/activities/{activity_id}/chat/stickers", headers=headers
++        )
++        assert admin_list.status_code == 200
++        assert [item["name"] for item in admin_list.json()] == ["开心", "动图", "照片"]
++
++        user_token = register_user(client, activity_id, "表情用户", "13800005001")
++        user_list = client.get(
++            f"/api/v1/activities/{activity_id}/chat/stickers",
++            headers={"Authorization": f"Bearer {user_token}"},
++        )
++        assert user_list.status_code == 200
++        assert [item["sticker_id"] for item in user_list.json()] == [
++            png["sticker_id"], gif["sticker_id"], jpeg["sticker_id"]
++        ]
++
++        other_list = client.get(
++            f"/api/v1/activities/{other_activity_id}/chat/stickers", headers=other_headers
++        )
++        assert other_list.status_code == 403
++        assert client.get(
++            f"/api/v1/activities/{other_activity_id}/chat/stickers",
++            headers={"Authorization": f"Bearer {user_token}"},
++        ).status_code == 403
++        assert client.get(
++            f"/api/v1/activities/{other_activity_id}/chat/stickers/{png['sticker_id']}/image?v={png['image_id']}"
++        ).status_code == 404
++        assert client.get(
++            f"/api/v1/admin/activities/{activity_id}/chat/stickers", headers={}
++        ).status_code == 401
++        assert client.post(
++            f"/api/v1/admin/activities/{activity_id}/chat/stickers",
++            headers={"Authorization": f"Bearer {user_token}"},
++            files={"file": ("blocked.png", image_bytes(), "image/png")},
++        ).status_code == 401
++
++        sticker_path = Path(settings.media_root) / "chat-stickers" / f"{png['image_id']}.png"
++        assert sticker_path.is_file()
++    finally:
++        app.dependency_overrides.clear()
++
++
++def test_sticker_upload_rejects_invalid_content_and_size(tmp_path: Path) -> None:
++    client, settings = make_client(tmp_path)
++    settings.media_root = str(tmp_path / "media")
++    try:
++        activity_id, headers = create_activity(client, name="表情校验")
++        endpoint = f"/api/v1/admin/activities/{activity_id}/chat/stickers"
++        invalid = client.post(
++            endpoint,
++            headers=headers,
++            files={"file": ("fake.png", b"<svg></svg>", "image/png")},
++        )
++        assert invalid.status_code == 422
++        mismatch = client.post(
++            endpoint,
++            headers=headers,
++            files={"file": ("wrong.png", image_bytes("GIF"), "image/png")},
++        )
++        assert mismatch.status_code == 422
++        unsupported = client.post(
++            endpoint,
++            headers=headers,
++            files={"file": ("video.mp4", b"video", "video/mp4")},
++        )
++        assert unsupported.status_code == 422
++        too_large = client.post(
++            endpoint,
++            headers=headers,
++            files={"file": ("large.gif", b"x" * (5 * 1024 * 1024 + 1), "image/gif")},
++        )
++        assert too_large.status_code == 413
++        assert client.get(endpoint, headers=headers).json() == []
++    finally:
++        app.dependency_overrides.clear()
++
++
++def test_sticker_websocket_history_danmaku_and_soft_disable(tmp_path: Path) -> None:
++    client, settings = make_client(tmp_path)
++    settings.media_root = str(tmp_path / "media")
++    try:
++        activity_id, headers = create_activity(client, name="表情实时")
++        sticker = upload_sticker(client, activity_id, headers, "鼓掌.webp", image_bytes("WEBP"), "image/webp")
++        user_token = register_user(client, activity_id, "表情发送者", "13800005002")
++        open_activity(client, activity_id, headers)
++        user_id = client.get(
++            f"/api/v1/activities/{activity_id}/me",
++            headers={"Authorization": f"Bearer {user_token}"},
++        ).json()["activity_user_id"]
++        danmaku_token = client.get(
++            f"/api/v1/admin/activities/{activity_id}/danmaku", headers=headers
++        ).json()["token"]
++
++        muted = client.post(
++            f"/api/v1/admin/activities/{activity_id}/participants/{user_id}/mute",
++            headers=headers,
++        )
++        assert muted.status_code == 200
++        with client.websocket_connect(f"/api/v1/activities/{activity_id}/chat/ws") as muted_ws:
++            muted_ws.send_json({"type": "auth", "token": user_token})
++            assert muted_ws.receive_json()["type"] == "chat.ready"
++            muted_ws.send_json({"type": "message.send", "sticker_id": sticker["sticker_id"]})
++            assert muted_ws.receive_json()["code"] == "muted"
++        unmuted = client.post(
++            f"/api/v1/admin/activities/{activity_id}/participants/{user_id}/unmute",
++            headers=headers,
++        )
++        assert unmuted.status_code == 200
++
++        with client.websocket_connect("/api/v1/danmaku/ws") as danmaku_ws:
++            danmaku_ws.send_json({"type": "auth", "token": danmaku_token})
++            assert danmaku_ws.receive_json()["type"] == "danmaku.ready"
++            with client.websocket_connect(f"/api/v1/activities/{activity_id}/chat/ws") as chat_ws:
++                chat_ws.send_json({"type": "auth", "token": user_token})
++                assert chat_ws.receive_json()["type"] == "chat.ready"
++                chat_ws.send_json({"type": "message.send", "sticker_id": sticker["sticker_id"]})
++                chat_event = chat_ws.receive_json()
++                danmaku_event = danmaku_ws.receive_json()
++
++                assert chat_event["type"] == "message.created"
++                message = chat_event["message"]
++                assert message["message_type"] == "sticker"
++                assert message["body"] == "[表情] 鼓掌"
++                assert message["sticker"]["image_url"] == sticker["image_url"]
++                assert danmaku_event["type"] == "danmaku.message.created"
++                assert "sender_username" not in danmaku_event["message"]
++                assert danmaku_event["message"]["sticker"]["sticker_id"] == sticker["sticker_id"]
++                message_id = message["message_id"]
++
++                chat_ws.send_json({"type": "message.send", "body": "不应混合", "sticker_id": sticker["sticker_id"]})
++                assert chat_ws.receive_json()["code"] == "invalid_sticker"
++
++                disabled = client.delete(
++                    f"/api/v1/admin/activities/{activity_id}/chat/stickers/{sticker['sticker_id']}",
++                    headers=headers,
++                )
++                assert disabled.status_code == 200
++                assert disabled.json()["is_enabled"] is False
++                assert client.get(
++                    f"/api/v1/activities/{activity_id}/chat/stickers",
++                    headers={"Authorization": f"Bearer {user_token}"},
++                ).json() == []
++                chat_ws.send_json({"type": "message.send", "sticker_id": sticker["sticker_id"]})
++                assert chat_ws.receive_json()["code"] == "invalid_sticker"
++
++        closed = client.post(f"/api/v1/admin/activities/{activity_id}/close", headers=headers)
++        assert closed.status_code == 200
++        with client.websocket_connect(f"/api/v1/activities/{activity_id}/chat/ws") as closed_ws:
++            closed_ws.send_json({"type": "auth", "token": user_token})
++            assert closed_ws.receive_json()["type"] == "chat.ready"
++            closed_ws.send_json({"type": "message.send", "sticker_id": sticker["sticker_id"]})
++            assert closed_ws.receive_json()["code"] == "read_only"
++        open_activity(client, activity_id, headers)
++
++        history = client.get(
++            f"/api/v1/activities/{activity_id}/chat/messages",
++            headers={"Authorization": f"Bearer {user_token}"},
++        )
++        assert history.status_code == 200
++        assert history.json()["items"][0]["message_type"] == "sticker"
++        assert history.json()["items"][0]["sticker"]["name"] == "鼓掌"
++        assert client.get(sticker["image_url"]).status_code == 200
++
++        danmaku_history = client.get(
++            f"/api/v1/danmaku/messages?after_id={message_id - 1}",
++            headers={"Authorization": f"Bearer {danmaku_token}"},
++        )
++        assert danmaku_history.status_code == 200
++        assert danmaku_history.json()["items"][0]["message_type"] == "sticker"
++        assert danmaku_history.json()["items"][0]["sticker"]["sticker_id"] == sticker["sticker_id"]
++
++        restored = client.post(
++            f"/api/v1/admin/activities/{activity_id}/chat/stickers/{sticker['sticker_id']}/restore",
++            headers=headers,
++        )
++        assert restored.status_code == 200
++        assert restored.json()["is_enabled"] is True
++    finally:
++        app.dependency_overrides.clear()
++
++
++def test_legacy_chat_database_migrates_without_losing_text(tmp_path: Path) -> None:
++    database_path = tmp_path / "legacy-chat.db"
++    connection = sqlite3.connect(database_path)
++    connection.executescript(
++        """
++        CREATE TABLE activities (
++            activity_id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, start_time TEXT, end_time TEXT,
++            status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
++        );
++        CREATE TABLE activity_users (
++            id INTEGER PRIMARY KEY AUTOINCREMENT, activity_id TEXT NOT NULL, username TEXT NOT NULL,
++            phone TEXT NOT NULL, created_at TEXT NOT NULL
++        );
++        CREATE TABLE activity_chat_messages (
++            message_id INTEGER PRIMARY KEY AUTOINCREMENT, activity_id TEXT NOT NULL,
++            activity_user_id INTEGER NOT NULL, body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 500),
++            created_at TEXT NOT NULL
++        );
++        INSERT INTO activities VALUES ('legacy-activity', '旧活动', NULL, NULL, NULL, 'open',
++          '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00');
++        INSERT INTO activity_users(activity_id, username, phone, created_at)
++          VALUES ('legacy-activity', '旧用户', '13800005003', '2026-01-01T00:00:00+00:00');
++        INSERT INTO activity_chat_messages(activity_id, activity_user_id, body, created_at)
++          VALUES ('legacy-activity', 1, '旧文本', '2026-01-01T00:00:01+00:00');
++        """
++    )
++    connection.commit()
++    connection.close()
++    settings = Settings(
++        database_path=str(database_path),
++        media_root=str(tmp_path / "media"),
++        jwt_secret="test-secret-at-least-thirty-two-bytes",
++        superuser_username="root",
++        superuser_password="secret-password",
++    )
++    init_database(settings)
++    with sqlite3.connect(database_path) as migrated:
++        columns = {row[1] for row in migrated.execute("PRAGMA table_info(activity_chat_messages)")}
++        sticker_table = migrated.execute(
++            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'activity_chat_stickers'"
++        ).fetchone()
++    assert {"message_type", "sticker_id"} <= columns
++    assert sticker_table is not None
++
++    app.dependency_overrides[get_settings] = lambda: settings
++    client = TestClient(app)
++    try:
++        token = create_access_token(
++            "旧用户",
++            settings,
++            activity_id="legacy-activity",
++            activity_user_id=1,
++            activity_user_session_version=0,
++        )
++        history = client.get(
++            "/api/v1/activities/legacy-activity/chat/messages",
++            headers={"Authorization": f"Bearer {token}"},
++        )
++        assert history.status_code == 200
++        assert history.json()["items"] == [
++            {
++                "message_id": 1,
++                "activity_id": "legacy-activity",
++                "sender_activity_user_id": 1,
++                "sender_username": "旧用户",
++                "body": "旧文本",
++                "created_at": "2026-01-01T00:00:01Z",
++                "message_type": "text",
++                "sticker": None,
++            }
++        ]
++        with client.websocket_connect("/api/v1/activities/legacy-activity/chat/ws") as websocket:
++            websocket.send_json({"type": "auth", "token": token})
++            assert websocket.receive_json()["type"] == "chat.ready"
++            websocket.send_json({"type": "message.send", "body": "迁移后仍可发文本"})
++            created = websocket.receive_json()["message"]
++            assert created["message_type"] == "text"
++            assert created["sticker"] is None
++    finally:
++        client.close()
++        app.dependency_overrides.clear()
++
++
++def test_storage_path_rejects_namespace_symlink(tmp_path: Path) -> None:
++    from app.modules.files.service import CHAT_STICKERS_NAMESPACE, MediaError, storage_path
++
++    media_root = tmp_path / "media"
++    media_root.mkdir()
++    target = tmp_path / "outside"
++    target.mkdir()
++    namespace_root = media_root / CHAT_STICKERS_NAMESPACE
++    try:
++        namespace_root.symlink_to(target, target_is_directory=True)
++    except (NotImplementedError, OSError):
++        pytest.skip("当前 Windows 环境不允许创建目录符号链接")
++    settings = Settings(
++        database_path=str(tmp_path / "db.sqlite"),
++        media_root=str(media_root),
++        jwt_secret="test-secret-at-least-thirty-two-bytes",
++        superuser_username="root",
++        superuser_password="secret-password",
++    )
++    with pytest.raises(MediaError):
++        storage_path(
++            settings,
++            f"{CHAT_STICKERS_NAMESPACE}/image.png",
++            namespace=CHAT_STICKERS_NAMESPACE,
++        )
++
++
++def test_chat_sticker_orphan_scan_only_removes_unreferenced_files(tmp_path: Path) -> None:
++    from app.modules.chat.stickers import scan_chat_sticker_media
++    from app.modules.files.service import CHAT_STICKERS_NAMESPACE, chat_sticker_media_root
++
++    settings = Settings(
++        database_path=str(tmp_path / "db.sqlite"),
++        media_root=str(tmp_path / "media"),
++        jwt_secret="test-secret-at-least-thirty-two-bytes",
++        superuser_username="root",
++        superuser_password="secret-password",
++    )
++    init_database(settings)
++    namespace_root = chat_sticker_media_root(settings)
++    orphan = namespace_root / "orphan.png"
++    orphan.write_bytes(image_bytes())
++    old_time = time.time() - 10
++    orphan.touch()
++    os.utime(orphan, (old_time, old_time))
++    assert scan_chat_sticker_media(settings, grace_seconds=0) == [
++        f"{CHAT_STICKERS_NAMESPACE}/orphan.png"
++    ]
++    assert not orphan.exists()
++
++
++def test_media_temp_parent_and_scan_root_symlinks_never_escape_media_root(tmp_path: Path) -> None:
++    from app.modules.chat.stickers import scan_chat_sticker_media
++    from app.modules.files.service import (
++        CHAT_STICKERS_NAMESPACE,
++        MediaError,
++        temporary_media_root,
++    )
++
++    media_root = tmp_path / "media"
++    media_root.mkdir()
++    outside = tmp_path / "outside"
++    outside.mkdir()
++    settings = Settings(
++        database_path=str(tmp_path / "db.sqlite"),
++        media_root=str(media_root),
++        jwt_secret="test-secret-at-least-thirty-two-bytes",
++        superuser_username="root",
++        superuser_password="secret-password",
++    )
++    init_database(settings)
++    temporary_root = media_root / ".tmp"
++    try:
++        temporary_root.symlink_to(outside, target_is_directory=True)
++    except (NotImplementedError, OSError):
++        pytest.skip("当前 Windows 环境不允许创建目录符号链接")
++    with pytest.raises(MediaError):
++        temporary_media_root(settings, CHAT_STICKERS_NAMESPACE)
++    temporary_root.unlink()
++
++    namespace_root = media_root / CHAT_STICKERS_NAMESPACE
++    namespace_root.symlink_to(outside, target_is_directory=True)
++    sentinel = outside / "sentinel.png"
++    sentinel.write_bytes(image_bytes())
++    assert scan_chat_sticker_media(settings, grace_seconds=0) == []
++    assert sentinel.is_file()
+diff --git a/apps/backend/tests/test_danmaku.py b/apps/backend/tests/test_danmaku.py
+index 0c807831a04e54df597d777f862ae9f2bb881ac3..837ab843bda38dff93ea7a9bd74f04713c444c74 100644
+--- a/apps/backend/tests/test_danmaku.py
++++ b/apps/backend/tests/test_danmaku.py
+@@ -302,8 +302,12 @@ def test_danmaku_websocket_broadcasts_message_summary_and_live_settings(tmp_path
+                 assert chat_event["type"] == "message.created"
+                 assert chat_event["message"]["sender_username"] == "弹幕用户"
+                 assert danmaku_event["type"] == "danmaku.message.created"
+-                assert set(danmaku_event["message"]) == {"message_id", "activity_id", "body", "created_at"}
++                assert set(danmaku_event["message"]) == {
++                    "message_id", "activity_id", "body", "created_at", "message_type", "sticker"
++                }
+                 assert danmaku_event["message"]["body"] == "只显示正文"
++                assert danmaku_event["message"]["message_type"] == "text"
++                assert danmaku_event["message"]["sticker"] is None
+                 message_id = danmaku_event["message"]["message_id"]
+ 
+                 updated = client.put(
+@@ -348,10 +352,14 @@ def test_danmaku_websocket_broadcasts_message_summary_and_live_settings(tmp_path
+         assert missed_body["has_more"] is False
+         assert len(missed_body["items"]) == 1
+         missed_item = missed_body["items"][0]
+-        assert set(missed_item) == {"message_id", "activity_id", "body", "created_at"}
++        assert set(missed_item) == {
++            "message_id", "activity_id", "body", "created_at", "message_type", "sticker"
++        }
+         assert missed_item["message_id"] == second_message_id
+         assert missed_item["activity_id"] == activity_id
+         assert missed_item["body"] == "断线补齐消息"
++        assert missed_item["message_type"] == "text"
++        assert missed_item["sticker"] is None
+         assert missed_item["created_at"]
+         no_more = client.get(
+             f"/api/v1/danmaku/messages?after_id={second_message_id}",
+diff --git a/apps/backend/tests/test_lottery.py b/apps/backend/tests/test_lottery.py
+index 40773c0881e374ad339fbbec9ddb717d21fe8bb8..6fca50be51d95aa35edc74e3a929a6984ce67fa0 100644
+--- a/apps/backend/tests/test_lottery.py
++++ b/apps/backend/tests/test_lottery.py
+@@ -15,7 +15,9 @@ from app.modules.lottery.service import LotteryDrawError, draw_lottery
+ def make_client(tmp_path: Path) -> tuple[TestClient, Settings]:
+     settings = Settings(
+         database_path=str(tmp_path / "lottery.db"),
++        media_root=str(tmp_path / "media"),
+         jwt_secret="test-secret-at-least-thirty-two-bytes",
++        lottery_security_code="",
+         superuser_username="root",
+         superuser_password="secret-password",
+     )
+diff --git a/apps/screen-web/AGENTS.md b/apps/screen-web/AGENTS.md
+index 561928ded3203793e0d54c2620bf30ea899bf2c8..1f75d31257a84cb1b875485ea234d3c146e3eb85 100644
+--- a/apps/screen-web/AGENTS.md
++++ b/apps/screen-web/AGENTS.md
+@@ -2,7 +2,7 @@
+ 
+ 大屏端使用 Vue 3 + ECharts，保留普通活动大屏入口，并为 Electron 弹幕工具提供可嵌入渲染层。仅 URL 带有
+ `danmaku-overlay=1` 时，`src/components/realtime/DanmakuOverlay.vue` 才会使用桌面预加载层临时提供的 token 与会话
+-连接独立弹幕 WebSocket；普通入口继续显示活动数据大屏基础页面。弹幕仅显示聊天正文，首次 HTTP session 的最大消息 ID
++连接独立弹幕 WebSocket；普通入口继续显示活动数据大屏基础页面。弹幕显示聊天正文和表情图片，首次 HTTP session 的最大消息 ID
+ 是唯一不回放历史的基线。每次 `danmaku.ready` 都从当前游标以 `after_id` 有序补齐，ready 快照不得直接抬高游标；
+ 恢复完成后的连续实时消息直接消费 WebSocket 完整正文，只有恢复中、乱序或检测到 ID 缺口时才通过 HTTP 补齐。
+ `message-order.ts` 提供无浏览器依赖的消息 ID 合并、实时消息路由、待恢复完整消息缓存和 ready 补齐游标逻辑，
+@@ -13,6 +13,11 @@
+ `requestAnimationFrame` 循环和 `performance.now()` 派发生命周期、重连、重试和队列刷新任务；位移继续由 CSS
+ `transform` 动画完成，不在 JavaScript 中逐帧改写位置。
+ 
++`DanmakuOverlay.vue` 负责消息连接、排序恢复和队列，`DanmakuOverlay.css` 负责文字/图片弹幕的动画样式。
++
++弹幕消息同时支持文字和活动聊天表情；表情使用 `<img>` 滚动，GIF 保持浏览器动画，图片按当前字体高度和原始宽高比
++计算展示宽度，并使用同一宽度参与轨道碰撞和入场间隔；入场宽度至少覆盖兼容正文，确保失败回退可读。图片加载失败时显示兼容正文。
++
+ ## 实时抽奖大屏
+ 
+ `src/components/lottery/LotteryScreen.vue` 使用公开 `/api/v1/activities/{activity_id}/lottery/ws`，不发送管理员凭证和
+@@ -36,7 +41,7 @@
+ 
+ ## 本次修复说明
+ 
+-- 恢复完成后，连续的 WS 事件直接把四字段完整消息加入弹幕队列，不再为每条实时消息发起 `/danmaku/messages` 请求。
++- 恢复完成后，连续的 WS 事件直接把文字或表情的完整消息加入弹幕队列，不再为每条实时消息发起 `/danmaku/messages` 请求。
+ - WS 乱序或 ID 缺口事件缓存完整消息并去重，容量上限为 200；超限丢弃最早缓存，但 HTTP 恢复仍以已处理的
+   `lastMessageId` 调用 `after_id`，不会因缓存溢出而跳过中间消息。
+ - HTTP 恢复与 WS 事件交错时按消息 ID 合并；重复消息不重复展示，恢复失败保留未解决的完整 WS 消息并重试。
+diff --git a/apps/screen-web/package.json b/apps/screen-web/package.json
+index 0089071c95ecc50882985ae7611d29bbc080d679..4133130d3b99d448cf2a2c33ea2832a02d000954 100644
+--- a/apps/screen-web/package.json
++++ b/apps/screen-web/package.json
+@@ -7,7 +7,7 @@
+     "dev": "vite --port 5174",
+     "build": "vue-tsc --noEmit && vite build",
+     "typecheck": "vue-tsc --noEmit",
+-    "test": "tsc --target ES2022 --module NodeNext --moduleResolution NodeNext --outDir dist-test src/components/realtime/message-order.ts src/components/realtime/task-scheduler.ts src/components/realtime/danmaku-layout.ts src/components/lottery/lottery-order.ts src/components/lottery/lottery-globe-math.ts && node scripts/test-message-order.mjs && node scripts/test-task-scheduler.mjs && node scripts/test-danmaku-layout.mjs && node scripts/test-lottery-order.mjs && node scripts/test-lottery-globe.mjs"
++    "test": "tsc --target ES2022 --module NodeNext --moduleResolution NodeNext --outDir dist-test src/components/realtime/message-order.ts src/components/realtime/task-scheduler.ts src/components/realtime/danmaku-layout.ts src/components/lottery/lottery-order.ts src/components/lottery/lottery-globe-math.ts && node scripts/test-message-order.mjs && node scripts/test-task-scheduler.mjs && node scripts/test-danmaku-layout.mjs && node scripts/test-danmaku-stickers.mjs && node scripts/test-lottery-order.mjs && node scripts/test-lottery-globe.mjs"
+   },
+   "dependencies": { "echarts": "^5.6.0", "vue": "^3.5.13", "vue-router": "^4.5.0" },
+   "devDependencies": {
+diff --git a/apps/screen-web/scripts/test-danmaku-layout.mjs b/apps/screen-web/scripts/test-danmaku-layout.mjs
+index d75ba62cc7e6d667dc489a21254dbf8dd6507a0a..abde9a807f41a8ba8e76dc4b2f3b2d66c41bc7ec 100644
+--- a/apps/screen-web/scripts/test-danmaku-layout.mjs
++++ b/apps/screen-web/scripts/test-danmaku-layout.mjs
+@@ -44,13 +44,17 @@ const overlaySource = await readFile(
+   new URL("../src/components/realtime/DanmakuOverlay.vue", import.meta.url),
+   "utf8",
+ );
++const overlayStyles = await readFile(
++  new URL("../src/components/realtime/DanmakuOverlay.css", import.meta.url),
++  "utf8",
++);
+ assert.match(overlaySource, /findSafeTrack/);
+ assert.match(overlaySource, /max_wait_seconds/);
+ assert.match(overlaySource, /entry_interval_seconds/);
+ assert.match(overlaySource, /DANMAKU_QUEUE_RETRY_MS = 50/);
+ assert.match(overlaySource, /queuedAt/);
+-assert.match(overlaySource, /--danmaku-duration/);
+-assert.match(overlaySource, /translate3d\(-100%, 0, 0\)/);
++assert.match(overlayStyles, /--danmaku-duration/);
++assert.match(overlayStyles, /translate3d\(-100%, 0, 0\)/);
+ assert.doesNotMatch(overlaySource, /-100vw - 100%/);
+ assert.doesNotMatch(overlaySource, /\.style\.transform/);
+ assert.doesNotMatch(overlaySource, /trackReleaseAt/);
+diff --git a/apps/screen-web/scripts/test-danmaku-stickers.mjs b/apps/screen-web/scripts/test-danmaku-stickers.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..fd631b4a5dfc2e61203b44b8965862808c72ccc7
+--- /dev/null
++++ b/apps/screen-web/scripts/test-danmaku-stickers.mjs
+@@ -0,0 +1,24 @@
++import assert from "node:assert/strict";
++import { readFile } from "node:fs/promises";
++
++const { measureDanmakuImageWidth } = await import("../dist-test/realtime/danmaku-layout.js");
++const [overlay, styles] = await Promise.all([
++  readFile(new URL("../src/components/realtime/DanmakuOverlay.vue", import.meta.url), "utf8"),
++  readFile(new URL("../src/components/realtime/DanmakuOverlay.css", import.meta.url), "utf8"),
++]);
++
++assert.equal(measureDanmakuImageWidth(256, 256, 36), 36);
++assert.equal(measureDanmakuImageWidth(512, 128, 36), 144);
++assert.equal(measureDanmakuImageWidth(128, 512, 36), 9);
++assert.equal(measureDanmakuImageWidth(1, 1, 96), 96);
++assert.equal(measureDanmakuImageWidth(0, 0, 36), 216);
++assert.match(overlay, /message\.message_type === "sticker" && message\.sticker/);
++assert.match(overlay, /class="danmaku-sticker"/);
++assert.match(overlay, /@error="markImageFailed\(item\.key\)"/);
++assert.match(overlay, /--danmaku-width/);
++assert.match(overlay, /Math\.max\(imageWidth, fallbackWidth\)/);
++assert.match(overlay, /new URL\(imageURL, apiBaseUrl\)/);
++assert.match(styles, /height: var\(--danmaku-font-size\)/);
++assert.match(styles, /width: 100%/);
++
++console.log("danmaku sticker tests passed");
+diff --git a/apps/screen-web/scripts/test-task-scheduler.mjs b/apps/screen-web/scripts/test-task-scheduler.mjs
+index 7ec94c2d843ad3d0261b8205d440a62b53652682..d99b089ca198646c56d6fafc38f3de11dca2120b 100644
+--- a/apps/screen-web/scripts/test-task-scheduler.mjs
++++ b/apps/screen-web/scripts/test-task-scheduler.mjs
+@@ -115,9 +115,13 @@ const overlaySource = fs.readFileSync(
+   new URL("../src/components/realtime/DanmakuOverlay.vue", import.meta.url),
+   "utf8",
+ );
++const overlayStyles = fs.readFileSync(
++  new URL("../src/components/realtime/DanmakuOverlay.css", import.meta.url),
++  "utf8",
++);
+ assert.doesNotMatch(overlaySource, /\bsetTimeout\b/);
+ assert.doesNotMatch(overlaySource, /\bsetInterval\b/);
+-assert.match(overlaySource, /animation:\s*danmaku-fly/);
++assert.match(overlayStyles, /animation:\s*danmaku-fly/);
+ assert.match(overlaySource, /scheduler\.scheduleAt/);
+ assert.match(overlaySource, /scheduler\.scheduleAfter/);
+ assert.doesNotMatch(overlaySource, /scheduler\.subscribeFrame/);
+diff --git a/apps/screen-web/src/api/client.ts b/apps/screen-web/src/api/client.ts
+index d910c85fad074086703b7afd3437c63a1ef43a60..64199191b7c74f174e369e76e67d59c9cbff66ab 100644
+--- a/apps/screen-web/src/api/client.ts
++++ b/apps/screen-web/src/api/client.ts
+@@ -17,6 +17,16 @@ export interface DanmakuMessage {
+   activity_id: string;
+   body: string;
+   created_at: string;
++  message_type: "text" | "sticker";
++  sticker: DanmakuSticker | null;
++}
++export interface DanmakuSticker {
++  sticker_id: number;
++  name: string;
++  image_url: string;
++  mime: string;
++  width: number;
++  height: number;
+ }
+ export interface DanmakuMessagePage {
+   items: DanmakuMessage[];
+diff --git a/apps/screen-web/src/components/realtime/DanmakuOverlay.css b/apps/screen-web/src/components/realtime/DanmakuOverlay.css
+new file mode 100644
+index 0000000000000000000000000000000000000000..0aaedddc2337553e7fbc30298c74ee68dc9c3add
+--- /dev/null
++++ b/apps/screen-web/src/components/realtime/DanmakuOverlay.css
+@@ -0,0 +1,106 @@
++.danmaku-overlay {
++  width: 100vw;
++  height: 100vh;
++  overflow: hidden;
++  pointer-events: none;
++}
++
++.danmaku-canvas {
++  position: relative;
++  width: 100%;
++  height: 100%;
++  overflow: hidden;
++}
++
++.danmaku-item {
++  position: absolute;
++  top: var(--danmaku-top);
++  left: 0;
++  margin: 0;
++  color: var(--danmaku-color);
++  font-size: var(--danmaku-font-size);
++  font-weight: 750;
++  line-height: 1.2;
++  opacity: var(--danmaku-opacity);
++  text-shadow: 0 2px 4px rgb(0 0 0 / 70%);
++  white-space: nowrap;
++  will-change: transform;
++  animation: danmaku-fly var(--danmaku-duration) linear forwards;
++}
++
++.danmaku-item--sticker {
++  display: flex;
++  align-items: center;
++  width: var(--danmaku-width);
++  height: var(--danmaku-font-size);
++}
++
++.danmaku-sticker {
++  display: block;
++  width: 100%;
++  height: 100%;
++  object-fit: contain;
++  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 70%));
++}
++
++.danmaku-item--sticker > span {
++  display: block;
++  width: 100%;
++  overflow: hidden;
++  text-overflow: ellipsis;
++}
++
++.danmaku-launch-placeholder {
++  display: grid;
++  place-items: center;
++  align-content: center;
++  gap: 12px;
++  width: min(100% - 48px, 480px);
++  min-height: 100vh;
++  margin: 0 auto;
++  color: #dfe9e4;
++  text-align: center;
++}
++
++.danmaku-launch-mark {
++  display: grid;
++  place-items: center;
++  width: 46px;
++  height: 46px;
++  color: #17211e;
++  background: #77d2b5;
++  border-radius: 6px;
++  font-size: 23px;
++  font-weight: 800;
++}
++
++.danmaku-launch-placeholder h1 {
++  margin: 6px 0 0;
++  font-size: 22px;
++}
++
++.danmaku-launch-placeholder p {
++  margin: 0;
++  color: #9daea6;
++  font-size: 14px;
++}
++
++.danmaku-overlay--standalone {
++  background: #07111f;
++}
++
++@keyframes danmaku-fly {
++  from {
++    transform: translate3d(100vw, 0, 0);
++  }
++
++  to {
++    transform: translate3d(-100%, 0, 0);
++  }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .danmaku-item {
++    animation-duration: 0.01ms !important;
++  }
++}
+diff --git a/apps/screen-web/src/components/realtime/DanmakuOverlay.vue b/apps/screen-web/src/components/realtime/DanmakuOverlay.vue
+index b52944009ffb13141e85e19b9ad546e5abb3c8e5..483eac8535acdcc2fcc4a6a429e308868a5c15c9 100644
+--- a/apps/screen-web/src/components/realtime/DanmakuOverlay.vue
++++ b/apps/screen-web/src/components/realtime/DanmakuOverlay.vue
+@@ -5,9 +5,17 @@
+         v-for="item in activeItems"
+         :key="item.key"
+         class="danmaku-item"
++        :class="{ 'danmaku-item--sticker': Boolean(item.sticker) }"
+         :style="item.style"
+       >
+-        {{ item.body }}
++        <img
++          v-if="item.sticker && !item.imageFailed"
++          class="danmaku-sticker"
++          :src="resolveImageURL(item.sticker.image_url)"
++          :alt="item.sticker.name"
++          @error="markImageFailed(item.key)"
++        />
++        <span v-else>{{ item.body }}</span>
+       </p>
+     </div>
+     <section v-else class="danmaku-launch-placeholder">
+@@ -20,6 +28,7 @@
+ 
+ <script setup lang="ts">
+ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
++import "./DanmakuOverlay.css";
+ import {
+   danmakuWebSocketURL,
+   getDanmakuMessages,
+@@ -40,6 +49,7 @@ import {
+   DANMAKU_GAP_PX,
+   findSafeTrack,
+   isPendingMessageExpired,
++  measureDanmakuImageWidth,
+   measureDanmakuText,
+   type DanmakuMotion,
+ } from "./danmaku-layout";
+@@ -51,6 +61,8 @@ type ActiveItem = {
+   track: number;
+   top: number;
+   width: number;
++  sticker: DanmakuMessage["sticker"];
++  imageFailed: boolean;
+   startedAt: number;
+   durationMs: number;
+   style: Record<string, string>;
+@@ -160,6 +172,23 @@ const measureBodyWidth = (body: string, fontSize: number) => {
+   context.font = `${DANMAKU_FONT_WEIGHT} ${fontSize}px ${DANMAKU_FONT_FAMILY}`;
+   return measureDanmakuText(body, fontSize, (text) => context.measureText(text).width);
+ };
++const measureMessageWidth = (message: DanmakuMessage, fontSize: number) => {
++  if (message.message_type === "sticker" && message.sticker) {
++    const imageWidth = measureDanmakuImageWidth(message.sticker.width, message.sticker.height, fontSize);
++    const fallbackWidth = measureBodyWidth(message.body, fontSize);
++    return Math.max(imageWidth, fallbackWidth);
++  }
++  return measureBodyWidth(message.body, fontSize);
++};
++const resolveImageURL = (imageURL: string) => {
++  const apiBaseUrl = bootstrap.value?.apiBaseUrl;
++  if (!apiBaseUrl) return imageURL;
++  return new URL(imageURL, apiBaseUrl).toString();
++};
++const markImageFailed = (key: string) => {
++  const item = activeItems.value.find((candidate) => candidate.key === key);
++  if (item) item.imageFailed = true;
++};
+ const queueMessage = (message: DanmakuMessage) => {
+   if (!canRender.value || message.message_id <= lastMessageId.value) return;
+   lastMessageId.value = message.message_id;
+@@ -186,7 +215,7 @@ const flushQueue = () => {
+       pendingMessages.value.shift();
+       continue;
+     }
+-    const width = measureBodyWidth(pending.message.body, currentSettings.font_size);
++    const width = measureMessageWidth(pending.message, currentSettings.font_size);
+     const durationMs = currentSettings.duration_seconds * 1000;
+     const candidate: DanmakuMotion = { startedAt: now, durationMs, width };
+     const track = findSafeTrack(
+@@ -213,6 +242,8 @@ const flushQueue = () => {
+       track,
+       top,
+       width,
++      sticker: pending.message.message_type === "sticker" ? pending.message.sticker : null,
++      imageFailed: false,
+       startedAt: now,
+       durationMs,
+       style: {
+@@ -220,6 +251,7 @@ const flushQueue = () => {
+         "--danmaku-font-size": `${currentSettings.font_size}px`,
+         "--danmaku-opacity": String(currentSettings.opacity),
+         "--danmaku-duration": `${currentSettings.duration_seconds}s`,
++        "--danmaku-width": `${width}px`,
+         "--danmaku-color": currentSettings.text_color,
+       },
+     });
+@@ -374,90 +406,3 @@ onBeforeUnmount(() => {
+   flushTaskId = undefined;
+ });
+ </script>
+-
+-<style scoped>
+-.danmaku-overlay {
+-  width: 100vw;
+-  height: 100vh;
+-  overflow: hidden;
+-  pointer-events: none;
+-}
+-
+-.danmaku-canvas {
+-  position: relative;
+-  width: 100%;
+-  height: 100%;
+-  overflow: hidden;
+-}
+-
+-.danmaku-item {
+-  position: absolute;
+-  top: var(--danmaku-top);
+-  margin: 0;
+-  color: var(--danmaku-color);
+-  font-size: var(--danmaku-font-size);
+-  font-weight: 750;
+-  line-height: 1.2;
+-  left: 0;
+-  opacity: var(--danmaku-opacity);
+-  text-shadow: 0 2px 4px rgb(0 0 0 / 70%);
+-  white-space: nowrap;
+-  will-change: transform;
+-  animation: danmaku-fly var(--danmaku-duration) linear forwards;
+-}
+-
+-.danmaku-launch-placeholder {
+-  display: grid;
+-  place-items: center;
+-  align-content: center;
+-  gap: 12px;
+-  width: min(100% - 48px, 480px);
+-  min-height: 100vh;
+-  margin: 0 auto;
+-  color: #dfe9e4;
+-  text-align: center;
+-}
+-
+-.danmaku-launch-mark {
+-  display: grid;
+-  place-items: center;
+-  width: 46px;
+-  height: 46px;
+-  color: #17211e;
+-  background: #77d2b5;
+-  border-radius: 6px;
+-  font-size: 23px;
+-  font-weight: 800;
+-}
+-
+-.danmaku-launch-placeholder h1 {
+-  margin: 6px 0 0;
+-  font-size: 22px;
+-}
+-
+-.danmaku-launch-placeholder p {
+-  margin: 0;
+-  color: #9daea6;
+-  font-size: 14px;
+-}
+-
+-.danmaku-overlay--standalone {
+-  background: #07111f;
+-}
+-
+-@keyframes danmaku-fly {
+-  from {
+-    transform: translate3d(100vw, 0, 0);
+-  }
+-
+-  to {
+-    transform: translate3d(-100%, 0, 0);
+-  }
+-}
+-
+-@media (prefers-reduced-motion: reduce) {
+-  .danmaku-item {
+-    animation-duration: 0.01ms !important;
+-  }
+-}
+-</style>
+diff --git a/apps/screen-web/src/components/realtime/danmaku-layout.ts b/apps/screen-web/src/components/realtime/danmaku-layout.ts
+index ac3f556d8dd2957cb3cf19e412a6ab61c134a8a0..82d91a36e8df821af7843b6181383f3045b19575 100644
+--- a/apps/screen-web/src/components/realtime/danmaku-layout.ts
++++ b/apps/screen-web/src/components/realtime/danmaku-layout.ts
+@@ -19,6 +19,7 @@ export type TextWidthMeasurer = (text: string) => number;
+ 
+ const MIN_DURATION_MS = 1;
+ const MIN_TEXT_WIDTH_PX = 1;
++const MAX_IMAGE_WIDTH_MULTIPLIER = 6;
+ 
+ const finiteOr = (value: number, fallback: number) => (Number.isFinite(value) ? value : fallback);
+ 
+@@ -28,6 +29,18 @@ export function measureDanmakuText(text: string, fontSize: number, measure: Text
+   return Number.isFinite(measured) && measured > 0 ? measured : fallback;
+ }
+ 
++export function measureDanmakuImageWidth(width: number, height: number, fontSize: number): number {
++  const safeFontSize = Math.max(MIN_TEXT_WIDTH_PX, finiteOr(fontSize, MIN_TEXT_WIDTH_PX));
++  const safeWidth = finiteOr(width, 0);
++  const safeHeight = finiteOr(height, 0);
++  if (safeWidth <= 0 || safeHeight <= 0) return safeFontSize * MAX_IMAGE_WIDTH_MULTIPLIER;
++  const proportionalWidth = safeFontSize * (safeWidth / safeHeight);
++  return Math.max(
++    MIN_TEXT_WIDTH_PX,
++    Math.min(safeFontSize * MAX_IMAGE_WIDTH_MULTIPLIER, proportionalWidth),
++  );
++}
++
+ export function isPendingMessageExpired(queuedAt: number, now: number, maxWaitMs: number): boolean {
+   return !Number.isFinite(queuedAt)
+     || !Number.isFinite(now)
+diff --git a/apps/user-web/AGENTS.md b/apps/user-web/AGENTS.md
+index e935531c3d083fe28fa8b57993e29a0d2a543de4..0010d615a403c0ad77ee6f7a10e8ecaa6ac4639f 100644
+--- a/apps/user-web/AGENTS.md
++++ b/apps/user-web/AGENTS.md
+@@ -12,7 +12,7 @@
+ - 登录后的活动壳不渲染全局顶部 NavBar，通过顶部 safe-area 直接展示首页、聊天、我的三个嵌套路由；
+   底部 Tabbar 使用命名路由持续匹配当前项，当前项以金色图标、金色加粗文字和包裹背景高亮。
+ - 聊天页使用 HTTP 历史游标和首帧认证 WebSocket，
+-  断线按指数退避重连并以 after_id 补齐消息；聊天输入区位于底部导航上方，消息行以发送者用户名、头像和左右气泡展示，
++  断线按指数退避重连并以 after_id 补齐消息；登录后读取当前活动启用表情，点击表情立即发送 sticker-only 消息；消息行以发送者用户名、头像和左右气泡展示，
+   消息列表仅在追加前位于底部阈值内时自动滚动；输入框默认一行且与发送按钮同高，最多可视三行，超过三行后在控件内部滚动。
+ - 聊天 WebSocket 收到停用用户的 `unauthorized` 错误后会清除当前活动 token、停止重连并返回活动入口；`muted` 错误只提示用户，不清除会话。
+ - `views/activity/home.vue` 和 `views/activity/me.vue` 展示当前活动用户头像；
+@@ -31,6 +31,9 @@
+ 头像组件只从二十个静态 SVG 导入中按 `avatar_id` 映射资源，不接受路径或 HTML；头像显示在首页、“我的”页和消息行中，
+ 消息行头像使用稳定的活动用户 ID 本地映射，不进入聊天消息或 WebSocket 协议。
+ 
++聊天表情图片由后端提供活动隔离的版本化 URL；表情气泡和表情选择器使用图片渲染，图片失败时显示 `[表情] 名称`。
++表情消息不与文字草稿混合，活动关闭、结束、禁言或停用时沿用现有发送限制。
++
+ 聊天输入框保留 `maxlength=500` 限制，但不显示会撑高默认输入框的字数提示；Vant Field 使用零垂直内边距和内容居中对齐，并关闭聊天 Field 默认的内部 `::after` 分隔线。
+ 
+ 登录后活动壳使用 `activity-shell` 承接顶部 safe-area；聊天高度只扣除 Tabbar 与上下 safe-area，
+diff --git a/apps/user-web/src/api/client.ts b/apps/user-web/src/api/client.ts
+index 6e06b772d8bf3f01a2626a5bc179717266070cea..618df1a9b5636f088880c45d1a2bc7f5f83a1a66 100644
+--- a/apps/user-web/src/api/client.ts
++++ b/apps/user-web/src/api/client.ts
+@@ -1,6 +1,11 @@
+ const baseURL =
+   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
+ export const apiURL = (path: string) => `${baseURL}${path}`;
++export const mediaURL = (imageUrl: string | null): string | null => {
++  if (!imageUrl) return null;
++  const origin = baseURL.startsWith("http") ? new URL(baseURL).origin : window.location.origin;
++  return new URL(imageUrl, origin).toString();
++};
+ export const chatWebSocketURL = (activityId: string) => {
+   const url = apiURL(`/activities/${activityId}/chat/ws`);
+   return url.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
+@@ -49,6 +54,16 @@ export interface ChatMessage {
+   sender_username: string;
+   body: string;
+   created_at: string;
++  message_type: "text" | "sticker";
++  sticker: ChatSticker | null;
++}
++export interface ChatSticker {
++  sticker_id: number;
++  name: string;
++  image_url: string;
++  mime: string;
++  width: number;
++  height: number;
+ }
+ export interface ChatMessagePage {
+   items: ChatMessage[];
+@@ -108,6 +123,10 @@ export const getActivityMe = (activityId: string, token: string) =>
+   request<ActivityUserResponse>(`/activities/${activityId}/me`, {
+     headers: { Authorization: `Bearer ${token}` },
+   });
++export const getChatStickers = (activityId: string, token: string) =>
++  request<ChatSticker[]>(`/activities/${activityId}/chat/stickers`, {
++    headers: { Authorization: `Bearer ${token}` },
++  });
+ export const getChatMessages = (
+   activityId: string,
+   token: string,
+diff --git a/apps/user-web/src/views/activity/chat.css b/apps/user-web/src/views/activity/chat.css
+index 4d78799d6d8cd9be239e424bd8eb7af4694be5e4..72dbfb688b8eb9a8aafe1c65cf5d6e70e2ce8019 100644
+--- a/apps/user-web/src/views/activity/chat.css
++++ b/apps/user-web/src/views/activity/chat.css
+@@ -111,6 +111,35 @@
+   background: var(--activity-surface-strong);
+ }
+ 
++.activity-page .chat-message-bubble--sticker {
++  display: grid;
++  place-items: center;
++  min-width: 48px;
++  min-height: 48px;
++  padding: 4px;
++  border-color: transparent;
++  background: transparent;
++}
++
++.activity-page .chat-message--self .chat-message-bubble--sticker {
++  border-color: transparent;
++  background: transparent;
++}
++
++.activity-page .chat-message-bubble--sticker img {
++  display: block;
++  width: auto;
++  max-width: min(120px, 100%);
++  height: auto;
++  max-height: 120px;
++  border-radius: 8px;
++  object-fit: contain;
++}
++
++.activity-page .chat-message-bubble--sticker span {
++  white-space: nowrap;
++}
++
+ .activity-page .chat-composer {
+   display: flex;
+   flex: 0 0 auto;
+@@ -130,6 +159,47 @@
+   min-width: 0;
+ }
+ 
++.activity-page .chat-sticker-panel {
++  display: grid;
++  grid-template-columns: repeat(4, minmax(0, 1fr));
++  gap: 8px;
++  max-height: 184px;
++  overflow-y: auto;
++  padding: 10px;
++  border: 1px solid var(--activity-line);
++  border-radius: 10px;
++  background: var(--activity-surface);
++}
++
++.activity-page .chat-sticker-option {
++  display: grid;
++  place-items: center;
++  min-width: 0;
++  min-height: 64px;
++  padding: 5px;
++  border: 1px solid transparent;
++  border-radius: 8px;
++  background: transparent;
++}
++
++.activity-page .chat-sticker-option:not(:disabled) { cursor: pointer; }
++
++.activity-page .chat-sticker-option:not(:disabled):hover,
++.activity-page .chat-sticker-option:not(:disabled):focus-visible {
++  border-color: var(--activity-line-strong);
++  background: var(--activity-surface-strong);
++  outline: none;
++}
++
++.activity-page .chat-sticker-option:disabled { opacity: 0.5; }
++
++.activity-page .chat-sticker-option img {
++  display: block;
++  width: 56px;
++  height: 56px;
++  object-fit: contain;
++}
++
+ .activity-page .chat-composer .van-cell {
+   box-sizing: border-box;
+   flex: 1;
+@@ -161,6 +231,14 @@
+   border-radius: 10px;
+ }
+ 
++.activity-page .chat-composer .chat-sticker-toggle {
++  min-width: 52px;
++  padding: 0 10px;
++  border-color: var(--activity-line);
++  color: var(--activity-gold-strong);
++  background: var(--activity-surface);
++}
++
+ @media (min-width: 601px) {
+   .activity-page .chat-content { max-width: 600px; margin: 0 auto; }
+ }
+diff --git a/apps/user-web/src/views/activity/chat.vue b/apps/user-web/src/views/activity/chat.vue
+index b722b4361dfd40b5379a80316a368104f70d2648..d66a60c10d7cd1c1d71d1e2699dab58bb9a2bbf6 100644
+--- a/apps/user-web/src/views/activity/chat.vue
++++ b/apps/user-web/src/views/activity/chat.vue
+@@ -20,11 +20,42 @@
+             <strong>{{ message.sender_username }}</strong>
+             <time :datetime="message.created_at">{{ formatTime(message.created_at) }}</time>
+           </div>
+-          <p class="chat-message-bubble">{{ message.body }}</p>
++          <p
++            class="chat-message-bubble"
++            :class="{ 'chat-message-bubble--sticker': message.message_type === 'sticker' }"
++          >
++            <template v-if="message.message_type === 'sticker' && message.sticker">
++              <img
++                v-if="!failedStickerMessages.has(message.message_id)"
++                :src="mediaURL(message.sticker.image_url) || undefined"
++                :alt="message.sticker.name"
++                @error="markStickerError(message.message_id)"
++              />
++              <span v-else>{{ message.body }}</span>
++            </template>
++            <template v-else>{{ message.body }}</template>
++          </p>
+         </div>
+       </article>
+     </div>
+     <form class="chat-composer" @submit.prevent="sendMessage">
++      <div v-if="stickerPickerOpen" class="chat-sticker-panel" aria-label="表情包选择器">
++        <button
++          v-for="sticker in stickers"
++          :key="sticker.sticker_id"
++          class="chat-sticker-option"
++          type="button"
++          :disabled="!canSendSticker || sending"
++          :aria-label="`发送${sticker.name}表情`"
++          @click="sendSticker(sticker)"
++        >
++          <img
++            :src="mediaURL(sticker.image_url) || undefined"
++            :alt="sticker.name"
++            loading="lazy"
++          />
++        </button>
++      </div>
+       <div class="chat-composer-controls">
+         <VanField
+           v-model="draft"
+@@ -35,6 +66,13 @@
+           type="textarea"
+           placeholder="输入消息"
+         />
++        <VanButton
++          native-type="button"
++          type="default"
++          class="chat-sticker-toggle"
++          :disabled="activity.status !== 'open' || connectionState !== 'connected' || sending || Boolean(draft.trim())"
++          @click="stickerPickerOpen = !stickerPickerOpen"
++        >表情</VanButton>
+         <VanButton native-type="submit" type="primary" :disabled="!canSend" :loading="sending">发送</VanButton>
+       </div>
+     </form>
+@@ -48,9 +86,12 @@ import "./chat.css";
+ import {
+   getActivityToken,
+   getChatMessages,
++  getChatStickers,
+   chatWebSocketURL,
++  mediaURL,
+   type Activity,
+   type ActivityAvatarId,
++  type ChatSticker,
+   type ActivityUserResponse,
+   type ChatMessage,
+ } from "../../api/client";
+@@ -62,6 +103,9 @@ const messages = ref<ChatMessage[]>([]);
+ const loading = ref(true);
+ const hasMore = ref(false);
+ const draft = ref("");
++const stickers = ref<ChatSticker[]>([]);
++const stickerPickerOpen = ref(false);
++const failedStickerMessages = ref(new Set<number>());
+ const sending = ref(false);
+ const messageList = ref<HTMLElement>();
+ const connectionState = ref<"connecting" | "connected" | "offline">("connecting");
+@@ -141,6 +185,16 @@ const fetchReconnectMessages = async () => {
+     cursor = latest;
+   }
+ };
++const fetchStickers = async () => {
++  const token = getActivityToken(props.activity.activity_id);
++  if (!token) return;
++  try {
++    stickers.value = await getChatStickers(props.activity.activity_id, token);
++  } catch {
++    stickers.value = [];
++    showToast("表情包加载失败");
++  }
++};
+ const loadOlder = async () => {
+   const oldest = messages.value[0]?.message_id;
+   if (!oldest) return;
+@@ -191,13 +245,24 @@ const connect = () => {
+   };
+   ws.onerror = () => ws.close();
+ };
+-const sendMessage = () => {
+-  const body = draft.value.trim();
+-  if (!body || !socket.value || socket.value.readyState !== WebSocket.OPEN || props.activity.status !== "open") return;
++const sendPayload = (payload: { body?: string; sticker_id?: number }) => {
++  if (!socket.value || socket.value.readyState !== WebSocket.OPEN || props.activity.status !== "open") return false;
+   sending.value = true;
+-  socket.value.send(JSON.stringify({ type: "message.send", body }));
+-  draft.value = "";
++  socket.value.send(JSON.stringify({ type: "message.send", ...payload }));
+   window.setTimeout(() => { sending.value = false; }, 300);
++  return true;
++};
++const sendMessage = () => {
++  const body = draft.value.trim();
++  if (!body || !canSend.value) return;
++  if (sendPayload({ body })) draft.value = "";
++};
++const sendSticker = (sticker: ChatSticker) => {
++  if (!canSendSticker.value) return;
++  if (sendPayload({ sticker_id: sticker.sticker_id })) stickerPickerOpen.value = false;
++};
++const markStickerError = (messageId: number) => {
++  failedStickerMessages.value = new Set(failedStickerMessages.value).add(messageId);
+ };
+ const formatTime = (value: string) => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+ const canSend = computed(() =>
+@@ -205,9 +270,18 @@ const canSend = computed(() =>
+   && draft.value.trim().length > 0
+   && connectionState.value === "connected"
+ );
++const canSendSticker = computed(() =>
++  props.activity.status === "open"
++  && !draft.value.trim()
++  && connectionState.value === "connected"
++);
+ 
+ onMounted(async () => {
+-  try { await fetchMessages(); } catch { showToast("消息加载失败"); } finally { loading.value = false; }
++  await Promise.all([
++    fetchMessages().catch(() => showToast("消息加载失败")),
++    fetchStickers(),
++  ]);
++  loading.value = false;
+   await nextTick();
+   scrollToLatest("auto");
+   connect();

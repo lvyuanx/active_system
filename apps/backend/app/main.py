@@ -7,6 +7,7 @@ from app.api.router import api_router
 from app.core.config import get_settings
 from app.modules.auth import ensure_superuser
 from app.modules.danmaku.testing import danmaku_test_manager
+from app.modules.chat.stickers import scan_chat_sticker_media
 from app.modules.lottery.media_service import scan_lottery_media
 
 settings = get_settings()
@@ -16,6 +17,7 @@ settings = get_settings()
 async def lifespan(_: FastAPI):
     ensure_superuser(settings)
     scan_lottery_media(settings)
+    scan_chat_sticker_media(settings)
     try:
         yield
     finally:

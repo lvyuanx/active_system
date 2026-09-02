@@ -44,13 +44,17 @@ const overlaySource = await readFile(
   new URL("../src/components/realtime/DanmakuOverlay.vue", import.meta.url),
   "utf8",
 );
+const overlayStyles = await readFile(
+  new URL("../src/components/realtime/DanmakuOverlay.css", import.meta.url),
+  "utf8",
+);
 assert.match(overlaySource, /findSafeTrack/);
 assert.match(overlaySource, /max_wait_seconds/);
 assert.match(overlaySource, /entry_interval_seconds/);
 assert.match(overlaySource, /DANMAKU_QUEUE_RETRY_MS = 50/);
 assert.match(overlaySource, /queuedAt/);
-assert.match(overlaySource, /--danmaku-duration/);
-assert.match(overlaySource, /translate3d\(-100%, 0, 0\)/);
+assert.match(overlayStyles, /--danmaku-duration/);
+assert.match(overlayStyles, /translate3d\(-100%, 0, 0\)/);
 assert.doesNotMatch(overlaySource, /-100vw - 100%/);
 assert.doesNotMatch(overlaySource, /\.style\.transform/);
 assert.doesNotMatch(overlaySource, /trackReleaseAt/);

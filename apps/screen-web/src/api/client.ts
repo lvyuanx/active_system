@@ -17,6 +17,16 @@ export interface DanmakuMessage {
   activity_id: string;
   body: string;
   created_at: string;
+  message_type: "text" | "sticker";
+  sticker: DanmakuSticker | null;
+}
+export interface DanmakuSticker {
+  sticker_id: number;
+  name: string;
+  image_url: string;
+  mime: string;
+  width: number;
+  height: number;
 }
 export interface DanmakuMessagePage {
   items: DanmakuMessage[];

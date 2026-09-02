@@ -20,11 +20,52 @@
             <strong>{{ message.sender_username }}</strong>
             <time :datetime="message.created_at">{{ formatTime(message.created_at) }}</time>
           </div>
-          <p class="chat-message-bubble">{{ message.body }}</p>
+          <p
+            class="chat-message-bubble"
+            :class="{ 'chat-message-bubble--sticker': message.message_type === 'sticker' }"
+          >
+            <template v-if="message.message_type === 'sticker' && message.sticker">
+              <img
+                v-if="!failedStickerMessages.has(message.message_id)"
+                :src="mediaURL(message.sticker.image_url) || undefined"
+                :alt="message.sticker.name"
+                @error="markStickerError(message.message_id)"
+              />
+              <span v-else>{{ message.body }}</span>
+            </template>
+            <template v-else>{{ message.body }}</template>
+          </p>
         </div>
       </article>
     </div>
-    <form class="chat-composer" @submit.prevent="sendMessage">
+    <form ref="composer" class="chat-composer" @submit.prevent="sendMessage">
+      <div
+        v-if="stickerPickerOpen"
+        id="chat-sticker-panel"
+        class="chat-sticker-panel"
+        role="dialog"
+        aria-label="表情包选择器"
+      >
+        <p v-if="stickersLoading" class="chat-sticker-empty">正在加载表情</p>
+        <p v-else-if="stickers.length === 0" class="chat-sticker-empty">暂无表情</p>
+        <template v-else>
+          <button
+            v-for="sticker in stickers"
+            :key="sticker.sticker_id"
+            class="chat-sticker-option"
+            type="button"
+            :disabled="!canSendSticker || sending"
+            :aria-label="`发送${sticker.name}表情`"
+            @click="sendSticker(sticker)"
+          >
+            <img
+              :src="mediaURL(sticker.image_url) || undefined"
+              :alt="sticker.name"
+              loading="lazy"
+            />
+          </button>
+        </template>
+      </div>
       <div class="chat-composer-controls">
         <VanField
           v-model="draft"
@@ -34,8 +75,32 @@
           :autosize="{ minHeight: 24, maxHeight: 72 }"
           type="textarea"
           placeholder="输入消息"
+          @click="stickerPickerOpen = false"
+          @focus="stickerPickerOpen = false"
         />
-        <VanButton native-type="submit" type="primary" :disabled="!canSend" :loading="sending">发送</VanButton>
+        <VanButton
+          native-type="button"
+          type="default"
+          class="chat-sticker-toggle"
+          :disabled="activity.status !== 'open' || connectionState !== 'connected' || sending || Boolean(draft.trim())"
+          :aria-controls="stickerPickerOpen ? 'chat-sticker-panel' : undefined"
+          :aria-expanded="stickerPickerOpen"
+          aria-haspopup="dialog"
+          :aria-label="stickerPickerOpen ? '关闭表情包' : '打开表情包'"
+          @click="stickerPickerOpen = !stickerPickerOpen"
+        >
+          <img class="chat-control-icon chat-smile-icon" :src="chatSmileIcon" alt="" aria-hidden="true" />
+        </VanButton>
+        <VanButton
+          native-type="submit"
+          type="primary"
+          :disabled="!canSend"
+          :loading="sending"
+          aria-label="发送"
+          class="chat-send-button"
+        >
+          <img class="chat-control-icon chat-send-icon" :src="chatSendIcon" alt="" aria-hidden="true" />
+        </VanButton>
       </div>
     </form>
   </section>
@@ -45,12 +110,17 @@
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { Button as VanButton, Field as VanField, Loading as VanLoading, showToast } from "vant";
 import "./chat.css";
+import chatSendIcon from "../../assets/icons/chat-send.svg";
+import chatSmileIcon from "../../assets/icons/chat-smile.svg";
 import {
   getActivityToken,
   getChatMessages,
+  getChatStickers,
   chatWebSocketURL,
+  mediaURL,
   type Activity,
   type ActivityAvatarId,
+  type ChatSticker,
   type ActivityUserResponse,
   type ChatMessage,
 } from "../../api/client";
@@ -62,8 +132,13 @@ const messages = ref<ChatMessage[]>([]);
 const loading = ref(true);
 const hasMore = ref(false);
 const draft = ref("");
+const stickers = ref<ChatSticker[]>([]);
+const stickersLoading = ref(true);
+const stickerPickerOpen = ref(false);
+const failedStickerMessages = ref(new Set<number>());
 const sending = ref(false);
 const messageList = ref<HTMLElement>();
+const composer = ref<HTMLElement>();
 const connectionState = ref<"connecting" | "connected" | "offline">("connecting");
 const socket = ref<WebSocket>();
 const stopped = ref(false);
@@ -141,6 +216,21 @@ const fetchReconnectMessages = async () => {
     cursor = latest;
   }
 };
+const fetchStickers = async () => {
+  const token = getActivityToken(props.activity.activity_id);
+  if (!token) {
+    stickersLoading.value = false;
+    return;
+  }
+  try {
+    stickers.value = await getChatStickers(props.activity.activity_id, token);
+  } catch {
+    stickers.value = [];
+    showToast("表情包加载失败");
+  } finally {
+    stickersLoading.value = false;
+  }
+};
 const loadOlder = async () => {
   const oldest = messages.value[0]?.message_id;
   if (!oldest) return;
@@ -191,13 +281,32 @@ const connect = () => {
   };
   ws.onerror = () => ws.close();
 };
+const sendPayload = (payload: { body?: string; sticker_id?: number }) => {
+  if (!socket.value || socket.value.readyState !== WebSocket.OPEN || props.activity.status !== "open") return false;
+  sending.value = true;
+  socket.value.send(JSON.stringify({ type: "message.send", ...payload }));
+  window.setTimeout(() => { sending.value = false; }, 300);
+  return true;
+};
 const sendMessage = () => {
   const body = draft.value.trim();
-  if (!body || !socket.value || socket.value.readyState !== WebSocket.OPEN || props.activity.status !== "open") return;
-  sending.value = true;
-  socket.value.send(JSON.stringify({ type: "message.send", body }));
-  draft.value = "";
-  window.setTimeout(() => { sending.value = false; }, 300);
+  if (!body || !canSend.value) return;
+  if (sendPayload({ body })) draft.value = "";
+};
+const sendSticker = (sticker: ChatSticker) => {
+  if (!canSendSticker.value) return;
+  if (sendPayload({ sticker_id: sticker.sticker_id })) stickerPickerOpen.value = false;
+};
+const markStickerError = (messageId: number) => {
+  failedStickerMessages.value = new Set(failedStickerMessages.value).add(messageId);
+};
+const handleDocumentPointerDown = (event: PointerEvent) => {
+  if (!stickerPickerOpen.value) return;
+  const target = event.target;
+  if (target instanceof Node && !composer.value?.contains(target)) stickerPickerOpen.value = false;
+};
+const handleDocumentKeydown = (event: KeyboardEvent) => {
+  if (event.key === "Escape") stickerPickerOpen.value = false;
 };
 const formatTime = (value: string) => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const canSend = computed(() =>
@@ -205,14 +314,27 @@ const canSend = computed(() =>
   && draft.value.trim().length > 0
   && connectionState.value === "connected"
 );
+const canSendSticker = computed(() =>
+  props.activity.status === "open"
+  && !draft.value.trim()
+  && connectionState.value === "connected"
+);
 
 onMounted(async () => {
-  try { await fetchMessages(); } catch { showToast("消息加载失败"); } finally { loading.value = false; }
+  document.addEventListener("pointerdown", handleDocumentPointerDown);
+  document.addEventListener("keydown", handleDocumentKeydown);
+  await Promise.all([
+    fetchMessages().catch(() => showToast("消息加载失败")),
+    fetchStickers(),
+  ]);
+  loading.value = false;
   await nextTick();
   scrollToLatest("auto");
   connect();
 });
 onBeforeUnmount(() => {
+  document.removeEventListener("pointerdown", handleDocumentPointerDown);
+  document.removeEventListener("keydown", handleDocumentKeydown);
   stopped.value = true;
   if (reconnectTimer) window.clearTimeout(reconnectTimer);
   socket.value?.close();

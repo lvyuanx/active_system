@@ -26,6 +26,11 @@ const router = createRouter({
       component: () => import("../views/participants/index.vue"),
       meta: { requiresAuth: true },
     },
+    {
+      path: "/activities/:activityId/stickers",
+      component: () => import("../views/stickers/index.vue"),
+      meta: { requiresAuth: true },
+    },
     { path: "/:pathMatch(.*)*", redirect: "/" },
   ],
 });

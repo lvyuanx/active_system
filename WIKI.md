@@ -40,6 +40,14 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 聊天室每次发送都会重新检查参与用户的 active/muted 状态；禁言返回 `chat.error`/`muted`，停用后的现有连接返回未授权并关闭，
 聊天历史不会因管理操作删除。用户端收到未授权聊天错误后会清除当前活动 token 并停止重连，回到活动入口。
 
+### 聊天表情包
+
+`activity_chat_stickers` 按活动保存表情名称、随机媒体标识、存储 key、MIME、大小、宽高和启用状态。管理员通过
+`/admin/activities/{activity_id}/chat/stickers` 逐文件上传、下架和恢复，用户通过 `/activities/{activity_id}/chat/stickers`
+读取当前活动启用列表。聊天消息增加 `message_type` 和 `sticker_id`，表情消息的 `body` 保留 `[表情] 名称` 兼容占位；
+历史消息引用不会因下架而失效。图片使用 `/api/v1/activities/{activity_id}/chat/stickers/{sticker_id}/image?v={image_id}`
+公开版本化访问，允许大屏 `<img>` 无管理员凭证加载。
+
 ## 活动弹幕
 
 `activity_danmaku_settings` 以 `activity_id` 为主键保存轨道、字体、不透明度、飞行时长、同轨道入场间隔、碰撞避让队列最大等待时间、
@@ -49,8 +57,9 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 `dm1.{activity_id}.{token_version}.{HMAC}`，HMAC 使用 `DANMAKU_TOKEN_SECRET`，为空时使用 `JWT_SECRET`；数据库不保存明文。
 轮换 token 会递增版本并断开该活动所有弹幕 WebSocket。
 
-弹幕 HTTP/WS 只接受该只读 token，聊天发言成功后向弹幕通道发送 `message_id`、`activity_id`、`body` 和
-`created_at`，不发送用户名或活动用户身份。设置保存会通过 `danmaku.settings.updated` 实时生效。现有聊天室协议保持不变。
+弹幕 HTTP/WS 只接受该只读 token，聊天发言成功后向弹幕通道发送 `message_id`、`activity_id`、`body`、`message_type`、
+可选 `sticker` 和 `created_at`，不发送用户名或活动用户身份。设置保存会通过 `danmaku.settings.updated` 实时生效。
+文本聊天室发送协议保持兼容，并新增独立 `sticker_id` 发送分支。
 
 ## WebSocket 实时抽奖
 
@@ -82,8 +91,8 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 ### 奖品图片媒体
 
 `lottery_prizes` 的 `image_id`、`image_storage_key`、`image_mime` 和 `image_size` 均可为空，旧数据库启动时按列增量迁移。
-媒体根目录由 `MEDIA_ROOT` 配置，奖品图片存于 `lottery-prizes/`，临时上传存于 `.tmp/`；服务端使用随机 key，
-只接受真实 JPEG、PNG、WebP 且单文件不超过 5 MiB。
+媒体根目录由 `MEDIA_ROOT` 配置，奖品图片存于 `lottery-prizes/`，聊天表情存于 `chat-stickers/`，临时上传存于 `.tmp/` 对应命名空间；
+服务端使用随机 key，奖品只接受真实 JPEG、PNG、WebP，聊天表情额外接受 GIF，单文件均不超过 5 MiB。
 
 管理端图片通过独立 multipart 上传、删除和管理员读取接口处理，现有 lottery 配置 PUT 保持纯 JSON。
 公开配置、快照和开奖事件只包含 `/api/v1/activities/{activity_id}/lottery/prizes/{prize_id}/image?v={image_id}` 安全引用，
@@ -108,8 +117,8 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 
 管理端弹幕页的真实测试开关由后端 `DanmakuTestManager` 驱动。任务按启动请求配置的人员数量，为活动创建或复用带
 “弹幕测试用户”标识的活动用户，并为每个用户启动独立发送循环；每个循环调用聊天 service 将测试正文写入
-`activity_chat_messages`，再广播标准聊天室事件和弹幕摘要，每条消息之后按配置的最小和最大延迟做均匀随机等待。因此测试消息可被聊天室、
-弹幕 WebSocket 和弹幕历史接口共同观察。
+`activity_chat_messages`，再广播标准聊天室事件和弹幕摘要。每条消息约有 30% 概率从当前活动启用表情中随机选择；没有启用表情时继续发送文本，
+若表情在创建前被下架则回退文本。消息之后按配置的最小和最大延迟做均匀随机等待，因此测试消息可被聊天室、弹幕 WebSocket 和弹幕历史接口共同观察。
 人员数量至少为 1 且不设应用层上限，测试用户头像编号在现有 20 个资源中循环复用；延迟限制为 0 至 60 秒且最大延迟不能小于最小延迟；
 任务仅允许在 `open` 活动运行，停止测试后不再产生新消息。
 
@@ -124,10 +133,11 @@ Electron 主进程在内存保留 token、session 和 `displayIds`，预加载�
 为每个选中显示器创建透明、置顶、不可聚焦并鼠标穿透的覆盖窗口。启动控制窗口默认 680×720，页面默认隐藏滚动条。
 首次连接不回放历史，重连按最后消息 ID 补齐；队列最多保留 200 条，溢出时丢弃最旧消息。
 普通 `screen-web` 入口继续显示活动数据大屏，只有 `?danmaku-overlay=1` 才进入 Electron 的透明弹幕渲染层。
-恢复完成后的连续 WebSocket 消息直接携带四字段完整弹幕并进入渲染队列，不再为每条消息发起 HTTP 请求；ready、断线重连或
+恢复完成后的连续 WebSocket 消息直接携带文字或表情的完整弹幕并进入渲染队列，不再为每条消息发起 HTTP 请求；ready、断线重连或
 检测到 ID 缺口时，渲染器才从当前游标通过 HTTP 拉取，并把缓存的 WS 完整消息按消息 ID 合并去重，避免乱序导致遗漏。
 
-弹幕渲染器使用 `danmaku-layout.ts` 根据 Canvas 文本宽度、视口宽度、飞行时长和 8px 间距预测运动矩形；同轨道必须等上一条
+弹幕渲染器使用 `danmaku-layout.ts` 根据 Canvas 文本宽度、视口宽度、飞行时长和 8px 间距预测运动矩形；表情展示高度默认是文字字号的 2.2 倍，
+图片宽度按原始宽高比同步计算并纳入运动矩形；同轨道必须等上一条
 完整进入视口后再经过 `entry_interval_seconds` 才能尝试入场，随后继续检查全轨迹碰撞；不同轨道不受该间隔限制，并从轮询游标开始选择。
 所有轨道暂不可用时，消息从本地入队时间开始计时，超过 `max_wait_seconds` 后丢弃。`task-scheduler.ts` 使用单个 `requestAnimationFrame` 主循环和 `performance.now()`
 派发入场刷新、节点回收、WebSocket 重连和 HTTP 重试任务；消息队列仍最多保留 200 条，弹幕横向位移由 CSS `transform`
@@ -145,7 +155,9 @@ Electron 主进程在内存保留 token、session 和 `displayIds`，预加载�
   金色加粗文字和可见包裹背景高亮，直接访问、刷新和历史导航时均以当前路由为准。
 - 聊天页不再扣除顶部 Header 高度；消息区采用头像、用户名、时间和左右圆角气泡的微信式排列，
   输入框固定在 Tabbar 上方，默认一行与 44px 发送按钮等高并支持 1–3 行自适应，
-  超过三行在控件内滚动；聊天 Field 不显示内部 `::after` 分隔线。
+  超过三行在控件内滚动；聊天 Field 不显示内部 `::after` 分隔线。输入区的表情入口和发送操作使用 44px 圆形按钮承载用户提供的白色 SVG，
+  分别为笑脸和纸飞机图标，笑脸主体放大显示，并提供无障碍标签；表情选择器点击输入框、输入区域外或按 `Escape` 自动隐藏。
+  表情列表加载期间显示“正在加载表情”，加载完成且没有启用表情时显示“暂无表情”。
 - 活动入口需要适配 320px 起的移动宽度、短屏和 safe-area inset，动态活动名称、描述和用户名必须允许换行，不得造成横向溢出。
 
 ## 本地端口

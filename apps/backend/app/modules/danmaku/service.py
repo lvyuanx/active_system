@@ -4,12 +4,14 @@ import hashlib
 import hmac
 import re
 import sqlite3
+from typing import Literal
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.core.config import Settings
 from app.core.database import transaction
+from app.modules.chat.stickers import ChatSticker, sticker_from_message_row
 
 
 DEFAULT_DANMAKU_SETTINGS = {
@@ -82,6 +84,8 @@ class DanmakuMessage(BaseModel):
     activity_id: str
     body: str
     created_at: datetime
+    message_type: Literal["text", "sticker"] = "text"
+    sticker: ChatSticker | None = None
 
 
 class DanmakuMessagePage(BaseModel):
@@ -301,8 +305,14 @@ def list_danmaku_messages(
 ) -> DanmakuMessagePage:
     with transaction(settings) as connection:
         rows = connection.execute(
-            """SELECT message_id, activity_id, body, created_at FROM activity_chat_messages
-            WHERE activity_id = ? AND message_id > ? ORDER BY message_id ASC LIMIT ?""",
+            """SELECT m.message_id, m.activity_id, m.body, m.created_at, m.message_type, m.sticker_id,
+                      s.name AS sticker_name, s.image_id AS sticker_image_id, s.image_mime AS sticker_image_mime,
+                      s.image_width AS sticker_image_width, s.image_height AS sticker_image_height
+               FROM activity_chat_messages m
+               LEFT JOIN activity_chat_stickers s
+                 ON s.sticker_id = m.sticker_id AND s.activity_id = m.activity_id
+               WHERE m.activity_id = ? AND m.message_id > ?
+               ORDER BY m.message_id ASC LIMIT ?""",
             (principal.activity_id, after_id, limit + 1),
         ).fetchall()
     has_more = len(rows) > limit
@@ -313,6 +323,8 @@ def list_danmaku_messages(
                 activity_id=str(row["activity_id"]),
                 body=str(row["body"]),
                 created_at=datetime.fromisoformat(str(row["created_at"])),
+                message_type=str(row["message_type"] or "text"),
+                sticker=sticker_from_message_row(row) if str(row["message_type"] or "text") == "sticker" else None,
             )
             for row in rows[:limit]
         ],

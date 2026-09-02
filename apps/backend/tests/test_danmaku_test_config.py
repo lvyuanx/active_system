@@ -9,6 +9,7 @@ import app.main as main_module
 from app.core.config import Settings, get_settings
 from app.core.database import init_database, transaction
 from app.main import app
+from app.modules.chat.service import ChatInvalidStickerError
 from app.modules.danmaku import testing as danmaku_testing
 from app.modules.danmaku.testing import (
     DanmakuTestConfig,
@@ -158,6 +159,7 @@ def test_danmaku_test_manager_runs_one_sender_per_user(monkeypatch) -> None:
             return None
 
         monkeypatch.setattr(danmaku_testing, "create_message", fake_create_message)
+        monkeypatch.setattr(danmaku_testing.random, "random", lambda: 1.0)
         monkeypatch.setattr(danmaku_testing.chat_manager, "broadcast", fake_broadcast)
         monkeypatch.setattr(danmaku_testing.danmaku_manager, "broadcast_message", fake_broadcast)
         task = asyncio.create_task(
@@ -175,3 +177,112 @@ def test_danmaku_test_manager_runs_one_sender_per_user(monkeypatch) -> None:
         assert len(emitted) >= 100
 
     asyncio.run(verify())
+
+
+def test_danmaku_test_selects_enabled_sticker_randomly(monkeypatch) -> None:
+    sticker = SimpleNamespace(sticker_id=17)
+    monkeypatch.setattr(danmaku_testing.random, "random", lambda: 0.0)
+    monkeypatch.setattr(danmaku_testing.random, "choice", lambda options: options[0])
+    monkeypatch.setattr(
+        danmaku_testing,
+        "list_stickers",
+        lambda *_args, **_kwargs: [sticker],
+    )
+
+    body, sticker_id = danmaku_testing._select_test_payload("test-activity", object(), 0)
+
+    assert body == danmaku_testing.TEST_MESSAGES[0]
+    assert sticker_id == sticker.sticker_id
+
+
+def test_danmaku_test_uses_text_without_enabled_stickers(monkeypatch) -> None:
+    monkeypatch.setattr(danmaku_testing.random, "random", lambda: 0.0)
+    monkeypatch.setattr(danmaku_testing, "list_stickers", lambda *_args, **_kwargs: [])
+
+    body, sticker_id = danmaku_testing._select_test_payload("test-activity", object(), 1)
+
+    assert body == danmaku_testing.TEST_MESSAGES[1]
+    assert sticker_id is None
+
+
+def test_danmaku_test_manager_broadcasts_selected_sticker(monkeypatch) -> None:
+    async def verify() -> None:
+        manager = DanmakuTestManager()
+        user = DanmakuTestUser(
+            activity_user_id=1,
+            username="测试用户1",
+            joined_at=datetime.now(timezone.utc),
+        )
+        sticker = SimpleNamespace(sticker_id=17)
+        calls: list[tuple[str | None, int | None]] = []
+        broadcasts: list[tuple[str, dict]] = []
+        delivered = asyncio.Event()
+
+        monkeypatch.setattr(danmaku_testing.random, "random", lambda: 0.0)
+        monkeypatch.setattr(danmaku_testing, "list_stickers", lambda *_args, **_kwargs: [sticker])
+
+        def fake_create_message(_activity_id, _principal, body, _settings, *, sticker_id=None):
+            calls.append((body, sticker_id))
+            return SimpleNamespace(
+                model_dump=lambda mode: {
+                    "message_id": 1,
+                    "activity_id": "test-activity",
+                    "body": "[表情] 开心",
+                    "created_at": "2026-08-28T00:00:00+00:00",
+                    "message_type": "sticker",
+                    "sticker": {"sticker_id": sticker_id, "name": "开心"},
+                }
+            )
+
+        async def fake_chat_broadcast(_activity_id, payload) -> None:
+            broadcasts.append(("chat", payload))
+
+        async def fake_danmaku_broadcast(_activity_id, payload) -> None:
+            broadcasts.append(("danmaku", payload))
+            delivered.set()
+
+        monkeypatch.setattr(danmaku_testing, "create_message", fake_create_message)
+        monkeypatch.setattr(danmaku_testing.chat_manager, "broadcast", fake_chat_broadcast)
+        monkeypatch.setattr(danmaku_testing.danmaku_manager, "broadcast_message", fake_danmaku_broadcast)
+        task = asyncio.create_task(
+            manager._run_user(
+                "test-activity",
+                user,
+                0,
+                1,
+                0.0,
+                object(),
+                DanmakuTestConfig(user_count=1, min_delay_seconds=60, max_delay_seconds=60),
+                asyncio.Lock(),
+            )
+        )
+        await asyncio.wait_for(delivered.wait(), timeout=1)
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+        assert calls == [(None, 17)]
+        assert [kind for kind, _payload in broadcasts] == ["chat", "danmaku"]
+        assert broadcasts[0][1]["message"]["message_type"] == "sticker"
+        assert broadcasts[1][1]["message_type"] == "sticker"
+        assert broadcasts[1][1]["sticker"]["sticker_id"] == 17
+
+    asyncio.run(verify())
+
+
+def test_danmaku_test_falls_back_to_text_if_sticker_is_disabled(monkeypatch) -> None:
+    sticker = SimpleNamespace(sticker_id=17)
+    calls: list[tuple[str | None, int | None]] = []
+    monkeypatch.setattr(danmaku_testing.random, "random", lambda: 0.0)
+    monkeypatch.setattr(danmaku_testing, "list_stickers", lambda *_args, **_kwargs: [sticker])
+
+    def fake_create_message(_activity_id, _principal, body, _settings, *, sticker_id=None):
+        calls.append((body, sticker_id))
+        if sticker_id is not None:
+            raise ChatInvalidStickerError
+        return SimpleNamespace()
+
+    monkeypatch.setattr(danmaku_testing, "create_message", fake_create_message)
+
+    danmaku_testing._create_test_message("test-activity", object(), 0, object())
+
+    assert calls == [(None, 17), (danmaku_testing.TEST_MESSAGES[0], None)]

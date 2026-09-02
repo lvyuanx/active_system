@@ -302,8 +302,12 @@ def test_danmaku_websocket_broadcasts_message_summary_and_live_settings(tmp_path
                 assert chat_event["type"] == "message.created"
                 assert chat_event["message"]["sender_username"] == "弹幕用户"
                 assert danmaku_event["type"] == "danmaku.message.created"
-                assert set(danmaku_event["message"]) == {"message_id", "activity_id", "body", "created_at"}
+                assert set(danmaku_event["message"]) == {
+                    "message_id", "activity_id", "body", "created_at", "message_type", "sticker"
+                }
                 assert danmaku_event["message"]["body"] == "只显示正文"
+                assert danmaku_event["message"]["message_type"] == "text"
+                assert danmaku_event["message"]["sticker"] is None
                 message_id = danmaku_event["message"]["message_id"]
 
                 updated = client.put(
@@ -348,10 +352,14 @@ def test_danmaku_websocket_broadcasts_message_summary_and_live_settings(tmp_path
         assert missed_body["has_more"] is False
         assert len(missed_body["items"]) == 1
         missed_item = missed_body["items"][0]
-        assert set(missed_item) == {"message_id", "activity_id", "body", "created_at"}
+        assert set(missed_item) == {
+            "message_id", "activity_id", "body", "created_at", "message_type", "sticker"
+        }
         assert missed_item["message_id"] == second_message_id
         assert missed_item["activity_id"] == activity_id
         assert missed_item["body"] == "断线补齐消息"
+        assert missed_item["message_type"] == "text"
+        assert missed_item["sticker"] is None
         assert missed_item["created_at"]
         no_more = client.get(
             f"/api/v1/danmaku/messages?after_id={second_message_id}",
