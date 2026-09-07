@@ -53,9 +53,9 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 `activity_danmaku_settings` 以 `activity_id` 为主键保存轨道、字体、不透明度、飞行时长、同轨道入场间隔、碰撞避让队列最大等待时间、
 显示区域、文字颜色、token 版本和更新时间。`entry_interval_seconds` 默认 1.0 秒、范围为 0.1–5.0 秒；`max_wait_seconds`
 默认 1.5 秒、范围为 0.5–5.0 秒；旧数据库启动时只增量增加缺失列。
-管理员读取或写入时以默认值懒创建。当前 token 为
+活动创建事务会初始化默认记录；旧活动仍可由服务按需补齐。当前 token 为
 `dm1.{activity_id}.{token_version}.{HMAC}`，HMAC 使用 `DANMAKU_TOKEN_SECRET`，为空时使用 `JWT_SECRET`；数据库不保存明文。
-轮换 token 会递增版本并断开该活动所有弹幕 WebSocket。
+播放设置和活动状态变化不会轮换 token，只有管理员手动刷新才会递增版本并断开该活动所有弹幕 WebSocket。
 
 弹幕 HTTP/WS 只接受该只读 token，聊天发言成功后向弹幕通道发送 `message_id`、`activity_id`、`body`、`message_type`、
 可选 `sticker` 和 `created_at`，不发送用户名或活动用户身份。设置保存会通过 `danmaku.settings.updated` 实时生效。
@@ -85,6 +85,9 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 连接管理器为单进程活动房间实现，按 `admin`/`screen` 角色广播并在断开或发送失败时清理连接；轮次状态同样只保存在当前进程，服务重启会取消未落库轮次。管理端和大屏端均使用指数退避重连；
 大屏把 ready 历史作为已揭晓 `draw_id` 基线，后续事件去重后按序播放约 3 秒滚动揭晓。多副本部署仍需引入共享消息总线，不能把当前
 进程内 manager 当作跨实例广播方案。
+
+Windows 弹幕桌面工具在成功校验 token 后，通过 Electron `safeStorage` 将最近一次 token 加密保存到用户数据目录；启动页下次打开时通过受限 IPC 自动填充。
+安全存储不可用时不写入明文，工具仍可手动输入 token 启动。
 
 当活动用户较多时，球体渲染仍保留全部用户点位，但使用人数分层档位限制前景头像和姓名数量；姓名使用屏幕空间矩形避让，未进入细节预算的用户绘制为低成本光点。高密度档位每两帧绘制一次，并将设备像素比限制在 1.25 以内；头像圆形裁剪图和球体引导线使用 Canvas 缓存，停止/揭晓阶段仍强制完整绘制。
 

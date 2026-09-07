@@ -79,11 +79,21 @@ def test_danmaku_manager_rejects_old_token_connection_after_rotation() -> None:
 
 
 def test_danmaku_settings_are_validated_isolated_and_token_rotation_revokes_old_token(tmp_path: Path) -> None:
-    client, _ = make_client(tmp_path)
+    client, settings = make_client(tmp_path)
     try:
         headers = admin_headers(client)
         first_id = create_activity(client, headers, "第一场弹幕活动")
         second_id = create_activity(client, headers, "第二场弹幕活动")
+
+        with transaction(settings) as connection:
+            records = connection.execute(
+                "SELECT activity_id, token_version FROM activity_danmaku_settings "
+                "WHERE activity_id IN (?, ?) ORDER BY activity_id",
+                (first_id, second_id),
+            ).fetchall()
+        assert [(row["activity_id"], row["token_version"]) for row in records] == sorted(
+            [(first_id, 1), (second_id, 1)]
+        )
 
         first = client.get(f"/api/v1/admin/activities/{first_id}/danmaku", headers=headers)
         assert first.status_code == 200
@@ -116,9 +126,22 @@ def test_danmaku_settings_are_validated_isolated_and_token_rotation_revokes_old_
             },
         )
         assert updated.status_code == 200
-        assert updated.json()["settings"]["text_color"] == "#12AB34"
-        assert updated.json()["settings"]["entry_interval_seconds"] == 1.0
-        assert updated.json()["settings"]["max_wait_seconds"] == 1.5
+        updated_body = updated.json()
+        assert updated_body["settings"]["text_color"] == "#12AB34"
+        assert updated_body["settings"]["entry_interval_seconds"] == 1.0
+        assert updated_body["settings"]["max_wait_seconds"] == 1.5
+        assert updated_body["token"] == stable_token
+        assert updated_body["token_created_at"] == first_body["token_created_at"]
+        for transition in ("open", "close"):
+            transitioned = client.post(f"/api/v1/admin/activities/{first_id}/{transition}", headers=headers)
+            assert transitioned.status_code == 200
+            unchanged = client.get(f"/api/v1/admin/activities/{first_id}/danmaku", headers=headers)
+            assert unchanged.json()["token"] == stable_token
+            assert unchanged.json()["token_created_at"] == first_body["token_created_at"]
+        init_database(settings)
+        reloaded = client.get(f"/api/v1/admin/activities/{first_id}/danmaku", headers=headers)
+        assert reloaded.json()["token"] == stable_token
+        assert reloaded.json()["token_created_at"] == first_body["token_created_at"]
         second = client.get(f"/api/v1/admin/activities/{second_id}/danmaku", headers=headers)
         assert second.json()["settings"]["track_count"] == 6
 

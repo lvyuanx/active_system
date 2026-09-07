@@ -9,6 +9,7 @@ ipcRenderer.on("danmaku:overlay-session", (_event, session: unknown) => {
 
 contextBridge.exposeInMainWorld("danmakuDesktop", {
   listDisplays: () => ipcRenderer.invoke("danmaku:list-displays"),
+  getRememberedToken: () => ipcRenderer.invoke("danmaku:get-remembered-token"),
   start: (request: unknown) => ipcRenderer.invoke("danmaku:start", request),
   stop: () => ipcRenderer.invoke("danmaku:stop"),
   resume: () => ipcRenderer.invoke("danmaku:resume"),

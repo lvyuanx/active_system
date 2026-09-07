@@ -124,6 +124,10 @@ def create_activity(
                 now,
             ),
         )
+        # 弹幕包会间接依赖活动路由，延迟导入以避免应用启动阶段的循环导入。
+        from app.modules.danmaku.service import ensure_danmaku_record
+
+        ensure_danmaku_record(connection, activity_id)
         row = connection.execute("SELECT * FROM activities WHERE activity_id = ?", (activity_id,)).fetchone()
     return row_to_activity(row)
 

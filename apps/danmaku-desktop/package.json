@@ -10,6 +10,7 @@
     "dev": "pnpm build:main && electron .",
     "build": "pnpm build:main",
     "build:main": "tsc -p tsconfig.json",
+    "test": "pnpm build:main && node scripts/test-token-memory.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "dist:win": "pnpm --filter @active/screen-web build && pnpm build:main && electron-builder --win nsis --x64"
   },
@@ -28,6 +29,7 @@
     },
     "files": [
       "dist/main.js",
+      "dist/remembered-token.js",
       "dist/preload.cjs",
       "launcher/**",
       "package.json"

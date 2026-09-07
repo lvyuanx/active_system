@@ -5,11 +5,14 @@ import {
   ipcMain,
   Menu,
   nativeImage,
+  safeStorage,
   screen,
   Tray,
 } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { loadRememberedToken, saveRememberedToken } from "./remembered-token.js";
 
 type DanmakuSettings = {
   track_count: number;
@@ -59,6 +62,7 @@ const isLauncherSender = (sender: Electron.WebContents) => sender === launcherWi
 const isOverlaySender = (sender: Electron.WebContents) =>
   [...overlayWindows.values()].some((window) => window.webContents === sender);
 const launcherFile = () => path.join(app.getAppPath(), "launcher", "index.html");
+const rememberedTokenFile = () => path.join(app.getPath("userData"), "danmaku-token.bin");
 const preloadFile = () => path.join(__dirname, "preload.cjs");
 const overlayURL = () => `${process.env.DANMAKU_SCREEN_DEV_URL ?? "http://localhost:5174"}/?danmaku-overlay=1`;
 const packagedOverlayFile = () => path.join(process.resourcesPath, "screen-web", "index.html");
@@ -282,7 +286,12 @@ function installIpcHandlers(): void {
     runtime = { ...request, session };
     createOverlayWindows();
     launcherWindow?.hide();
+    await saveRememberedToken(rememberedTokenFile(), request.token, safeStorage);
     return session;
+  });
+  ipcMain.handle("danmaku:get-remembered-token", async (event) => {
+    if (!isLauncherSender(event.sender)) throw new Error("未授权的 token 请求");
+    return loadRememberedToken(rememberedTokenFile(), safeStorage);
   });
   ipcMain.handle("danmaku:stop", (event) => {
     if (!isLauncherSender(event.sender)) throw new Error("未授权的停止请求");

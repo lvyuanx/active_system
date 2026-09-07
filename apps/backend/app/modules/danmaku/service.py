@@ -122,7 +122,8 @@ def _activity_or_raise(connection: sqlite3.Connection, activity_id: str) -> sqli
     return activity
 
 
-def _ensure_record(connection: sqlite3.Connection, activity_id: str) -> sqlite3.Row:
+def ensure_danmaku_record(connection: sqlite3.Connection, activity_id: str) -> sqlite3.Row:
+    """确保活动在同一事务内拥有初始弹幕配置和 token 版本。"""
     _activity_or_raise(connection, activity_id)
     now = _now()
     connection.execute(
@@ -178,7 +179,7 @@ def _record_from_row(row: sqlite3.Row) -> DanmakuRecord:
 
 def get_danmaku_record(activity_id: str, settings: Settings) -> DanmakuRecord:
     with transaction(settings) as connection:
-        row = _ensure_record(connection, activity_id)
+        row = ensure_danmaku_record(connection, activity_id)
     return _record_from_row(row)
 
 
@@ -189,7 +190,7 @@ def update_danmaku_settings(
 ) -> DanmakuRecord:
     now = _now()
     with transaction(settings) as connection:
-        _ensure_record(connection, activity_id)
+        ensure_danmaku_record(connection, activity_id)
         connection.execute(
             """UPDATE activity_danmaku_settings SET
                 track_count = ?, font_size = ?, opacity = ?, duration_seconds = ?, entry_interval_seconds = ?,
@@ -221,7 +222,7 @@ def update_danmaku_settings(
 def regenerate_danmaku_token(activity_id: str, settings: Settings) -> DanmakuRecord:
     now = _now()
     with transaction(settings) as connection:
-        current = _ensure_record(connection, activity_id)
+        current = ensure_danmaku_record(connection, activity_id)
         connection.execute(
             """UPDATE activity_danmaku_settings
             SET token_version = ?, token_created_at = ?, updated_at = ? WHERE activity_id = ?""",
@@ -281,7 +282,7 @@ def make_admin_response(record: DanmakuRecord, settings: Settings) -> DanmakuAdm
 def get_danmaku_session(principal: DanmakuPrincipal, settings: Settings) -> DanmakuSessionResponse:
     with transaction(settings) as connection:
         activity = _activity_or_raise(connection, principal.activity_id)
-        record = _record_from_row(_ensure_record(connection, principal.activity_id))
+        record = _record_from_row(ensure_danmaku_record(connection, principal.activity_id))
         latest = connection.execute(
             "SELECT COALESCE(MAX(message_id), 0) AS latest_message_id "
             "FROM activity_chat_messages WHERE activity_id = ?",

@@ -45,6 +45,16 @@ const loadDisplays = async () => {
     setStatus(error instanceof Error ? error.message : "无法读取显示器", "error");
   }
 };
+const loadRememberedToken = async () => {
+  try {
+    const rememberedToken = await window.danmakuDesktop.getRememberedToken();
+    if (typeof rememberedToken === "string" && !token.value.trim()) {
+      token.value = rememberedToken;
+    }
+  } catch {
+    // 安全存储不可用时保持空输入，不影响本次手动启动。
+  }
+};
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -93,3 +103,4 @@ stopButton.addEventListener("click", async () => {
 });
 
 loadDisplays();
+loadRememberedToken();
