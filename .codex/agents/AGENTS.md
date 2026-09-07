@@ -15,12 +15,16 @@
 
 | 文件 | 岗位 | 模型与推理强度 | 沙箱 |
 | --- | --- | --- | --- |
-| `product_manager.toml` | 产品经理 | `gpt-5.6-luna` / `max` | `read-only` |
-| `solution_architect.toml` | 架构师 | `gpt-5.6-sol` / `max` | `read-only` |
-| `developer.toml` | 开发 | `gpt-5.6-luna` / `max` | `workspace-write` |
-| `tester.toml` | 测试 | `gpt-5.6-luna` / `max` | `workspace-write` |
-| `reviewer.toml` | 审核 | `gpt-5.6-sol` / `xhigh` | `read-only` |
-| `acceptance_owner.toml` | 验收 | `gpt-5.6-luna` / `max` | `read-only` |
+| `product_manager.toml` | 产品经理 | `gpt-6-astra` / `medium` | `read-only` |
+| `solution_architect.toml` | 架构师 | `gpt-6-astra` / `high` | `read-only` |
+| `developer.toml` | 开发 | `gpt-6-astra` / `low` | `workspace-write` |
+| `tester.toml` | 测试 | `gpt-6-astra` / `low` | `workspace-write` |
+| `reviewer.toml` | 审核 | `gpt-6-astra` / `high` | `read-only` |
+| `acceptance_owner.toml` | 验收 | `gpt-6-astra` / `medium` | `read-only` |
+
+本仓库没有主 Agent 模型默认值；上一级配置只启用多 Agent 能力，不新增主 Agent 或通用子 Agent 模型。
+开发、测试使用 low，产品、验收使用 medium，架构、审核使用 high。提高档位须先征得用户同意，
+再显式修改配置并重新验证；不得自动升级或替换不可用模型。静态矩阵检查不代表真实调用已通过。
 
 项目级多 Agent 能力开关位于上一级 `.codex/config.toml` 的 `[features].multi_agent`。当前 ChatGPT
 桌面端/Codex 0.144.x 将根级 `[agents]` 解释为角色声明表，因此不能在其中写入 `enabled = true`、线程
