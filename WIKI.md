@@ -1,5 +1,14 @@
 # 项目知识
 
+## 服务器发布
+
+Linux 用根 upgrade.sh 管理 Compose 的 backend/nginx。三端静态资源在 Nginx 镜像内；Docker 构建
+显式设置 /admin/、/screen/、/user/，后端仅内部网络。生产浏览器默认同源 API 与应用链接。
+部署密钥独立放 deploy/.env，发布与数据位于忽略的 deploy/runtime。每次记录固定镜像 ID和完整配置，
+停后端后归档 SQLite 与媒体；成功才推进 current。首次部署的失败尝试以 pending-parent 保留前驱链，
+受控容器按项目、服务、对应镜像和实际数据挂载核验，支持连续失败后的混合版本重试。
+人工恢复把备份解到新目录，原失败数据保留。
+
 ## 架构概览
 
 项目采用 Monorepo，包含一个 FastAPI 模块化单体、三个 Vue 3 前端应用和一个 Electron Windows 弹幕工具：
@@ -173,7 +182,7 @@ Electron 主进程在内存保留 token、session 和 `displayIds`，预加载�
 ## 启动入口
 
 - Windows 双击 `start.cmd`，或执行 `powershell -ExecutionPolicy Bypass -File .\start.ps1`，会分别打开后端和前端窗口。
-- 执行 `powershell -ExecutionPolicy Bypass -File .\start.ps1 -Docker` 会通过 Compose 构建并启动全部容器。
+- `start.ps1 -Docker` 提示改用 Linux 部署入口；服务器配置 deploy/.env 后执行 `bash upgrade.sh`。
 - 开发弹幕桌面工具时先运行 `pnpm dev:screen`，再运行 `pnpm dev:danmaku`；Windows x64 NSIS 安装包命令为
   `pnpm dist:danmaku:win`。
 

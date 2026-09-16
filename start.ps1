@@ -14,10 +14,7 @@ function Assert-Command([string]$Name, [string]$InstallHint) {
 }
 
 if ($Docker) {
-    Assert-Command "docker" ""
-    Write-Host "Starting all services with Docker Compose..." -ForegroundColor Cyan
-    docker compose -f (Join-Path $projectRoot "deploy/compose/docker-compose.yml") up --build
-    exit $LASTEXITCODE
+    throw "Docker deployment now uses Linux: configure deploy/.env, then run bash upgrade.sh. See deploy/README.md."
 }
 
 Assert-Command "pnpm" "Install pnpm first."

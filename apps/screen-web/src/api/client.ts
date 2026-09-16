@@ -1,4 +1,5 @@
-const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
+export const baseURL = (import.meta.env.VITE_API_BASE_URL
+  ?? (import.meta.env.PROD ? "/api/v1" : "http://localhost:8000/api/v1")).replace(/\/$/, "");
 export const apiURL = (path: string) => `${baseURL}${path}`;
 
 export interface DanmakuSettings {
@@ -47,7 +48,8 @@ export interface DanmakuOverlayBootstrap {
 
 const withBaseURL = (apiBaseUrl: string, path: string) => `${apiBaseUrl.replace(/\/$/, "")}${path}`;
 export const danmakuWebSocketURL = (apiBaseUrl: string) =>
-  withBaseURL(apiBaseUrl, "/danmaku/ws").replace(/^http:/, "ws:").replace(/^https:/, "wss:");
+  new URL(withBaseURL(apiBaseUrl, "/danmaku/ws"), window.location.href).toString()
+    .replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 
 export interface LotteryDraw {
   draw_id: number;
@@ -111,7 +113,8 @@ export interface LotteryDrawnEvent {
   roll_names: string[];
 }
 export const lotteryWebSocketURL = (apiBaseUrl: string, activityId: string) =>
-  withBaseURL(apiBaseUrl, `/activities/${encodeURIComponent(activityId)}/lottery/ws`)
+  new URL(withBaseURL(apiBaseUrl, `/activities/${encodeURIComponent(activityId)}/lottery/ws`),
+    window.location.href).toString()
     .replace(/^http:/, "ws:")
     .replace(/^https:/, "wss:");
 

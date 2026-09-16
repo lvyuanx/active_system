@@ -72,6 +72,7 @@ import { onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { useRoute } from "vue-router";
 import QRCode from "qrcode";
+import { activityScreenURL, activityUserURL } from "../../app-links";
 import { getActivity, type Activity } from "../../api/client";
 import ActivitySidebar from "../../components/ActivitySidebar.vue";
 
@@ -81,14 +82,8 @@ const loading = ref(true);
 const error = ref("");
 const qrDataUrl = ref("");
 const username = localStorage.getItem("active_admin_username") || "超级用户";
-const userBaseUrl = (
-  import.meta.env.VITE_USER_WEB_BASE_URL ?? "http://localhost:5175"
-).replace(/\/$/, "");
-const screenBaseUrl = (
-  import.meta.env.VITE_SCREEN_WEB_BASE_URL ?? "http://localhost:5174"
-).replace(/\/$/, "");
 const activityId = String(route.params.activityId);
-const userUrl = `${userBaseUrl}/activity/${activityId}`;
+const userUrl = activityUserURL(activityId);
 
 const load = async () => {
   try {
@@ -110,9 +105,7 @@ const copyUrl = async () => {
 };
 const openUserUrl = () => window.open(userUrl, "_blank", "noopener,noreferrer");
 const openLotteryScreen = () => {
-  const screenUrl = new URL(screenBaseUrl);
-  screenUrl.searchParams.set("activity_id", activityId);
-  window.open(screenUrl.toString(), "_blank", "noopener,noreferrer");
+  window.open(activityScreenURL(activityId), "_blank", "noopener,noreferrer");
 };
 const downloadQr = () => {
   const link = document.createElement("a");

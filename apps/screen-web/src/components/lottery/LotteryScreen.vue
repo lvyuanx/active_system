@@ -132,6 +132,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
+  baseURL,
   lotteryWebSocketURL,
   type LotteryDraw,
   type LotteryDrawnEvent,
@@ -144,8 +145,7 @@ import { avatarSources } from "./avatar-sources";
 import LotteryGlobe from "./LotteryGlobe.vue";
 
 const props = defineProps<{ activityId: string; apiBaseUrl?: string }>();
-const apiBaseUrl = props.apiBaseUrl
-  || (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1");
+const apiBaseUrl = props.apiBaseUrl || baseURL;
 const snapshot = ref<LotterySnapshot>();
 const queue = ref<LotteryDraw[]>([]);
 const currentDraw = ref<LotteryDraw>();

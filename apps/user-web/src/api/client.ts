@@ -1,5 +1,5 @@
-const baseURL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
+const baseURL = (import.meta.env.VITE_API_BASE_URL
+  ?? (import.meta.env.PROD ? "/api/v1" : "http://localhost:8000/api/v1")).replace(/\/$/, "");
 export const apiURL = (path: string) => `${baseURL}${path}`;
 export const mediaURL = (imageUrl: string | null): string | null => {
   if (!imageUrl) return null;
@@ -7,7 +7,7 @@ export const mediaURL = (imageUrl: string | null): string | null => {
   return new URL(imageUrl, origin).toString();
 };
 export const chatWebSocketURL = (activityId: string) => {
-  const url = apiURL(`/activities/${activityId}/chat/ws`);
+  const url = new URL(apiURL(`/activities/${activityId}/chat/ws`), window.location.href).toString();
   return url.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 };
 

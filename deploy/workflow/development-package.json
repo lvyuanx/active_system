@@ -1,0 +1,73 @@
+{
+  "work_package_id": "deployment-serial",
+  "workflow_id": "compose-deployment",
+  "target": "TASK-v1",
+  "read_scope": [
+    "D:/projects/active_system"
+  ],
+  "write_scope": [
+    "deploy (except workflow)",
+    "upgrade.sh",
+    ".dockerignore",
+    ".gitattributes",
+    ".gitignore",
+    "start.ps1",
+    "apps/admin-web",
+    "apps/user-web",
+    "apps/screen-web",
+    "README.md",
+    "MEMORY.md",
+    "LEARNING.md",
+    "WIKI.md",
+    "CLAUDE.md",
+    "PROJECT_AGENTS.md",
+    "apps/backend/pyproject.toml",
+    "apps/backend/AGENTS.md"
+  ],
+  "ephemeral_scope": [
+    "deploy/runtime/test-dev",
+    "apps/*/dist",
+    "apps/screen-web/dist-test"
+  ],
+  "acceptance_refs": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006"
+  ],
+  "upstream_dependencies": [
+    "product_manager",
+    "solution_architect"
+  ],
+  "downstream_dependencies": [
+    "tester",
+    "reviewer",
+    "acceptance_owner"
+  ],
+  "handoff_ref": [
+    "deploy/workflow/TASK-v1.md",
+    "deploy/workflow/ARCHITECTURE.md"
+  ],
+  "input_snapshot": "70793924 tracked clean plus deploy/workflow evidence",
+  "input_snapshot_id": "70793924-clean-workflow",
+  "input_manifest_sha256": "1004fa2c2a2ae2fdd7b2d29416371b45baa9a6271124538bd25eebefc4b298cf",
+  "input_tree_oid": "5440a4ef6efdb3015a16910205a46e827710b148",
+  "head_snapshot": "70793924d129de74b26517a852a1fe6cbe412fc3",
+  "head_sha": "70793924d129de74b26517a852a1fe6cbe412fc3",
+  "branch_ref": "refs/heads/master",
+  "worktree_path": "D:/projects/active_system",
+  "upstream_patch_shas": [],
+  "output_patch_path": null,
+  "output_patch_sha256": null,
+  "resource_claims": [
+    "single production writer",
+    "no Docker daemon"
+  ],
+  "file_manifest": "git ls-tree -r --full-tree HEAD, LF-joined UTF-8 without terminal newline",
+  "actual_file_manifest": "deploy/runtime/test-dev/development-manifest-v2.json",
+  "patch_digest": "NOT_APPLICABLE: serial shared tree, no isolated patch integration",
+  "qualification": "NOT_APPLICABLE",
+  "status": "SUCCEEDED"
+}

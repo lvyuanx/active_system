@@ -1,5 +1,10 @@
 # 后端模块说明
 
+## 镜像打包
+
+pyproject.toml 显式使用 setuptools 构建并只发现 app* 包，避免 data/migrations 多个顶层目录阻断安装。
+Docker 部署保留单 uvicorn，数据库和媒体均由 Compose 绑定在 `/app/data`，配置从独立部署文件注入。
+
 ## 模块简介
 
 `apps/backend` 是活动系统的 FastAPI 模块化单体后端，负责管理活动、用户参与、活动数据和大屏统计。

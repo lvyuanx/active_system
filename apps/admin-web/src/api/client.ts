@@ -1,4 +1,5 @@
-const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
+const baseURL = (import.meta.env.VITE_API_BASE_URL
+  ?? (import.meta.env.PROD ? "/api/v1" : "http://localhost:8000/api/v1")).replace(/\/$/, "");
 
 export function apiURL(path: string): string {
   return `${baseURL}${path}`;
@@ -349,6 +350,6 @@ export const deleteLotteryPrizeImage = (activityId: string, prizeId: number) =>
 export const getLotteryHistory = (activityId: string) =>
   request<LotteryHistoryPage>(`/admin/activities/${activityId}/lottery/history`);
 export const lotteryWebSocketURL = (activityId: string) =>
-  `${baseURL}/admin/activities/${encodeURIComponent(activityId)}/lottery/ws`
+  new URL(`${baseURL}/admin/activities/${encodeURIComponent(activityId)}/lottery/ws`, window.location.href).toString()
     .replace(/^http:/, "ws:")
     .replace(/^https:/, "wss:");

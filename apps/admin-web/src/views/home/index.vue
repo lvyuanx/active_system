@@ -178,6 +178,7 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from "element-plus";
 import { useRouter } from "vue-router";
+import { activityScreenURL } from "../../app-links";
 import {
   changeActivityStatus,
   clearToken,
@@ -198,9 +199,6 @@ const error = ref("");
 const dialogVisible = ref(false);
 const formRef = ref<FormInstance>();
 const username = localStorage.getItem("active_admin_username") || "超级用户";
-const screenBaseUrl = (
-  import.meta.env.VITE_SCREEN_WEB_BASE_URL ?? "http://localhost:5174"
-).replace(/\/$/, "");
 const form = reactive({ name: "", description: "", start_time: "", end_time: "" });
 const rules: FormRules = {
   name: [{ required: true, message: "请输入活动名称", trigger: "blur" }],
@@ -270,9 +268,7 @@ const changeStatus = async (activity: Activity, action: "open" | "close" | "end"
 const logout = () => { clearToken(); router.push("/login"); };
 const openActivity = (activityId: string) => router.push(`/activities/${activityId}`);
 const openLotteryScreen = (activityId: string) => {
-  const screenUrl = new URL(screenBaseUrl);
-  screenUrl.searchParams.set("activity_id", activityId);
-  window.open(screenUrl.toString(), "_blank", "noopener,noreferrer");
+  window.open(activityScreenURL(activityId), "_blank", "noopener,noreferrer");
 };
 const statusLabel = (status: Activity["status"]) => ({ closed: "已关闭", open: "进行中", ended: "已结束" })[status];
 const formatDate = (value: string | null) => value

@@ -1,5 +1,13 @@
 # 开发经验
 
+## 2026-09-07 部署构建
+
+- 后端默认 setuptools 自动发现把 app/data/migrations 当作多个顶层包而阻断构建；显式 app* 后，
+  隔离构建的 pip wheel 已成功。本机旧工具链无 bdist_wheel 时，--no-build-isolation 仍会失败，不能据此
+  判定 Docker 的隔离构建失败。
+- 生产三个子路径必须同时设置 Vite build base 与 Router BASE_URL。仅字符串替换 http 不能让相对
+  API 变成 WebSocket 绝对地址，应先用 URL 与页面地址解析，再映射 ws/wss。
+
 已按任务持续记录经过验证的项目级经验。
 
 ## 2026-09-02 弹幕 token 记忆

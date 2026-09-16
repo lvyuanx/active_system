@@ -8,6 +8,14 @@
 - `apps/user-web`：Vue 3 + Vant 4 用户端。
 - `apps/danmaku-desktop`：Electron Windows 弹幕悬浮工具。
 
+## Linux 服务器部署
+
+首次 `git clone` 后，复制 `deploy/.env.example` 为 `deploy/.env` 并填写密钥，执行 `bash upgrade.sh`。
+后续运行同一命令即可快进拉取、构建、备份数据并更新 backend/nginx 两个容器。仅 Nginx 默认发布 80 端口，
+提供 `/admin/`、`/screen/`、`/user/` 并反代 `/api/`。宿主机只需 Docker Compose、Git 和 Bash 等系统工具。
+完整配置、故障诊断及人工恢复见 [部署说明](deploy/README.md)。
+生产二维码与大屏默认使用当前站点来源及对应子路径；开发仍使用 5175/5174，显式 VITE 地址优先。
+
 ## 本地开发
 
 环境要求：Node.js 22+、pnpm 11+、Python 3.11+。
@@ -37,7 +45,7 @@ Electron 仅通过 `?danmaku-overlay=1` 加载透明弹幕渲染层。
 启动后端前复制 `.env.example` 为 `.env`，设置 `SUPERUSER_USERNAME`、`SUPERUSER_PASSWORD`、`LOTTERY_SECURITY_CODE` 和随机的 `JWT_SECRET`。
 可选设置独立的 `DANMAKU_TOKEN_SECRET`；为空时弹幕 token 使用 `JWT_SECRET` 派生。后端首次启动会初始化 SQLite 数据库和超级用户；只有该超级用户可以登录管理端。
 奖品图片和聊天表情包由管理员通过独立 multipart 接口上传，默认保存到 `MEDIA_ROOT=./data/media`；奖品支持 JPEG、PNG、WebP，
-聊天表情额外支持 GIF，单文件上限均为 5 MiB。Docker 部署使用持久化媒体卷，配置 JSON 和聊天消息均不承载图片二进制。
+聊天表情额外支持 GIF，单文件上限均为 5 MiB。Docker 部署将数据库和媒体一起持久化，配置 JSON 和聊天消息不承载图片二进制。
 
 登录后默认进入活动选择页。活动状态为“已关闭”“进行中”“已结束”：新建活动默认为已关闭，可在已关闭和进行中之间反复切换；管理员手动结束后不可再次开启或关闭。活动名称必填，描述、开始时间和结束时间可选，若同时填写时间则结束时间必须晚于开始时间。
 

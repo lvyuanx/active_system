@@ -1,5 +1,11 @@
 # 用户端模块说明
 
+## 部署入口
+
+Docker 构建指定 Vite `/user/` base，Router 使用 BASE_URL。根入口 `src/views/entry.vue` 显示活动扫码提示，
+未匹配路径回到有实际组件的根路由，避免重定向循环。API 显式 VITE_API_BASE_URL 优先，
+生产默认同源 `/api/v1`，开发维持 localhost:8000；聊天 WebSocket 根据解析后的绝对 URL 使用 ws/wss。
+
 用户端使用 Vue 3 + Vant 4，面向移动端活动参与者，负责活动入口、报名参与、结果查看和个人信息。页面放在 src/views/，移动端通用交互组件放在 src/components/。
 
 ## 当前已实现功能

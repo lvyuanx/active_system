@@ -1,5 +1,11 @@
 # 大屏端模块说明
 
+## 服务器部署
+
+Docker 构建通过 CLI 指定 `/screen/` base，默认 vite.config.ts 的 `./` 保留给 Electron。
+API 显式 VITE_API_BASE_URL 优先，生产同源 `/api/v1`，开发维持 localhost:8000。
+组件显式 apiBaseUrl/桌面 bootstrap 优先；WS 使用 URL 解析后按 http/https 转换 ws/wss，兼容相对 API。
+
 大屏端使用 Vue 3 + ECharts，保留普通活动大屏入口，并为 Electron 弹幕工具提供可嵌入渲染层。仅 URL 带有
 `danmaku-overlay=1` 时，`src/components/realtime/DanmakuOverlay.vue` 才会使用桌面预加载层临时提供的 token 与会话
 连接独立弹幕 WebSocket；普通入口继续显示活动数据大屏基础页面。弹幕显示聊天正文和表情图片，首次 HTTP session 的最大消息 ID

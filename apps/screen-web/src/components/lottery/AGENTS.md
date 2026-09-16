@@ -1,5 +1,8 @@
 # 抽奖大屏组件说明
 
+API 地址优先使用组件传入值，否则使用 `src/api/client.ts` 的统一 baseURL；生产默认同源 API，
+显式 VITE_API_BASE_URL 和桌面传入值保持优先。WebSocket 支持相对 API 在 HTTPS 下生成 wss。
+
 ## 模块职责
 
 `src/components/lottery/` 提供公开活动抽奖大屏，不保存管理员凭证，不承担开奖控制，只消费活动级 lottery WebSocket。

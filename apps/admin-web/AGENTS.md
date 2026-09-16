@@ -1,5 +1,12 @@
 # 管理端模块说明
 
+## 生产部署入口
+
+Docker 构建通过 Vite CLI 指定 `/admin/` base，Router 使用 `import.meta.env.BASE_URL`。
+API 显式 `VITE_API_BASE_URL` 优先，生产默认同源 `/api/v1`，开发保持 localhost:8000；
+WebSocket 先用 URL 解析为绝对地址再转换 ws/wss。`src/app-links.ts` 集中生成活动二维码与大屏链接，
+生产默认同源 `/user/`、`/screen/`，显式配置与开发端口仍兼容，活动 ID 与已有查询参数保留。
+
 管理端使用 Vue 3 + Element Plus，负责管理员登录、活动配置、参与者管理、数据查看和系统设置。业务页面放在 `src/views/`，请求封装放在 `src/api/`。
 
 ## 当前已实现功能

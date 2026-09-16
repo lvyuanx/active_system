@@ -7,10 +7,11 @@
 ## 主要流程
 
 页面根据 `/activities/:activityId` 路由加载活动详情，管理员可以复制或打开用户端地址，也可以从“活动入口”面板打开对应活动的公开实时抽奖大屏。
-大屏地址使用 `VITE_SCREEN_WEB_BASE_URL` 配置，并自动附加当前活动的 `activity_id` 查询参数。
+大屏地址由 `src/app-links.ts` 生成，显式 `VITE_SCREEN_WEB_BASE_URL` 优先；生产默认同源 `/screen/`，
+开发默认 localhost:5174，并自动附加当前活动的 `activity_id` 查询参数。
 
 ## 交互约定
 
 - “打开抽奖大屏”在新标签页打开 screen-web，不携带管理员凭证。
 - 抽奖大屏是公开只读展示；奖项配置和开奖控制继续由侧边栏的“实时抽奖”页面负责。
-- 用户端地址和二维码仍使用 `VITE_USER_WEB_BASE_URL`，两类入口互不替代。
+- 用户端地址和二维码显式 `VITE_USER_WEB_BASE_URL` 优先，生产默认同源 `/user/`，开发 localhost:5175。

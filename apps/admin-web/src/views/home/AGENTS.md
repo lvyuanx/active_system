@@ -18,4 +18,5 @@
 ## 依赖关系
 
 页面复用 `src/api/client.ts` 的活动列表、创建和状态变更接口，使用 Vue Router 跳转到活动管理和登录路由；
-抽奖大屏地址由 `VITE_SCREEN_WEB_BASE_URL` 配置，默认值为 `http://localhost:5174`。
+抽奖大屏地址复用 `src/app-links.ts`，显式 `VITE_SCREEN_WEB_BASE_URL` 优先；生产默认同源 `/screen/`，
+开发默认 `http://localhost:5174`，保留配置查询参数并设置活动 ID。
