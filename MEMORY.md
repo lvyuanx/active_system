@@ -1,10 +1,15 @@
 # 当前进度
 
-- TASK-v1：已实现 Docker Compose 双容器部署、三端子路径和升级/人工恢复工具。
-- 基础验证已通过：三端类型检查和生产子路径构建、后端隔离 wheel、Compose 配置检查、Bash 语法、配置解析和归档测试。
-- 已修复首次连续失败的 pending 记录丢失；22 个发布场景已独立复测，代码风险复核无未解决问题。
-- 7 个真实临时 Git 场景、原生 Nginx HTTP/HTTPS 三端及登录/上传/聊天/开奖回归通过，390px 用户入口无溢出。
-- 16 个 URL 兼容断言、大屏相对资源构建、无桌面项目的精简 workspace 锁定安装通过。
-- Linux Docker daemon 当前不可用，真实容器首次/二次升级、flock、自更新及恢复证据缺失；
-  完整测试门禁 BLOCKED，正式审核和验收尚未通过。未执行服务器发布，没有豁免缺失项。
-- 任务范围和流程证据由主 Agent 维护于 deploy/workflow/。
+- 2026-09-21：完成独立 deploy 目录重构，使用 build.py 本地打包及 docker-compose.yaml 服务器运行。
+- activate-backend/activate-nginx 两容器使用显式 bridge 网络；代码和配置只读挂载，数据在 runtime/data。
+- .env 分别配置宿主机前后端端口，默认 8080/8000；生产前端保持同源 API。
+- 后端 Dockerfile 已配置 pip 使用阿里云 PyPI 镜像。
+- 服务器已完成镜像构建，但曾因缺少 runtime/data 创建容器失败；已在本地 Compose 中显式启用
+  数据挂载 create_host_path: true，待将配置同步至服务器后验证首次启动。
+- 已移除旧 Git 自动更新、发布及恢复脚本和专用测试；原运行数据及历史材料保留，workflow 标注为旧方案。
+- 实际执行三端类型检查、生产子路径构建并生成后端产物；7 项部署测试通过，包含失败回滚、重复打包、
+  排除敏感文件，以及仓库外复制后的 Compose 配置、端口和挂载解析。
+- 原生 Nginx 1.28.0 配置检查和 HTTP/HTTPS 浏览器回归通过：三端入口、深层刷新、登录、二维码、上传、
+  聊天与抽奖 WebSocket 均通过，无页面错误。证据：deploy/runtime/test-qa/proxy-1789996798448274000/results.json。
+- Linux Docker daemon 仍无法连接；尚未验证真实镜像构建、容器首次启动、重建后的数据持久化与代码更新。
+  未执行服务器发布，以上本机检查不等同于 Docker 实测验收。

@@ -2,12 +2,16 @@
 
 ## 服务器发布
 
-Linux 用根 upgrade.sh 管理 Compose 的 backend/nginx。三端静态资源在 Nginx 镜像内；Docker 构建
-显式设置 /admin/、/screen/、/user/，后端仅内部网络。生产浏览器默认同源 API 与应用链接。
-部署密钥独立放 deploy/.env，发布与数据位于忽略的 deploy/runtime。每次记录固定镜像 ID和完整配置，
-停后端后归档 SQLite 与媒体；成功才推进 current。首次部署的失败尝试以 pending-parent 保留前驱链，
-受控容器按项目、服务、对应镜像和实际数据挂载核验，支持连续失败后的混合版本重试。
-人工恢复把备份解到新目录，原失败数据保留。
+开发机运行 deploy/build.py，通过项目指定 pnpm 锁定安装并构建三个 Web，base 分别为
+/admin/、/screen/、/user/；后端复制应用代码并从 pyproject.toml 生成运行依赖清单。
+打包目录独立复制到服务器，由 deploy/docker-compose.yaml 管理 activate-backend、activate-nginx。
+镜像只提供运行环境，应用代码和静态资源只读挂载；生产浏览器固定同源 API 与应用链接。
+后端镜像的 pip 使用阿里云 PyPI 镜像 https://mirrors.aliyun.com/pypi/simple/。
+两容器通过显式 bridge 网络通信；.env 的 FRONTEND_PORT/BACKEND_PORT 分别控制宿主机发布端口，
+默认 8080/8000，内部固定为 8080/8000。Nginx 不监听 80，/api 转发至 activate-backend:8000。
+部署密钥独立放 deploy/.env，SQLite 与媒体共同持久化到 deploy/runtime/data。
+数据绑定挂载显式启用 create_host_path: true，由 Compose 创建缺失目录；代码及配置挂载禁用自动创建。
+更新先停服备份，再替换产物并重建；保留服务器配置和数据，不自动拉取 Git、备份或恢复。
 
 ## 架构概览
 
@@ -182,7 +186,7 @@ Electron 主进程在内存保留 token、session 和 `displayIds`，预加载�
 ## 启动入口
 
 - Windows 双击 `start.cmd`，或执行 `powershell -ExecutionPolicy Bypass -File .\start.ps1`，会分别打开后端和前端窗口。
-- `start.ps1 -Docker` 提示改用 Linux 部署入口；服务器配置 deploy/.env 后执行 `bash upgrade.sh`。
+- `start.ps1 -Docker` 提示先本地运行 deploy/build.py，再复制 deploy 并使用 Compose 启动。
 - 开发弹幕桌面工具时先运行 `pnpm dev:screen`，再运行 `pnpm dev:danmaku`；Windows x64 NSIS 安装包命令为
   `pnpm dist:danmaku:win`。
 

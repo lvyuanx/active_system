@@ -1,83 +1,117 @@
-# Linux 一键部署
+# 独立 Docker Compose 部署
 
-服务器需要 Linux、Bash 4+、Git、Docker Engine、Docker Compose v2（支持 `up --wait-timeout`）、
-util-linux 的 flock、coreutils。当前用户必须能访问 Docker daemon，Git 必须能无交互拉取远程仓库。
-依赖下载需要能访问镜像仓库、npm 和 PyPI；宿主机不需要 Node.js、pnpm 或 Python。
-本方案用于全新安装，未提供旧服务器数据迁移；允许升级短暂停机。
+## 开发机打包
 
-## 首次配置
+开发机需要 Python 3.11+、Node.js 22+（满足 pnpm 11 的运行要求）、项目 package.json 指定的
+pnpm 11.16.0，以及 npm 网络访问。无需本机 Docker。
 
-```bash
-git clone <你的仓库地址> active_system
-cd active_system
-cp deploy/.env.example deploy/.env
-chmod 600 deploy/.env
-${EDITOR:-vi} deploy/.env
-bash upgrade.sh
-```
-
-填写管理员密码（至少 12 字符）、随机 JWT_SECRET（至少 32 字符）及抽奖安全码（至少 6 字符），
-示例值不能使用。可用 `openssl rand -hex 32` 生成随机值。配置为单行 KEY=value 字面值，
-不加引号，支持字母、数字及 `_ . , : / @ % + = ! ? ~ -`；不支持空格、美元符号或 Shell 表达式。
-未知键和重复键会拒绝。默认管理员为 admin、HTTP_PORT=80；APP_CORS_ORIGINS 默认空，同源请求不需要 CORS。
-根目录 `.env` 只用于本地开发，部署脚本不会读取它。
-
-成功后访问 `http://服务器地址/admin/`、`/screen/`、`/user/`；活动二维码指向 `/user/activity/<id>`，
-大屏活动入口为 `/screen/?activity_id=<id>`。单独用户入口显示扫码提示。仅 Nginx 发布端口，后端在内部网络。
-HTTPS 由外部反向代理提供，代理需保留 Host、设置 X-Forwarded-Proto，并支持 WebSocket Upgrade。
-不要将 Docker daemon 的网络接口暴露给非信任用户。
-
-## 日常升级
+在仓库根目录执行（也支持从其他工作目录用脚本绝对路径执行）：
 
 ```bash
-bash /你的绝对路径/active_system/upgrade.sh
+python deploy/build.py
 ```
 
-脚本更新当前分支实际配置的上游，仅允许相等或落后；本地超前、分叉、任何修改或未跟踪文件均拒绝。
-它不会丢弃代码、合并冲突或提交。Git 拉取更换脚本后会持原锁重新执行新脚本。
-请只部署可信仓库中的已审核提交。`start.ps1 -Docker` 会指向本 Linux 入口。
+脚本锁定安装三个 Web 应用的依赖，执行类型检查，并输出
+`nginx/html/admin`、`nginx/html/screen`、`nginx/html/user`。
+部署构建固定使用同源 API 和三个站点子路径，不采用开发机 VITE 地址覆盖，不构建 Electron，
+也不改变各应用原有 dist。后端 app 和 migrations 复制至 backend，
+requirements.txt 从后端 pyproject.toml 的运行依赖生成。
 
-两个镜像均构建且 Nginx/Compose 校验成功后才停止旧后端。完整备份后更新两个容器，健康检查最长等待
-180 秒，再检查三端入口和 API；成功才更新记录。构建失败不会停止旧服务；不会执行 compose down。
-每次尝试使用提交 SHA 加时间/PID 唯一标签，保存实际镜像 ID；同 SHA 重建不覆盖可恢复版本。
+全部构建成功才替换产物；重复打包删除产物中的废弃文件，不清空整个 deploy，
+不覆盖 .env、Nginx 配置或 runtime。不要同时执行多个打包任务，也不要对正在挂载运行的目录执行打包。
+产物被 Git 忽略：复制实际打包完成的 deploy 目录，不能用 git archive 替代打包。
 
-数据默认位于 `deploy/runtime/data/`，SQLite 和 media 一起持久化。`deploy/runtime/releases/<尝试名>/`
-包含 compose.json（**含密钥**）、commit、backend-image、nginx-image、data-dir；已有实例的升级尝试还保存
-data.tar.gz、data.sha256 和 restore-release。目录只允许部署用户访问，不要公开上传发布记录。
-不要在需要恢复前执行 image prune、删除旧镜像或备份；磁盘需容纳至少两套镜像和完整数据备份。
-脚本不自动清理备份，保留策略由运维按恢复需求制定。
+## 服务器首次启动
 
-## 故障与恢复
-
-失败退出码非零并打印阶段、诊断命令和记录位置。构建/配置故障修复后重新运行即可；首次启动部分失败时，
-脚本通过 pending 前驱链确认其自身创建的容器后允许重试。连续失败即使遗留不同尝试的 backend/nginx，
-只要链记录完整、无环、数据目录一致且项目/服务/对应镜像/后端挂载全部匹配，仍可重试；
-未知服务、外来镜像、数据挂载不符或坏链会拒绝。请保留失败尝试目录和 pending-parent，勿手工改写记录。
-成功后 pending 指向 current，无记录外来容器拒绝自动接管。
-备份失败会尝试恢复旧后端并检查健康；若明确提示恢复失败，应立即检查日志。
-新版本启动后发生故障不会自动覆盖数据库。若后端已换成新镜像而 current 仍为旧成功版本，后续升级会
-要求先显式恢复，防止把新版本数据与旧镜像配对。可先诊断：
+服务器需要 Linux Docker Engine 和支持 `up --wait` 的 Docker Compose，
+能够访问镜像仓库和阿里云 PyPI 镜像；无需 Git、Node.js、pnpm 或宿主机 Python。
+后端镜像通过 PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/ 安装 Python 依赖。
+复制整个打包后的 deploy 目录到服务器。该目录不依赖父目录或开发机绝对路径。
 
 ```bash
-docker compose -p active-system -f deploy/runtime/releases/<尝试名>/compose.json ps
-docker compose -p active-system -f deploy/runtime/releases/<尝试名>/compose.json logs --tail=100
+cd /你的路径/deploy
+cp .env.example .env
+chmod 600 .env
+# 编辑 .env，填写管理员密码、JWT_SECRET 和 LOTTERY_SECURITY_CODE
+docker compose --env-file .env config --quiet
+docker compose --env-file .env up -d --build --wait
 ```
 
-恢复到该次升级前的成功版本（选择**包含备份的升级尝试名**，不是旧版本名）：
+.env 使用 Compose 的标准语法。含美元符号等特殊字符的字面密钥可用单引号包裹；
+Shell 中同名环境变量优先于 --env-file，请避免意外覆盖。必填凭据为空时 Compose 拒绝启动。
+建议管理员密码至少 12 字符、随机 JWT 密钥至少 32 字符、安全码至少 6 字符。
+启动时会按管理员配置初始化或更新超级用户密码。
+
+| 配置 | 默认值 | 含义 |
+| --- | --- | --- |
+| FRONTEND_PORT | 8080 | 宿主机发布至 Nginx 容器 8080 |
+| BACKEND_PORT | 8000 | 宿主机直接发布至后端容器 8000 |
+| SUPERUSER_USERNAME | admin | 管理员账号 |
+| SUPERUSER_PASSWORD | 必填 | 管理员密码 |
+| JWT_SECRET | 必填 | JWT 签名密钥 |
+| LOTTERY_SECURITY_CODE | 必填 | 抽奖特殊配置安全码 |
+| DANMAKU_TOKEN_SECRET | 空 | 空时沿用 JWT_SECRET |
+| APP_CORS_ORIGINS | 空 | 直接跨源调用 API 时允许的来源，逗号分隔 |
+
+两个外部端口需可用且不同。默认访问：
+
+- 管理端：http://服务器:8080/admin/
+- 大屏：http://服务器:8080/screen/?activity_id=活动ID
+- 用户端：http://服务器:8080/user/activity/活动ID
+- API：http://服务器:8080/api/v1/health 或 http://服务器:8000/api/v1/health
+
+前端总是经同源 /api 请求后端。两个服务、容器分别名为 activate-backend 和 activate-nginx，
+处于 Compose 管理的 activate bridge 网络；Nginx 使用 activate-backend:8000 转发，
+不依赖 BACKEND_PORT。修改外部端口后重新执行 up 命令即可，无需重新打包。
+
+Nginx 不监听 80。nginx.conf 仅放全局与 http 配置，显式加载 client.conf；
+client.conf 定义站点并在 server 内包含 backend.conf 的 /api location。
+不要将 backend.conf 在 http 层通配加载。
+HTTPS 由外部代理提供，需要保留 Host、X-Forwarded-Proto 和 WebSocket Upgrade。
+后端端口按需求直接发布；正式公网访问及上传通常使用 Nginx 入口。
+
+## 挂载与持久化
+
+代码、迁移、静态资源及 Nginx 配置只读挂载；缺少挂载源会明确报错。
+后端镜像仅安装 requirements.txt，Nginx 镜像移除默认站点，均不内置应用代码。
+数据库和媒体分别存放于 runtime/data/active_system.db 和 runtime/data/media，
+共同读写挂载到 /app/data。数据挂载显式设置 bind.create_host_path: true，
+由 Compose 在首次启动时创建缺失的宿主机 runtime/data，无需手动 mkdir；已有目录及数据保留。
+
+## 更新、备份和回退
+
+本方案允许停机升级，不自动拉取 Git、创建版本记录、备份或回滚。
+每次更新必须保留服务器的 .env 和完整 runtime；不要将开发机 runtime 覆盖到服务器。
+
+1. 在开发机重新打包，传输到服务器的独立暂存目录。
+2. 在服务器当前 deploy 中执行停止命令，避免复制过程中代码和数据变化。
+3. 将当前代码、配置、依赖清单及完整 runtime/data 备份到 deploy 外的独立目录。
+4. 用新包完整替换 backend/app、backend/migrations、backend/requirements.txt、nginx/html；
+   同步 Dockerfile、Compose 和需要更新的配置。目录整体替换，避免残留已删除文件。
+5. 保留服务器 .env 与 runtime，再执行启动命令。
 
 ```bash
-bash deploy/scripts/restore.sh <带有data.tar.gz的尝试名>
+docker compose --env-file .env stop
+# 完成上述备份、替换后
+docker compose --env-file .env up -d --build --force-recreate --wait
 ```
 
-恢复程序取得同一把锁，验证备份 SHA-256、路径和文件类型，先恢复到新的 `runtime/restored-*` 空目录，
-再停止当前后端，用 restore-release 指向的旧配置及旧镜像启动两个容器并检查健康和入口。
-恢复前的失败数据目录完整保留；恢复后业务回到备份时刻，此后写入不会自动合并。
-成功后 current 更新为恢复记录，下一次 upgrade 自动沿用恢复后的数据目录。恢复凭据/端口来自旧配置，
-下次升级前核对 deploy/.env 与期望值一致。恢复失败保留新目录和记录，修复后可再次显式调用；不会删除原数据。
-首次部署没有旧成功版本和备份，只能修复启动问题后重试，不提供不存在的回滚目标。
+只替换后端文件并不会自动重载进程；必须重启或重建容器。
+失败时查看日志，修复后重试。需要回退时先停止服务、另存失败数据，
+再恢复配套的旧代码、配置、依赖和停机备份数据，最后重建启动；备份后的新增数据不会自动合并。
+原有旧部署不自动接管或迁移；先按旧部署实际配置停服和备份，再人工确认数据位置及端口后迁移。
+历史 runtime/releases 等记录保持原样，但新方案不消费这些记录。
 
-## 验证
+## 日常检查与验证
 
-本次提交须另附实际执行证据；语法检查、模拟故障和本机代理验证不能证明 Linux Docker 实测通过。
-发布验收应在 Linux 依次验证首次部署、含活动/用户/图片的二次升级、HTTP/HTTPS 登录上传和聊天/抽奖 WS、
-构建/备份/健康故障及上述恢复步骤。未完成这些场景时不得认定 T6 验收通过。
+```bash
+docker compose --env-file .env ps
+docker compose --env-file .env logs --tail=100
+docker compose --env-file .env exec activate-nginx nginx -t
+```
+
+开发验证：`python -m unittest discover -s deploy/tests -p "test_*.py" -v`。
+测试在独立临时目录内验证打包失败、重复打包和 Compose 可移植性，不使用真实部署凭据和数据。
+run_proxy_qa.py 可使用 Windows 原生 Nginx 执行 HTTP/HTTPS 浏览器回归，
+需预装对应测试依赖和证书；不能代替 Linux Docker 验收。
+workflow 中保留的是旧 Git 发布方案的历史材料，不代表新方案已验收。

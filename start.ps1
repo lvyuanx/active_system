@@ -14,7 +14,8 @@ function Assert-Command([string]$Name, [string]$InstallHint) {
 }
 
 if ($Docker) {
-    throw "Docker deployment now uses Linux: configure deploy/.env, then run bash upgrade.sh. See deploy/README.md."
+    throw ("请先运行 python deploy/build.py；复制 deploy 到服务器并配置 .env 后，在该目录运行 " +
+        "docker compose --env-file .env up -d --build --wait。详见 deploy/README.md。")
 }
 
 Assert-Command "pnpm" "Install pnpm first."

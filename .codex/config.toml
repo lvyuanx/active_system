@@ -1,6 +1,0 @@
-# The installed ChatGPT desktop/Codex 0.144.x parser reserves [agents] for
-# role declarations. Keep the multi-agent feature flag in [features] so the
-# project config remains compatible with that parser; role-specific model,
-# reasoning, and sandbox settings live in .codex/agents/*.toml.
-[features]
-multi_agent = true

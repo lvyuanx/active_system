@@ -2,7 +2,8 @@
 
 ## 生产部署入口
 
-Docker 构建通过 Vite CLI 指定 `/admin/` base，Router 使用 `import.meta.env.BASE_URL`。
+deploy/build.py 通过 Vite CLI 指定 `/admin/` base，Router 使用 `import.meta.env.BASE_URL`。
+产物在 deploy/nginx/html/admin，只读挂载至 Nginx；部署打包固定使用同源 API 和应用链接。
 API 显式 `VITE_API_BASE_URL` 优先，生产默认同源 `/api/v1`，开发保持 localhost:8000；
 WebSocket 先用 URL 解析为绝对地址再转换 ws/wss。`src/app-links.ts` 集中生成活动二维码与大屏链接，
 生产默认同源 `/user/`、`/screen/`，显式配置与开发端口仍兼容，活动 ID 与已有查询参数保留。

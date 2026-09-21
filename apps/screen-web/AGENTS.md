@@ -2,7 +2,8 @@
 
 ## 服务器部署
 
-Docker 构建通过 CLI 指定 `/screen/` base，默认 vite.config.ts 的 `./` 保留给 Electron。
+deploy/build.py 通过 CLI 指定 `/screen/` base，默认 vite.config.ts 的 `./` 保留给 Electron。
+产物在 deploy/nginx/html/screen，只读挂载至 Nginx，部署打包固定使用同源 API。
 API 显式 VITE_API_BASE_URL 优先，生产同源 `/api/v1`，开发维持 localhost:8000。
 组件显式 apiBaseUrl/桌面 bootstrap 优先；WS 使用 URL 解析后按 http/https 转换 ws/wss，兼容相对 API。
 

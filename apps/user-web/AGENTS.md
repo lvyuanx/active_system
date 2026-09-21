@@ -2,7 +2,8 @@
 
 ## 部署入口
 
-Docker 构建指定 Vite `/user/` base，Router 使用 BASE_URL。根入口 `src/views/entry.vue` 显示活动扫码提示，
+deploy/build.py 指定 Vite `/user/` base，产物在 deploy/nginx/html/user，只读挂载至 Nginx。
+部署打包固定使用同源 API。Router 使用 BASE_URL。根入口 `src/views/entry.vue` 显示活动扫码提示，
 未匹配路径回到有实际组件的根路由，避免重定向循环。API 显式 VITE_API_BASE_URL 优先，
 生产默认同源 `/api/v1`，开发维持 localhost:8000；聊天 WebSocket 根据解析后的绝对 URL 使用 ws/wss。
 

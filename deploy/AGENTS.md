@@ -1,30 +1,33 @@
 # 部署模块
 
-`compose/docker-compose.yml` 定义固定项目名 active-system 的 backend/nginx 两服务。
-后端单进程，SQLite 与媒体挂载在 `/app/data`；只有 Nginx 发布端口。
-`docker/frontend.Dockerfile` 使用 pnpm 11.16.0 frozen lock 构建三个 Web，CLI base 分别为
-`/admin/`、`/screen/`、`/user/`；不执行 Electron。大屏默认 Vite 相对 base 保留给桌面打包。
+## 职责与入口
 
-## 升级数据流
+build.py 在开发机用 Python 3.11+ 和项目指定 pnpm 安装锁定依赖、检查并构建三个 Web，
+把后端代码和运行依赖清单打包到 deploy。服务器只需该目录和 Docker Compose。
+docker-compose.yaml 定义 activate-backend、activate-nginx 两服务及同名容器，项目名 active-system。
 
-根 `upgrade.sh` 整体解析 main 后进入 `scripts/common.sh`：固定 flock、严格字面 env、依赖和干净树检查、
-当前上游 fetch/ff-only、自更新 exec 续跑。`scripts/release.sh` 保存唯一尝试目录、构建镜像、固定镜像 ID、
-校验配置，停旧后端并完整备份，再 force-recreate 两容器，检查健康与站点，成功才推进 current/previous。
-首次失败用 pending 的前驱链核实受控容器，以支持连续失败后的重试；新尝试切换前保存 pending-parent，
-不能丢失旧尝试镜像记录。整条链必须存在、无环且数据目录一致；容器的项目、服务、对应服务的镜像 ID、
-后端 /app/data 挂载必须全部匹配。成功时 pending 指向 current；没有记录的现有部署不自动接管。
-备份阶段失败或信号恢复旧后端；切换开始后不自动覆盖数据。
+## 构建与运行数据流
 
-## 文件与恢复
+三端 base 为 /admin/、/screen/、/user/；API 固定同源 /api/v1，不构建 Electron。
+build.py 在 deploy 内临时目录准备所有产物，成功后更名发布；失败恢复旧产物，
+若恢复本身失败则保留暂存备份。只允许替换 OUTPUTS 中的四个产物，不修改配置、.env、runtime。
+不要并发打包，也不要在运行中挂载的部署目录内打包。
 
-`deploy/.env` 是不被 Git 追踪的严格 KEY=value，不 source/eval，不读取根 .env；白名单配置见示例。
-`runtime/` 忽略 Git 和 Docker，保存 data、releases、current、previous、pending 和固定锁。
-每个发布保存完整解析配置（含密钥，目录 700）、SHA、镜像 ID、绝对数据路径、配套备份及 SHA-256。
-`scripts/artifacts.py` 只在已有后端镜像内处理归档和 JSON，不要求宿主机 Python。
-`scripts/restore.sh <尝试名>` 明确人工调用，将切换前备份恢复到新目录，使用配套旧配置/镜像启动。
-原失败数据保持不动，成功记录指向新数据目录，后续升级据此继续。
+backend 镜像只安装生成的 requirements.txt。app、migrations、nginx/html 与 Nginx 配置只读挂载；
+SQLite 和媒体统一持久化到 runtime/data，并在后端单进程下使用。
+数据挂载显式设置 bind.create_host_path: true，由 Compose 创建缺失的宿主机目录；
+代码和配置挂载保持 false，避免把缺失产物误建为空目录。
+两个服务加入显式 activate bridge 网络，Nginx 通过 activate-backend:8000 访问后端。
 
-## 验证边界
+## 配置
 
-脚本语法、归档测试、三端构建与本机 Nginx 检查不替代 Linux Docker 首次/二次/故障/恢复实测。
-部署步骤和人工恢复流程见 README.md；workflow 目录由主 Agent 维护。
+deploy/.env 是 Compose 标准配置文件；FRONTEND_PORT 默认 8080、BACKEND_PORT 默认 8000，
+控制两个容器各自的宿主机映射；容器内部端口固定，nginx.conf 无 80 监听。
+必填凭据不设可用默认值。client.conf 在 server 内包含 backend.conf，不能在 http 层通配包含。
+两服务健康检查和依赖确保后端健康后启动 Nginx；生产同源 API 保持不变。
+
+## 升级与验证边界
+
+旧 Git 发布、版本指针、备份恢复脚本已移除；旧 runtime 和 workflow 仅保留历史数据与证据。
+升级先停服、备份，再替换产物和重建；保留服务器 .env 与 runtime，不自动迁移旧实例。
+测试见 tests/AGENTS.md，使用说明见 README.md。静态检查不能替代 Linux Docker 实测。

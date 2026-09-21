@@ -1,0 +1,91 @@
+name: active-system
+
+services:
+  activate-backend:
+    container_name: activate-backend
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      APP_ENV: production
+      DATABASE_PATH: /app/data/active_system.db
+      MEDIA_ROOT: /app/data/media
+      PYTHONDONTWRITEBYTECODE: "1"
+      SUPERUSER_USERNAME: ${SUPERUSER_USERNAME:-admin}
+      SUPERUSER_PASSWORD: ${SUPERUSER_PASSWORD:?请在 .env 填写管理员密码}
+      JWT_SECRET: ${JWT_SECRET:?请在 .env 填写随机 JWT 密钥}
+      LOTTERY_SECURITY_CODE: ${LOTTERY_SECURITY_CODE:?请在 .env 填写抽奖安全码}
+      DANMAKU_TOKEN_SECRET: ${DANMAKU_TOKEN_SECRET:-}
+      APP_CORS_ORIGINS: ${APP_CORS_ORIGINS:-}
+    volumes:
+      - type: bind
+        source: ./backend/app
+        target: /app/app
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./backend/migrations
+        target: /app/migrations
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./runtime/data
+        target: /app/data
+        bind:
+          create_host_path: true
+    networks: [activate]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5)
+      interval: 5s
+      timeout: 6s
+      retries: 24
+      start_period: 20s
+
+  activate-nginx:
+    container_name: activate-nginx
+    build: ./nginx
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8080}:8080"
+    volumes:
+      - type: bind
+        source: ./nginx/html
+        target: /usr/share/nginx/html
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./nginx/nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./nginx/conf.d
+        target: /etc/nginx/conf.d
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      activate-backend:
+        condition: service_healthy
+    networks: [activate]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 5s
+      timeout: 6s
+      retries: 24
+      start_period: 10s
+
+networks:
+  activate:
+    driver: bridge

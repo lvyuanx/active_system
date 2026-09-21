@@ -43,6 +43,11 @@ temp/
 
 # Docker local overrides
 docker-compose.override.yml
+deploy/.build-*/
+deploy/backend/app/
+deploy/backend/migrations/
+deploy/backend/requirements.txt
+deploy/nginx/html/
 
 # IDE and system
 .idea/

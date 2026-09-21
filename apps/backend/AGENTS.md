@@ -3,6 +3,7 @@
 ## 镜像打包
 
 pyproject.toml 显式使用 setuptools 构建并只发现 app* 包，避免 data/migrations 多个顶层目录阻断安装。
+部署 build.py 将 app、migrations 和运行依赖打包至 deploy/backend；镜像仅安装依赖，代码只读挂载。
 Docker 部署保留单 uvicorn，数据库和媒体均由 Compose 绑定在 `/app/data`，配置从独立部署文件注入。
 
 ## 模块简介
