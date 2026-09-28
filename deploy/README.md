@@ -56,6 +56,7 @@ cd /你的路径/deploy
 cp .env.example .env
 chmod 600 .env
 # 编辑 .env，填写管理员密码、JWT_SECRET 和 LOTTERY_SECURITY_CODE
+docker network inspect open-getaway-network >/dev/null 2>&1 || docker network create --driver bridge open-getaway-network
 docker compose --env-file .env config --quiet
 docker compose --env-file .env up -d --build --wait
 ```
@@ -82,7 +83,7 @@ Shell 中同名环境变量优先于 --env-file，请避免意外覆盖。必填
 - API：http://网关地址/api/v1/health
 
 前端总是经同源 /api 请求后端。两个服务、容器分别名为 activate-backend 和 activate-nginx，
-处于 Compose 管理且实际名称固定为 open-getaway-network 的 bridge 网络，且不向宿主机发布端口。
+处于外部管理且实际名称固定为 open-getaway-network 的共享 bridge 网络，且不向宿主机发布端口。
 外部网关接入该网络后，应将公开请求转发至 activate-nginx:8080；Nginx 再使用 activate-backend:8000 转发 API，
 无需直接暴露后端端口。
 
@@ -91,6 +92,7 @@ client.conf 定义站点并在 server 内包含 backend.conf 的 /api location�
 不要将 backend.conf 在 http 层通配加载。
 HTTPS 由外部代理提供，需要保留 Host、X-Forwarded-Proto 和 WebSocket Upgrade。
 正式公网访问及上传统一使用外部网关入口；后端和 Nginx 端口仅在 Docker 网络内部可达。
+`open-getaway-network` 由网关侧负责创建和保留，`docker compose down` 不会删除该共享网络。
 
 ## 挂载与持久化
 

@@ -5,7 +5,7 @@
   离开聊天路由后导航和视口变量恢复；真实 iPhone/Android 软键盘仍需设备验收。
 
 - 2026-09-21：完成独立 deploy 目录重构，使用 build.py 本地打包及 docker-compose.yaml 服务器运行。
-- activate-backend/activate-nginx 两容器统一使用实际名称为 open-getaway-network 的显式 bridge 网络；
+- activate-backend/activate-nginx 两容器统一使用由网关管理、实际名称为 open-getaway-network 的 external bridge 网络；
   代码和配置只读挂载，数据在 runtime/data。
 - 两个容器不再直接发布宿主机端口；外部网关接入 open-getaway-network 后统一转发至 activate-nginx:8080，
   生产前端保持同源 API。

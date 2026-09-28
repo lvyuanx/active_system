@@ -61,7 +61,7 @@ class ComposeTests(unittest.TestCase):
                     self.assertTrue(mount.get("bind", {}).get("create_host_path", True))
         network = config["networks"]["open-getaway-network"]
         self.assertEqual(network["name"], "open-getaway-network")
-        self.assertEqual(network["driver"], "bridge")
+        self.assertTrue(network["external"])
         self.assertEqual(services["activate-nginx"]["depends_on"]["activate-backend"]["condition"], "service_healthy")
 
     def test_missing_credentials_refuse_start(self):

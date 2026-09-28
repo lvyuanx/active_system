@@ -89,4 +89,4 @@ services:
 networks:
   open-getaway-network:
     name: open-getaway-network
-    driver: bridge
+    external: true

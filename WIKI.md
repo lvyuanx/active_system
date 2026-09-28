@@ -7,7 +7,7 @@
 打包目录独立复制到服务器，由 deploy/docker-compose.yaml 管理 activate-backend、activate-nginx。
 镜像只提供运行环境，应用代码和静态资源只读挂载；生产浏览器固定同源 API 与应用链接。
 后端镜像的 pip 使用阿里云 PyPI 镜像 https://mirrors.aliyun.com/pypi/simple/。
-两容器通过实际名称为 open-getaway-network 的显式 bridge 网络通信，均不向宿主机发布端口；
+两容器通过由网关管理、实际名称为 open-getaway-network 的 external bridge 网络通信，均不向宿主机发布端口；
 内部端口固定为 8080/8000，由接入该网络的外部网关统一转发至 activate-nginx:8080。
 Nginx 不监听 80，/api 转发至 activate-backend:8000。
 部署密钥独立放 deploy/.env，SQLite 与媒体共同持久化到 deploy/runtime/data。
