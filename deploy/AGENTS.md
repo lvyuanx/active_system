@@ -22,12 +22,13 @@ backend 镜像只安装生成的 requirements.txt。app、migrations、nginx/htm
 SQLite 和媒体统一持久化到 runtime/data，并在后端单进程下使用。
 数据挂载显式设置 bind.create_host_path: true，由 Compose 创建缺失的宿主机目录；
 代码和配置挂载保持 false，避免把缺失产物误建为空目录。
-两个服务加入显式 activate bridge 网络，Nginx 通过 activate-backend:8000 访问后端。
+两个服务加入实际名称固定为 open-getaway-network 的显式 bridge 网络，不发布宿主机端口；外部网关接入该网络后通过
+activate-nginx:8080 统一暴露服务，Nginx 通过 activate-backend:8000 访问后端。
 
 ## 配置
 
-deploy/.env 是 Compose 标准配置文件；FRONTEND_PORT 默认 8080、BACKEND_PORT 默认 8000，
-控制两个容器各自的宿主机映射；容器内部端口固定，nginx.conf 无 80 监听。
+deploy/.env 是 Compose 标准配置文件；两个容器仅声明固定的内部端口 8080/8000，宿主机不直接映射，
+由接入 open-getaway-network 的外部网关负责对外监听；nginx.conf 无 80 监听。
 必填凭据不设可用默认值。client.conf 在 server 内包含 backend.conf，不能在 http 层通配包含。
 两服务健康检查和依赖确保后端健康后启动 Nginx；生产同源 API 保持不变。
 

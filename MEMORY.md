@@ -5,8 +5,10 @@
   离开聊天路由后导航和视口变量恢复；真实 iPhone/Android 软键盘仍需设备验收。
 
 - 2026-09-21：完成独立 deploy 目录重构，使用 build.py 本地打包及 docker-compose.yaml 服务器运行。
-- activate-backend/activate-nginx 两容器使用显式 bridge 网络；代码和配置只读挂载，数据在 runtime/data。
-- .env 分别配置宿主机前后端端口，默认 8080/8000；生产前端保持同源 API。
+- activate-backend/activate-nginx 两容器统一使用实际名称为 open-getaway-network 的显式 bridge 网络；
+  代码和配置只读挂载，数据在 runtime/data。
+- 两个容器不再直接发布宿主机端口；外部网关接入 open-getaway-network 后统一转发至 activate-nginx:8080，
+  生产前端保持同源 API。
 - 后端 Dockerfile 已配置 pip 使用阿里云 PyPI 镜像。
 - 服务器已完成镜像构建，但曾因缺少 runtime/data 创建容器失败；已在本地 Compose 中显式启用
   数据挂载 create_host_path: true，待将配置同步至服务器后验证首次启动。

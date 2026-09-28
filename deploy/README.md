@@ -67,8 +67,6 @@ Shell 中同名环境变量优先于 --env-file，请避免意外覆盖。必填
 
 | 配置 | 默认值 | 含义 |
 | --- | --- | --- |
-| FRONTEND_PORT | 8080 | 宿主机发布至 Nginx 容器 8080 |
-| BACKEND_PORT | 8000 | 宿主机直接发布至后端容器 8000 |
 | SUPERUSER_USERNAME | admin | 管理员账号 |
 | SUPERUSER_PASSWORD | 必填 | 管理员密码 |
 | JWT_SECRET | 必填 | JWT 签名密钥 |
@@ -76,22 +74,23 @@ Shell 中同名环境变量优先于 --env-file，请避免意外覆盖。必填
 | DANMAKU_TOKEN_SECRET | 空 | 空时沿用 JWT_SECRET |
 | APP_CORS_ORIGINS | 空 | 直接跨源调用 API 时允许的来源，逗号分隔 |
 
-两个外部端口需可用且不同。默认访问：
+外部网关接入 `open-getaway-network` 后统一转发至 Nginx。默认访问：
 
-- 管理端：http://服务器:8080/admin/
-- 大屏：http://服务器:8080/screen/?activity_id=活动ID
-- 用户端：http://服务器:8080/user/activity/活动ID
-- API：http://服务器:8080/api/v1/health 或 http://服务器:8000/api/v1/health
+- 管理端：http://网关地址/admin/
+- 大屏：http://网关地址/screen/?activity_id=活动ID
+- 用户端：http://网关地址/user/activity/活动ID
+- API：http://网关地址/api/v1/health
 
 前端总是经同源 /api 请求后端。两个服务、容器分别名为 activate-backend 和 activate-nginx，
-处于 Compose 管理的 activate bridge 网络；Nginx 使用 activate-backend:8000 转发，
-不依赖 BACKEND_PORT。修改外部端口后重新执行 up 命令即可，无需重新打包。
+处于 Compose 管理且实际名称固定为 open-getaway-network 的 bridge 网络，且不向宿主机发布端口。
+外部网关接入该网络后，应将公开请求转发至 activate-nginx:8080；Nginx 再使用 activate-backend:8000 转发 API，
+无需直接暴露后端端口。
 
 Nginx 不监听 80。nginx.conf 仅放全局与 http 配置，显式加载 client.conf；
 client.conf 定义站点并在 server 内包含 backend.conf 的 /api location。
 不要将 backend.conf 在 http 层通配加载。
 HTTPS 由外部代理提供，需要保留 Host、X-Forwarded-Proto 和 WebSocket Upgrade。
-后端端口按需求直接发布；正式公网访问及上传通常使用 Nginx 入口。
+正式公网访问及上传统一使用外部网关入口；后端和 Nginx 端口仅在 Docker 网络内部可达。
 
 ## 挂载与持久化
 

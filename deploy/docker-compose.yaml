@@ -5,8 +5,8 @@ services:
     container_name: activate-backend
     build: ./backend
     restart: unless-stopped
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
+    expose:
+      - "8000"
     environment:
       APP_ENV: production
       DATABASE_PATH: /app/data/active_system.db
@@ -36,7 +36,7 @@ services:
         target: /app/data
         bind:
           create_host_path: true
-    networks: [activate]
+    networks: [open-getaway-network]
     healthcheck:
       test:
         - CMD
@@ -54,8 +54,8 @@ services:
     container_name: activate-nginx
     build: ./nginx
     restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-8080}:8080"
+    expose:
+      - "8080"
     volumes:
       - type: bind
         source: ./nginx/html
@@ -78,7 +78,7 @@ services:
     depends_on:
       activate-backend:
         condition: service_healthy
-    networks: [activate]
+    networks: [open-getaway-network]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/v1/health"]
       interval: 5s
@@ -87,5 +87,6 @@ services:
       start_period: 10s
 
 networks:
-  activate:
+  open-getaway-network:
+    name: open-getaway-network
     driver: bridge

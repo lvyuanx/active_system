@@ -13,9 +13,9 @@
 开发机执行 `python deploy/build.py`，将打包后的整个 `deploy` 目录复制到服务器。
 首次复制 `.env.example` 为 `.env` 并填写凭据，然后在该目录执行
 `docker compose --env-file .env up -d --build --wait`。服务器只需 Docker Compose 和镜像/依赖下载网络。
-`activate-nginx` 默认发布 8080，提供 `/admin/`、`/screen/`、`/user/` 并反代 `/api/`；
-`activate-backend` 默认发布 8000，两者通过 Docker 网络通信，代码只读挂载、数据独立持久化。
-端口通过 `.env` 配置。更新前停服备份，保留服务器配置及运行数据；完整步骤见 [部署说明](deploy/README.md)。
+`activate-nginx` 和 `activate-backend` 不向宿主机发布端口，统一加入 `open-getaway-network`；外部网关应转发至
+`activate-nginx:8080`，由 Nginx 继续反代 `/api/` 至 `activate-backend:8000`。代码只读挂载、数据独立持久化。
+更新前停服备份，保留服务器配置及运行数据；完整步骤见 [部署说明](deploy/README.md)。
 生产二维码与大屏默认使用当前站点来源及对应子路径；开发仍使用 5175/5174，显式 VITE 地址优先。
 
 ## 本地开发

@@ -22,10 +22,10 @@ class ComposeTests(unittest.TestCase):
         ))
         self.env = {key: value for key, value in os.environ.items() if key not in (
             "SUPERUSER_PASSWORD", "JWT_SECRET", "LOTTERY_SECURITY_CODE", "SUPERUSER_USERNAME",
-            "BACKEND_PORT", "FRONTEND_PORT", "DANMAKU_TOKEN_SECRET", "APP_CORS_ORIGINS",
+            "DANMAKU_TOKEN_SECRET", "APP_CORS_ORIGINS",
         ) and not key.startswith("COMPOSE_")}
         (self.deploy / ".env").write_text(
-            "FRONTEND_PORT=19080\nBACKEND_PORT=19000\nSUPERUSER_PASSWORD=test-password-only\n"
+            "SUPERUSER_PASSWORD=test-password-only\n"
             "JWT_SECRET=test-only-secret-at-least-32-characters\nLOTTERY_SECURITY_CODE=test123\n",
             encoding="utf-8",
         )
@@ -43,12 +43,12 @@ class ComposeTests(unittest.TestCase):
         config = json.loads(result.stdout)
         services = config["services"]
         self.assertEqual(set(services), {"activate-backend", "activate-nginx"})
-        for name, published, internal in (("activate-backend", "19000", 8000), ("activate-nginx", "19080", 8080)):
+        for name, internal in (("activate-backend", "8000"), ("activate-nginx", "8080")):
             service = services[name]
             self.assertEqual(service["container_name"], name)
-            self.assertEqual(service["ports"][0]["published"], published)
-            self.assertEqual(service["ports"][0]["target"], internal)
-            self.assertIn("activate", service["networks"])
+            self.assertNotIn("ports", service)
+            self.assertEqual(service["expose"], [internal])
+            self.assertIn("open-getaway-network", service["networks"])
             self.assertTrue(Path(service["build"]["context"]).is_relative_to(self.deploy))
             for mount in service["volumes"]:
                 self.assertTrue(Path(mount["source"]).is_relative_to(self.deploy))
@@ -59,7 +59,9 @@ class ComposeTests(unittest.TestCase):
                     self.assertFalse(mount.get("read_only", False))
                     # 部分 Compose 版本在 config 输出中省略值为 true 的默认字段。
                     self.assertTrue(mount.get("bind", {}).get("create_host_path", True))
-        self.assertEqual(config["networks"]["activate"]["driver"], "bridge")
+        network = config["networks"]["open-getaway-network"]
+        self.assertEqual(network["name"], "open-getaway-network")
+        self.assertEqual(network["driver"], "bridge")
         self.assertEqual(services["activate-nginx"]["depends_on"]["activate-backend"]["condition"], "service_healthy")
 
     def test_missing_credentials_refuse_start(self):
