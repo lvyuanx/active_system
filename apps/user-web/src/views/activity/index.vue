@@ -1,5 +1,9 @@
 <template>
-  <main class="activity-page">
+  <main
+    class="activity-page"
+    :class="{ 'activity-page--keyboard-visible': keyboardVisible }"
+    :style="viewportStyle"
+  >
     <section v-if="loading" class="page-state" aria-live="polite">
       <div class="state-symbol state-symbol--loading"><VanLoading size="24px" color="var(--activity-gold)" /></div>
       <p class="state-kicker">活动入口</p>
@@ -15,11 +19,21 @@
       <VanButton type="primary" class="retry-button" @click="load">重新加载</VanButton>
     </section>
 
-    <div v-else-if="activity && user" class="activity-shell">
+    <div
+      v-else-if="activity && user"
+      class="activity-shell"
+      :class="{ 'activity-shell--keyboard-visible': keyboardVisible }"
+    >
       <RouterView v-slot="{ Component }">
         <component :is="Component" :activity="activity" :user="user" />
       </RouterView>
-      <VanTabbar :model-value="activeTab" route safe-area-inset-bottom class="activity-tabbar">
+      <VanTabbar
+        v-show="!keyboardVisible"
+        :model-value="activeTab"
+        route
+        safe-area-inset-bottom
+        class="activity-tabbar"
+      >
         <VanTabbarItem :to="{ name: 'activity-home', params: { activityId } }" icon="home-o">
           首页
         </VanTabbarItem>
@@ -100,6 +114,7 @@ import "./activity.css";
 import "./activity-auth.css";
 import activityLogo from "../../assets/active-logo.png";
 import { activitySessionKey, type ActivitySession } from "./session";
+import { useKeyboardViewport } from "./useKeyboardViewport";
 import {
   ApiError,
   clearActivityToken,
@@ -128,6 +143,7 @@ const activeTab = computed(() => {
   if (route.path === `${basePath}/me`) return 2;
   return 0;
 });
+const { keyboardVisible, viewportStyle } = useKeyboardViewport(computed(() => route.name === "activity-chat"));
 
 const logout = () => {
   clearActivityToken(activityId);

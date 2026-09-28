@@ -41,6 +41,14 @@
   background: var(--activity-bg);
 }
 
+.activity-page.activity-page--keyboard-visible {
+  height: calc(
+    var(--activity-viewport-height, 100dvh) + var(--activity-viewport-offset-top, 0px)
+  );
+  min-height: 0;
+  overflow: hidden;
+}
+
 .activity-page,
 .activity-page button,
 .activity-page input {
@@ -121,6 +129,12 @@
   box-sizing: border-box;
   min-height: 100dvh;
   padding-top: env(safe-area-inset-top);
+}
+
+.activity-page .activity-shell--keyboard-visible {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .activity-page .home-content {

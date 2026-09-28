@@ -13,10 +13,27 @@
 数据绑定挂载显式启用 create_host_path: true，由 Compose 创建缺失目录；代码及配置挂载禁用自动创建。
 更新先停服备份，再替换产物并重建；保留服务器配置和数据，不自动拉取 Git、备份或恢复。
 
+## deploy 同步工具
+
+`deploy/rsync.py` 使用 Paramiko SSH/SFTP 从开发机单向上传 deploy 内容，默认不删除远端独有文件，按文件大小和秒级
+修改时间跳过未变化文件，`--force` 可强制上传，`--dry-run` 只预览。远端路径必须是绝对路径，脚本会创建缺失目录，
+并拒绝本地或远端路径中的符号链接和类型冲突。每个文件先传到同目录临时文件，再调用 `posix_rename` 原子替换；
+服务器不支持该扩展时保留原文件并报错。
+
+连接参数、同步目录、主机指纹和明文密码保存在 `deploy/.rsync.local.json`，该文件被 Git 忽略且同步时排除。
+同步始终排除 `.env`、其他 `.env.*`（保留 `.env.example`）、`runtime`、缓存、版本控制目录、虚拟环境、
+`node_modules`、`.build-*` 和本地状态文件。同步只负责上传，不负责停服、备份、重建或删除远端文件。
+
 ## 架构概览
 
 项目采用 Monorepo，包含一个 FastAPI 模块化单体、三个 Vue 3 前端应用和一个 Electron Windows 弹幕工具：
 Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层）、Vant 4 用户端和 `danmaku-desktop`。
+
+### 用户端聊天室视口适配
+
+用户端活动壳的聊天路由通过 `views/activity/useKeyboardViewport.ts` 监听输入框焦点、窗口尺寸和
+`visualViewport` 变化。可视高度较基准减少超过键盘阈值时隐藏底部 Tabbar，聊天内容以可视高度重新计算并取消底部安全区；
+视口恢复后导航返回。缩放变化不会触发键盘判断，聊天输入控件使用 16px 字号以避免 iOS 聚焦自动缩放。
 
 ## 数据隔离
 

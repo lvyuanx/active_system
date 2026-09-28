@@ -46,8 +46,12 @@ deploy/build.py 指定 Vite `/user/` base，产物在 deploy/nginx/html/user，�
 
 聊天输入框保留 `maxlength=500` 限制，但不显示会撑高默认输入框的字数提示；Vant Field 使用零垂直内边距和内容居中对齐，并关闭聊天 Field 默认的内部 `::after` 分隔线。
 
-登录后活动壳使用 `activity-shell` 承接顶部 safe-area；聊天高度只扣除 Tabbar 与上下 safe-area，
-不再扣除已删除的 52px NavBar。Tabbar 自身负责底部 safe-area，导航项不重复添加 inset。
+登录后活动壳使用 `activity-shell` 承接顶部 safe-area；聊天高度按可视视口动态计算，正常状态扣除 Tabbar 与上下
+safe-area，键盘弹出时隐藏 Tabbar 并取消底部 safe-area 占位。Tabbar 自身负责底部 safe-area，导航项不重复添加 inset。
+
+聊天路由使用 `views/activity/useKeyboardViewport.ts` 监听 `visualViewport` 和输入框焦点：软键盘使可视高度减少
+超过阈值时隐藏底部导航，视口恢复后再显示；横竖屏切换会重新建立基准，缩放不会被误判为键盘。聊天输入文字固定为
+16px，避免 iOS 聚焦输入框时自动缩放导致发送按钮出界。
 
 index.html 必须保留 width=device-width、initial-scale=1 和 viewport-fit=cover，避免设备模拟器使用桌面布局视口缩放页面。
 

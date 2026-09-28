@@ -4,6 +4,8 @@ test_build.py 使用临时目录和构建替身测试产物生成、依赖提取
 重复打包去除废弃文件、发布失败回滚，以及不修改 .env、配置和运行数据。
 test_compose.py 将部署配置和测试产物复制到仓库外，使用 docker compose config 验证
 自定义端口、挂载路径、只读性、服务网络与缺失凭据错误，不连接 Docker daemon。
+test_rsync.py 使用本地 SFTP 替身验证同步脚本的配置复用、排除规则、增量跳过、强制上传、预览模式、
+远端目录创建、中文和空格路径、符号链接拒绝、远端独有文件保留以及原子替换失败保护，不连接真实服务器。
 在 runtime/data 不存在时检查数据挂载显式启用 create_host_path，代码和配置挂载仍禁止自动创建。
 run_proxy_qa.py 使用实际打包的 html 和后端代码、拆分后的 Nginx 配置，配合 proxy_browser.cjs
 执行原生 Windows HTTP/HTTPS 登录、上传、聊天、抽奖和页面路由回归。

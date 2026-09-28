@@ -21,6 +21,29 @@ requirements.txt 从后端 pyproject.toml 的运行依赖生成。
 不覆盖 .env、Nginx 配置或 runtime。不要同时执行多个打包任务，也不要对正在挂载运行的目录执行打包。
 产物被 Git 忽略：复制实际打包完成的 deploy 目录，不能用 git archive 替代打包。
 
+## 通过 SSH 同步到服务器
+
+`rsync.py` 使用 Paramiko 的 SSH/SFTP 将本地 deploy 内容上传到服务器，不依赖本机或服务器安装
+rsync。首次使用先安装同步工具依赖：
+
+```bash
+python -m pip install -r deploy/requirements-rsync.txt
+python deploy/rsync.py --dry-run
+```
+
+脚本会交互询问服务器 IP、SSH 端口、用户名、密码、本地目录和远端绝对路径；本地目录默认是脚本所在的
+`deploy`，远端路径表示 deploy 目录本身，不会再自动追加 `deploy`。首次连接会显示 SSH 主机指纹并要求确认。
+成功认证后，连接参数、密码和目录保存到 `deploy/.rsync.local.json`；密码为明文保存，仅适合权限受控的开发机，
+该文件不会被上传。之后运行时直接回车即可复用上次输入，服务器、端口或用户名变化时会重新要求密码。
+
+默认只新增或覆盖文件，不删除服务器上已有的独有文件；按文件大小和秒级修改时间跳过未变化文件，必要时使用
+`--force` 强制上传。`--dry-run` 只检查并显示变更，不创建远端目录或上传。`.env`、其他 `.env.*`（保留
+`.env.example`）、`runtime`、版本控制目录、虚拟环境、缓存、`node_modules`、`.build-*` 和本地同步状态文件
+始终排除。文件会先上传到同目录临时文件，再使用 SFTP 原子替换；服务端不支持原子替换时同步失败且原文件保留。
+
+同步不会自动停服、备份、重建容器或删除远端文件。生产更新仍应先按下文流程停服并备份，确认同步完成后再执行
+`docker compose --env-file .env up -d --build --wait`。
+
 ## 服务器首次启动
 
 服务器需要 Linux Docker Engine 和支持 `up --wait` 的 Docker Compose，

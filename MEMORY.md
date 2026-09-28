@@ -1,5 +1,9 @@
 # 当前进度
 
+- 2026-09-21：用户端聊天室已加入 `visualViewport` 软键盘适配：键盘弹出时隐藏底部 Tabbar，聊天输入栏按可视高度贴近键盘，
+  键盘收起后恢复导航；输入框文字固定 16px 以避免 iOS 聚焦缩放。用户端类型检查和生产构建已通过，本机活动回归确认长文本无横向溢出、
+  离开聊天路由后导航和视口变量恢复；真实 iPhone/Android 软键盘仍需设备验收。
+
 - 2026-09-21：完成独立 deploy 目录重构，使用 build.py 本地打包及 docker-compose.yaml 服务器运行。
 - activate-backend/activate-nginx 两容器使用显式 bridge 网络；代码和配置只读挂载，数据在 runtime/data。
 - .env 分别配置宿主机前后端端口，默认 8080/8000；生产前端保持同源 API。
@@ -13,3 +17,6 @@
   聊天与抽奖 WebSocket 均通过，无页面错误。证据：deploy/runtime/test-qa/proxy-1789996798448274000/results.json。
 - Linux Docker daemon 仍无法连接；尚未验证真实镜像构建、容器首次启动、重建后的数据持久化与代码更新。
   未执行服务器发布，以上本机检查不等同于 Docker 实测验收。
+- 2026-09-21：新增 `deploy/rsync.py`，使用 Paramiko/SFTP 上传 deploy 内容；配置和明文密码保存在被 Git 忽略的
+  `.rsync.local.json`，默认排除 `.env`、runtime 和本地缓存，支持 `--dry-run`、`--force`、主机指纹校验及原子替换。
+  `deploy/tests/test_rsync.py` 的 10 项本地替身测试已通过；尚未连接真实 SSH 服务器验收。

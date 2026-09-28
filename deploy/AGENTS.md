@@ -6,6 +6,11 @@ build.py 在开发机用 Python 3.11+ 和项目指定 pnpm 安装锁定依赖、
 把后端代码和运行依赖清单打包到 deploy。服务器只需该目录和 Docker Compose。
 docker-compose.yaml 定义 activate-backend、activate-nginx 两服务及同名容器，项目名 active-system。
 
+rsync.py 是开发机到服务器的 SSH/SFTP 单向上传入口。它只新增或覆盖远端文件，不删除远端独有文件；
+`.env`、runtime、缓存、版本控制目录和 `.rsync.local.json` 等本地状态始终排除。同步配置保存在脚本旁的
+`.rsync.local.json`，包含明文密码，已加入 Git 忽略；修改同步逻辑时必须保持凭据不上传、主机指纹校验和原子替换。
+requirements-rsync.txt 是同步工具的独立依赖清单，不得并入后端运行依赖。
+
 ## 构建与运行数据流
 
 三端 base 为 /admin/、/screen/、/user/；API 固定同源 /api/v1，不构建 Electron。
