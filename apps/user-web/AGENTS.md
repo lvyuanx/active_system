@@ -50,8 +50,9 @@ deploy/build.py 指定 Vite `/user/` base，产物在 deploy/nginx/html/user，�
 safe-area，键盘弹出时隐藏 Tabbar 并取消底部 safe-area 占位。Tabbar 自身负责底部 safe-area，导航项不重复添加 inset。
 
 聊天路由使用 `views/activity/useKeyboardViewport.ts` 监听 `visualViewport` 和输入框焦点：软键盘使可视高度减少
-超过阈值时隐藏底部导航，视口恢复后再显示；横竖屏切换会重新建立基准，缩放不会被误判为键盘。聊天输入文字固定为
-16px，避免 iOS 聚焦输入框时自动缩放导致发送按钮出界。
+超过阈值时隐藏底部导航，视口恢复后再显示；输入框聚焦不能重置未弹键盘时的基准高度，以避免 iOS/WebView 事件时序
+导致键盘状态识别失败；触屏 WebView 在缺少视口事件时使用短延迟焦点兜底。横竖屏切换会重新建立基准，缩放不会被误判
+为键盘。聊天输入文字固定为 16px，避免 iOS 聚焦输入框时自动缩放导致发送按钮出界。
 
 index.html 必须保留 width=device-width、initial-scale=1 和 viewport-fit=cover，避免设备模拟器使用桌面布局视口缩放页面。
 

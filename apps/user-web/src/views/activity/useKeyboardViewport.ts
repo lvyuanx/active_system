@@ -2,6 +2,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, type Ref } from "vue"
 
 const KEYBOARD_OPEN_DELTA = 150;
 const KEYBOARD_CLOSE_DELTA = 100;
+const KEYBOARD_FOCUS_FALLBACK_DELAY = 300;
 
 type ViewportSnapshot = {
   height: number;
@@ -35,8 +36,10 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
   let baselineHeight = 0;
   let baselineOrientation = "";
   let textInputFocused = false;
+  let keyboardHeightObserved = false;
   let animationFrame = 0;
   let focusResetTimer = 0;
+  let keyboardFallbackTimer = 0;
 
   const resetBaseline = (height: number) => {
     baselineHeight = height;
@@ -58,6 +61,7 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
     if (!baselineHeight || orientation !== baselineOrientation) {
       resetBaseline(current.height);
       keyboardVisible.value = false;
+      keyboardHeightObserved = false;
       return;
     }
 
@@ -67,9 +71,14 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
     if (!textInputFocused && !keyboardVisible.value) baselineHeight = current.height;
 
     const heightReduction = baselineHeight - current.height;
+    if (heightReduction >= KEYBOARD_OPEN_DELTA) keyboardHeightObserved = true;
     if (!keyboardVisible.value && textInputFocused && heightReduction >= KEYBOARD_OPEN_DELTA) {
       keyboardVisible.value = true;
-    } else if (keyboardVisible.value && heightReduction <= KEYBOARD_CLOSE_DELTA) {
+    } else if (
+      keyboardVisible.value
+      && heightReduction <= KEYBOARD_CLOSE_DELTA
+      && (!textInputFocused || keyboardHeightObserved)
+    ) {
       keyboardVisible.value = false;
     }
   };
@@ -79,11 +88,30 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
     animationFrame = window.requestAnimationFrame(updateViewport);
   };
 
+  const isTouchDevice = () => navigator.maxTouchPoints > 0 || "ontouchstart" in window;
+
+  const clearKeyboardFallback = () => {
+    window.clearTimeout(keyboardFallbackTimer);
+    keyboardFallbackTimer = 0;
+  };
+
+  const scheduleKeyboardFallback = () => {
+    clearKeyboardFallback();
+    if (!isTouchDevice()) return;
+    keyboardFallbackTimer = window.setTimeout(() => {
+      keyboardFallbackTimer = 0;
+      if (active.value && textInputFocused && !keyboardVisible.value) {
+        // Some embedded iOS WebViews do not emit a visualViewport resize for the keyboard.
+        keyboardVisible.value = true;
+      }
+    }, KEYBOARD_FOCUS_FALLBACK_DELAY);
+  };
+
   const handleFocusIn = (event: FocusEvent) => {
     if (active.value && isTextEntryElement(event.target)) {
-      if (!keyboardVisible.value) resetBaseline(readViewport().height);
       textInputFocused = true;
       scheduleViewportUpdate();
+      scheduleKeyboardFallback();
     }
   };
 
@@ -92,6 +120,7 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
     window.clearTimeout(focusResetTimer);
     focusResetTimer = window.setTimeout(() => {
       textInputFocused = isTextEntryElement(document.activeElement);
+      if (!textInputFocused) clearKeyboardFallback();
       scheduleViewportUpdate();
     }, 0);
   };
@@ -105,6 +134,8 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
     viewportOffsetTop.value = current.offsetTop;
     textInputFocused = isTextEntryElement(document.activeElement);
     keyboardVisible.value = false;
+    keyboardHeightObserved = false;
+    clearKeyboardFallback();
     scheduleViewportUpdate();
   };
 
@@ -115,7 +146,9 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
     baselineHeight = 0;
     baselineOrientation = "";
     textInputFocused = false;
+    keyboardHeightObserved = false;
     window.clearTimeout(focusResetTimer);
+    clearKeyboardFallback();
     if (animationFrame) window.cancelAnimationFrame(animationFrame);
     animationFrame = 0;
   };
