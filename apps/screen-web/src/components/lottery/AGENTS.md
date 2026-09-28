@@ -7,16 +7,17 @@ API 地址优先使用组件传入值，否则使用 `src/api/client.ts` 的统�
 
 `src/components/lottery/` 提供公开活动抽奖大屏，不保存管理员凭证，不承担开奖控制，只消费活动级 lottery WebSocket。
 `LotteryGlobe.vue` 使用 Canvas 绘制头像与用户名 3D 球体，并按人数启用头像/光点/姓名的分层渲染；`LotteryWinnerReveal.vue` 负责中奖者中心放大层；
-`lottery-globe-canvas.ts` 缓存球体引导线，`lottery-globe-assets.ts` 缓存头像圆形位图；`LotteryScreen.css` 负责全屏主视觉，
+`lottery-globe-canvas.ts` 缓存球体引导线，`lottery-globe-assets.ts` 缓存头像圆形位图，`lottery-selection.ts` 按奖品筛选最新中奖记录；`LotteryScreen.css` 负责全屏主视觉，
 `LotteryScreenImages.css` 负责奖品缩略图、顶部当前奖品图片和进行中轮次标签图片样式；顶部当前奖品图桌面端为 80×80px，移动端为 64×64px。
 
 ## 主要流程
 
-组件连接 `/api/v1/activities/{activity_id}/lottery/ws` 后接收公开 `lottery.ready` 快照；ready 中的历史记录只建立已揭晓
+组件连接 `/api/v1/activities/{activity_id}/lottery/ws` 后接收公开 `lottery.ready` 快照和当前选中奖品 ID；ready 中的历史记录只建立已揭晓
 基线，进行中的 `active_round` 会恢复球体。收到 `lottery.draw.started` 后隐藏外围内容，仅让冻结的全部用户进入铺满视口的持续旋转球体；收到
 `lottery.draw.stopping` 立即冻结旋转，球体先向外打散，再在收到带 `round_id` 的 `lottery.drawn` 后让中奖用户从打散位置
 聚焦到中心，并在 `selecting` 阶段交接到从舞台中心缩放出现、并持续到 `revealed` 的中心用户层；若事件用户不在本地布局，仍使用事件中的用户名和默认头像揭晓。
 旧版无轮次事件仍使用候选名单滚动兜底。高人数时全部用户仍保留为球面点，前景姓名通过数量上限和屏幕空间碰撞避让筛选，动画按人数降帧并降低 Canvas 像素比。
+`lottery.prize.selected` 更新顶部当前奖品，并按当前 `prize_id` 切换中心中奖结果；该奖品没有中奖记录时清空中心结果，避免沿用上一奖品中奖人。
 `lottery.reset` 清空轮次、队列和名单，`lottery.config.updated` 更新奖项库存，错误事件只显示提示并结束对应轮次。
 `LotteryGlobe.vue` 不再绘制中心十字，中奖聚焦阶段使用 Canvas 光环和中心用户放大层作为视觉焦点，不再额外切换矩形中奖卡片。
 进行中轮次会隐藏页面外围内容和球体辅助文字；`revealed` 完成后短暂保留中心揭晓，再清理轮次恢复正常页面，保留最近中奖结果。
@@ -30,7 +31,7 @@ API 地址优先使用组件传入值，否则使用 `src/api/client.ts` 的统�
 - 公开开始轮次只展示活动用户 ID、用户名和头像 ID；中奖快照只展示用户名、奖项、序号、库存和安全奖品图片引用，
   不渲染手机号、名单标记、停用状态、管理员字段或存储 key。
 - 正常页面恢复后的中奖结果区使用当前轮次参与者的公开 `avatar_id` 展示头像；历史结果缺少参与者时使用稳定本地头像兜底，不加载外部头像。
-- 奖项进度显示奖品缩略图，顶部当前奖品区按当前奖项和奖品 ID 从公开快照匹配并显示奖品图；无图、404 或加载失败时隐藏图片并保留文字和库存。
+- 奖项进度显示奖品缩略图，顶部当前奖品区按进行中轮次、当前选中奖品和最近结果的优先级从公开快照匹配并显示奖品图；无图、404 或加载失败时隐藏图片并保留文字和库存。
 
 ## 视觉约定
 

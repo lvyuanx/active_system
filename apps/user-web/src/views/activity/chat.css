@@ -18,7 +18,6 @@
 .activity-page .activity-shell--keyboard-visible .chat-content {
   --activity-chat-navigation-height: 0px;
   --activity-chat-bottom-inset: 0px;
-  transform: translateY(var(--activity-viewport-offset-top, 0px));
 }
 
 .activity-page .chat-messages {

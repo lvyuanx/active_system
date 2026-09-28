@@ -9,6 +9,15 @@ import {
   winnerTargetRotation,
   winnerFocusHandoff,
 } from "../dist-test/lottery/lottery-globe-math.js";
+import { latestLotteryDrawForPrize } from "../dist-test/lottery/lottery-selection.js";
+
+const selectionDraws = [
+  { draw_id: 1, prize_id: 10 },
+  { draw_id: 3, prize_id: 20 },
+  { draw_id: 5, prize_id: 10 },
+];
+assert.equal(latestLotteryDrawForPrize(selectionDraws, 10)?.draw_id, 5);
+assert.equal(latestLotteryDrawForPrize(selectionDraws, 30), undefined);
 
 const points = fibonacciSphere(120);
 assert.equal(points.length, 120);

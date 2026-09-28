@@ -29,6 +29,7 @@
     },
     "files": [
       "dist/main.js",
+      "dist/remembered-launch-config.js",
       "dist/remembered-token.js",
       "dist/preload.cjs",
       "launcher/**",

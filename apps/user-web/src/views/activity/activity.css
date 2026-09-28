@@ -42,11 +42,15 @@
 }
 
 .activity-page.activity-page--keyboard-visible {
-  height: calc(
-    var(--activity-viewport-height, 100dvh) + var(--activity-viewport-offset-top, 0px)
-  );
+  position: fixed;
+  top: var(--activity-viewport-offset-top, 0px);
+  right: 0;
+  left: 0;
+  width: 100%;
+  height: var(--activity-viewport-height, 100dvh);
   min-height: 0;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .activity-page,

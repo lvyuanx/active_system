@@ -206,6 +206,7 @@ export interface LotterySnapshot {
   awards: LotterySnapshotAward[];
   draws: LotteryDraw[];
   latest_draw_id: number;
+  selected_prize_id?: number | null;
   active_round?: LotteryRound | null;
 }
 

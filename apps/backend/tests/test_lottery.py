@@ -9,6 +9,7 @@ from app.core.database import init_database, transaction
 from app.core.security import create_access_token, hash_password
 from app.main import app
 from app.modules.lottery.manager import lottery_manager
+from app.modules.lottery.round_state import lottery_selection_store
 from app.modules.lottery.service import LotteryDrawError, draw_lottery
 
 
@@ -597,6 +598,44 @@ def test_config_update_broadcasts_safe_event_only_to_same_activity(tmp_path: Pat
                 second_screen.send_json({"type": "lottery.ping"})
                 assert second_screen.receive_json() == {"type": "lottery.pong"}
     finally:
+        app.dependency_overrides.clear()
+
+
+def test_selected_prize_broadcasts_and_recovers_on_screen_reconnect(tmp_path: Path) -> None:
+    client, _ = make_client(tmp_path)
+    try:
+        activity_id, headers = create_activity(client, "当前奖品同步")
+        config = configure_lottery(client, activity_id, headers, quantity=2, prize_count=2)
+        open_activity(client, activity_id, headers)
+        selected_prize_id = config["prizes"][1]["prize_id"]
+        second_id, second_headers = create_activity(client, "当前奖品隔离")
+        configure_lottery(client, second_id, second_headers, quantity=2, prize_count=2)
+        open_activity(client, second_id, second_headers)
+
+        with client.websocket_connect(f"/api/v1/activities/{activity_id}/lottery/ws") as screen:
+            initial_ready = screen.receive_json()
+            assert initial_ready["selected_prize_id"] is None
+            with client.websocket_connect(f"/api/v1/activities/{second_id}/lottery/ws") as second_screen:
+                assert second_screen.receive_json()["selected_prize_id"] is None
+                with client.websocket_connect(f"/api/v1/admin/activities/{activity_id}/lottery/ws") as admin:
+                    admin.send_json({"type": "auth", "token": admin_token(client)})
+                    assert admin.receive_json()["type"] == "lottery.ready"
+                    admin.send_json({"type": "lottery.prize.select", "prize_id": selected_prize_id})
+
+                    admin_event = admin.receive_json()
+                    screen_event = screen.receive_json()
+                    assert admin_event == screen_event == {
+                        "type": "lottery.prize.selected",
+                        "selected_prize_id": selected_prize_id,
+                    }
+                    second_screen.send_json({"type": "lottery.ping"})
+                    assert second_screen.receive_json() == {"type": "lottery.pong"}
+
+                    with client.websocket_connect(f"/api/v1/activities/{activity_id}/lottery/ws") as recovered:
+                        recovered_ready = recovered.receive_json()
+                        assert recovered_ready["selected_prize_id"] == selected_prize_id
+    finally:
+        lottery_selection_store.clear_all()
         app.dependency_overrides.clear()
 
 

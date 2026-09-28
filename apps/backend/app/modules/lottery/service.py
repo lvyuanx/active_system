@@ -346,6 +346,22 @@ def _draw_prize_row(
     ).fetchone()
 
 
+def validate_lottery_prize_selection(
+    activity_id: str,
+    prize_id: int,
+    settings: Settings,
+) -> None:
+    with transaction(settings) as connection:
+        activity_or_raise(connection, activity_id)
+        prize = _draw_prize_row(connection, activity_id, prize_id)
+        if not prize:
+            raise LotteryDrawError("invalid_prize", "奖品不存在或不属于当前活动")
+        if not bool(prize["is_enabled"]):
+            raise LotteryDrawError("prize_disabled", "该奖品已停用")
+        if draw_count(connection, activity_id, prize_id) >= int(prize["quantity"]):
+            raise LotteryDrawError("inventory_exhausted", "奖品库存不足")
+
+
 def _round_avatar_id(activity_user_id: int, value: object) -> int:
     try:
         return validate_avatar_id(value)

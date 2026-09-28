@@ -26,10 +26,11 @@
 `PUT` 接口即时保存该奖品的黑白名单。`lottery_prize_entries` 是当前名单表，旧的 `lottery_entries` 仅作为历史活动级名单的迁移来源；
 每个活动只执行一次迁移，已存在的奖品复制旧标记，迁移后的新奖品默认没有黑白名单标记。配置保存不会再全量替换名单。管理员通过 WS 先发送 `lottery.draw.start`，后端冻结开始时的全部公开用户和合资格用户 ID，
 再广播 `lottery.draw.started`；停止时先将轮次标记为 stopping 并广播不含中奖信息的 `lottery.draw.stopping`，再处理
-`lottery.draw.stop`。开奖服务在 `BEGIN IMMEDIATE` 事务中重新校验奖品、库存、
+`lottery.draw.stop`。管理员切换抽取奖品时发送 `lottery.prize.select`，服务端校验启用状态和库存后维护活动级当前奖品，
+并广播公开的 `lottery.prize.selected`；两个 WS 首次连接的 `lottery.ready` 也带当前选中奖品 ID。开奖服务在 `BEGIN IMMEDIATE` 事务中重新校验奖品、库存、
 停用状态、跨奖品去重和冻结候选池，写入成功并提交后，router 才向管理员发送完整结果、向大屏发送带轮次 ID的无手机号
 `lottery.drawn`。相同轮次停止使用 `(activity_id, round_id)` 幂等；旧客户端仍可使用 `lottery.draw.request`。
-配置保存通过 HTTP 成功后广播安全的 `lottery.config.updated`；两个 WS 首次连接都收到按权限生成的 `lottery.ready`。
+配置保存通过 HTTP 成功后广播安全的 `lottery.config.updated`。
 
 奖品图片通过独立 multipart 接口处理，不进入配置 PUT JSON；图片使用随机 key 保存，并以
 `/api/v1/activities/{activity_id}/lottery/prizes/{prize_id}/image?v={image_id}` 作为公开安全引用。

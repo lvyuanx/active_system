@@ -6,16 +6,28 @@ const packageJson = JSON.parse(await readFile(new URL("../package.json", import.
 const mainSource = await readFile(new URL("../src/main.ts", import.meta.url), "utf8");
 const preloadSource = await readFile(new URL("../src/preload.cts", import.meta.url), "utf8");
 const launcherSource = await readFile(new URL("../launcher/launcher.js", import.meta.url), "utf8");
+const launchConfigSource = await readFile(new URL("../src/remembered-launch-config.ts", import.meta.url), "utf8");
 
 assert.match(mainSource, /remembered-token\.js/);
+assert.match(mainSource, /remembered-launch-config\.js/);
 assert.ok(packageJson.build.files.includes("dist/remembered-token.js"));
+assert.ok(packageJson.build.files.includes("dist/remembered-launch-config.js"));
 assert.match(mainSource, /saveRememberedToken\(rememberedTokenFile\(\), request\.token, safeStorage\)/);
+assert.match(mainSource, /saveRememberedLaunchConfig\(rememberedLaunchConfigFile\(\),/);
 assert.match(mainSource, /danmaku:get-remembered-token/);
+assert.match(mainSource, /danmaku:get-remembered-launch-config/);
 assert.match(preloadSource, /getRememberedToken: \(\) => ipcRenderer\.invoke\("danmaku:get-remembered-token"\)/);
+assert.match(preloadSource, /getRememberedLaunchConfig: \(\) => ipcRenderer\.invoke\("danmaku:get-remembered-launch-config"\)/);
 assert.match(launcherSource, /window\.danmakuDesktop\.getRememberedToken\(\)/);
+assert.match(launcherSource, /window\.danmakuDesktop\.getRememberedLaunchConfig\(\)/);
 assert.match(launcherSource, /token\.value = rememberedToken/);
+assert.match(launcherSource, /rememberedDisplayIds/);
+assert.doesNotMatch(launchConfigSource, /token/i);
 assert.doesNotMatch(`${mainSource}${preloadSource}${launcherSource}`, /localStorage/);
 
+const { loadRememberedLaunchConfig, saveRememberedLaunchConfig } = await import(
+  "../dist/remembered-launch-config.js",
+);
 const { loadRememberedToken, saveRememberedToken } = await import("../dist/remembered-token.js");
 const files = new Map();
 const fileSystem = {
@@ -39,6 +51,19 @@ const secureStorage = {
 };
 const tokenPath = "last-token.bin";
 const token = "dm1.activity-id.1.signature";
+const configPath = "last-launch-config.json";
+const launchConfig = {
+  apiBaseUrl: "http://localhost:8000/api/v1",
+  displayIds: [101, 202],
+};
+
+assert.equal(await saveRememberedLaunchConfig(configPath, launchConfig, fileSystem), true);
+assert.deepEqual(await loadRememberedLaunchConfig(configPath, fileSystem), launchConfig);
+assert.equal(await saveRememberedLaunchConfig("invalid-config.json", {
+  apiBaseUrl: "ftp://localhost:8000/api/v1",
+  displayIds: [101],
+}, fileSystem), false);
+assert.equal(await loadRememberedLaunchConfig("missing-config.json", fileSystem), null);
 
 assert.equal(await saveRememberedToken(tokenPath, `  ${token}  `, secureStorage, fileSystem), true);
 assert.ok(files.has(tokenPath));

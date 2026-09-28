@@ -5,13 +5,14 @@ from fastapi import WebSocket
 
 from app.core.config import Settings
 from .manager import lottery_manager
-from .round_state import LotteryRound, lottery_round_store
+from .round_state import LotteryRound, lottery_round_store, lottery_selection_store
 from .service import (
     LotteryConfigError,
     LotteryDrawError,
     draw_lottery,
     prepare_lottery_round,
     reset_lottery,
+    validate_lottery_prize_selection,
 )
 from .snapshot import public_snapshot
 from .state import lottery_operation_lock
@@ -68,6 +69,32 @@ def _draw_result_payload(round_id: str, outcome: Any) -> dict[str, Any]:
     }
 
 
+async def _handle_prize_select(
+    activity_id: str,
+    websocket: WebSocket,
+    message: dict[str, object],
+    settings: Settings,
+) -> None:
+    prize_id = _positive_int(message.get("prize_id"))
+    if prize_id is None:
+        await send_lottery_error(websocket, "invalid_request", "prize_id 参数无效")
+        return
+    async with lottery_operation_lock:
+        if lottery_round_store.get(activity_id):
+            await send_lottery_error(websocket, "draw_in_progress", "抽奖进行中，暂不能切换奖品")
+            return
+        try:
+            await asyncio.to_thread(validate_lottery_prize_selection, activity_id, prize_id, settings)
+        except (LotteryConfigError, LotteryDrawError) as error:
+            await send_lottery_error(websocket, error.code, error.detail)
+            return
+        lottery_selection_store.set(activity_id, prize_id)
+        await lottery_manager.broadcast(
+            activity_id,
+            {"type": "lottery.prize.selected", "selected_prize_id": prize_id},
+        )
+
+
 async def _handle_start(
     activity_id: str,
     websocket: WebSocket,
@@ -109,6 +136,7 @@ async def _handle_start(
         if not lottery_round_store.put_if_absent(lottery_round):
             await send_lottery_error(websocket, "draw_in_progress", "当前活动已有抽奖正在进行", round_id=round_id)
             return
+        lottery_selection_store.set(activity_id, prize_id)
         await lottery_manager.broadcast(activity_id, _started_payload(lottery_round))
 
 
@@ -207,6 +235,7 @@ async def _handle_legacy_draw(
         except LotteryDrawError as error:
             await send_lottery_error(websocket, error.code, error.detail, request_id=request_id)
             return
+        lottery_selection_store.set(activity_id, prize_id)
         result = _draw_result_payload(request_id, outcome)
         if outcome.idempotent:
             await lottery_manager.send(websocket, result)
@@ -237,15 +266,25 @@ async def _handle_reset(
         except LotteryConfigError as error:
             await send_lottery_error(websocket, error.code, error.detail)
             return
+        selected_prize_id = lottery_selection_store.get(activity_id)
         await lottery_manager.broadcast_role(
             activity_id,
             "admin",
-            {"type": "lottery.reset", "snapshot": snapshot},
+            {
+                "type": "lottery.reset",
+                "snapshot": {**snapshot, "selected_prize_id": selected_prize_id},
+            },
         )
         await lottery_manager.broadcast_role(
             activity_id,
             "screen",
-            {"type": "lottery.reset", "snapshot": public_snapshot(snapshot)},
+            {
+                "type": "lottery.reset",
+                "snapshot": {
+                    **public_snapshot(snapshot),
+                    "selected_prize_id": selected_prize_id,
+                },
+            },
         )
 
 
@@ -261,6 +300,8 @@ async def handle_admin_lottery_message(
     message_type = message.get("type")
     if message_type in {"lottery.ping", "ping"}:
         await websocket.send_json({"type": "lottery.pong"})
+    elif message_type == "lottery.prize.select":
+        await _handle_prize_select(activity_id, websocket, message, settings)
     elif message_type == "lottery.draw.start":
         await _handle_start(activity_id, websocket, message, settings)
     elif message_type == "lottery.draw.stop":

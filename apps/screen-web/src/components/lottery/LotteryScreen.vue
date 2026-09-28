@@ -141,6 +141,7 @@ import {
   type LotterySnapshot,
 } from "../../api/client";
 import { enqueueLotteryDraw, readyLotteryDrawIds } from "./lottery-order";
+import { latestLotteryDrawForPrize } from "./lottery-selection";
 import { avatarSources } from "./avatar-sources";
 import LotteryGlobe from "./LotteryGlobe.vue";
 
@@ -152,6 +153,7 @@ const currentDraw = ref<LotteryDraw>();
 const currentWinnerAvatarId = ref(1);
 const rollingNames = ref<string[]>([]);
 const activeRound = ref<LotteryRound>();
+const selectedPrizeId = ref<number>();
 const pendingDraw = ref<LotteryDraw>();
 const globeSettled = ref(false);
 const roundQueue = ref<LotteryRound[]>([]);
@@ -212,17 +214,20 @@ const activePrizeImageURL = computed(() => {
     ?.prizes.find((prize) => prize.prize_id === round.prize_id)?.image_url || null;
 });
 
-const selectedPrize = computed(() => snapshot.value?.awards
-  .flatMap((award) => award.prizes)
-  .find((item) => item.remaining_quantity > 0));
+const selectedPrize = computed(() => {
+  const prizes = snapshot.value?.awards.flatMap((award) => award.prizes) || [];
+  return prizes.find((item) => item.prize_id === selectedPrizeId.value)
+    || prizes.find((item) => item.remaining_quantity > 0);
+});
 const selectedPrizeName = computed(() => selectedPrize.value?.name);
 const displayPrizeName = computed(() => (
-  activeRound.value?.prize_name || currentDraw.value?.prize_name || selectedPrizeName.value
+  activeRound.value?.prize_name || selectedPrizeName.value || currentDraw.value?.prize_name
 ));
 const displayPrizeImageURL = computed(() => {
   if (activeRound.value) return activePrizeImageURL.value;
+  if (selectedPrize.value) return selectedPrize.value.image_url || null;
   if (currentDraw.value) return currentDraw.value.prize_image_url;
-  return selectedPrize.value?.image_url || null;
+  return null;
 });
 const currentWinnerAvatarSource = computed(() => avatarSources[currentWinnerAvatarId.value] || avatarSources[1]);
 
@@ -233,6 +238,12 @@ const fallbackWinnerAvatarId = (activityUserId: number) => {
 const rememberWinnerAvatar = (draw: LotteryDraw, participants: LotteryRoundParticipant[] = []) => {
   const participant = participants.find((item) => item.activity_user_id === draw.winner.activity_user_id);
   currentWinnerAvatarId.value = participant?.avatar_id || fallbackWinnerAvatarId(draw.winner.activity_user_id);
+};
+const syncCurrentDrawToSelectedPrize = (prizeId: number | undefined) => {
+  const draw = latestLotteryDrawForPrize(snapshot.value?.draws || [], prizeId);
+  currentDraw.value = draw;
+  if (draw) rememberWinnerAvatar(draw);
+  else currentWinnerAvatarId.value = 1;
 };
 
 const clearRestoreTimer = () => {
@@ -313,6 +324,7 @@ const handleGlobeSettled = () => {
       pendingDraw.value = undefined;
       globeSettled.value = false;
       globeStage.value = "rolling";
+      syncCurrentDrawToSelectedPrize(selectedPrizeId.value);
     }, duration);
   }
 };
@@ -351,20 +363,20 @@ const handleReady = (ready: LotterySnapshot) => {
   stoppingRoundIds.clear();
   error.value = "";
   activeRound.value = ready.active_round || undefined;
+  selectedPrizeId.value = typeof ready.selected_prize_id === "number"
+    ? ready.selected_prize_id
+    : activeRound.value?.prize_id;
+  if (activeRound.value) {
+    currentDraw.value = undefined;
+    currentWinnerAvatarId.value = 1;
+  } else {
+    syncCurrentDrawToSelectedPrize(selectedPrizeId.value);
+  }
   pendingDraw.value = undefined;
   globeSettled.value = false;
   globeStage.value = activeRound.value?.phase === "stopping" ? "scattering" : "rolling";
   rolling.value = false;
   rollingNames.value = [];
-  if (!ready.active_round && ready.draws.length) {
-    currentDraw.value = ready.draws.reduce(
-      (latest, draw) => draw.draw_id > latest.draw_id ? draw : latest,
-    );
-    if (currentDraw.value) rememberWinnerAvatar(currentDraw.value);
-  }
-  if (currentDraw.value && !knownDrawIds.has(currentDraw.value.draw_id)) {
-    currentDraw.value = undefined;
-  }
 };
 
 const applyConfigUpdate = (payload: Record<string, unknown>) => {
@@ -391,9 +403,16 @@ const handleMessage = (event: MessageEvent<string>) => {
   }
   if (payload.type === "lottery.ready") {
     handleReady(payload as unknown as LotterySnapshot);
+  } else if (payload.type === "lottery.prize.selected") {
+    const prizeId = payload.selected_prize_id;
+    if (typeof prizeId === "number" && Number.isInteger(prizeId) && prizeId > 0) {
+      selectedPrizeId.value = prizeId;
+      if (!activeRound.value && !rolling.value) syncCurrentDrawToSelectedPrize(prizeId);
+    }
   } else if (payload.type === "lottery.draw.started" && payload.round) {
     const round = payload.round as LotteryRound;
     if (!Array.isArray(round.participants)) return;
+    selectedPrizeId.value = round.prize_id;
     const normalizedRound = stoppingRoundIds.has(round.round_id) ? { ...round, phase: "stopping" as const } : round;
     if (activeRound.value && !globeSettled.value) queueRound(normalizedRound);
     else activateRound(normalizedRound);
@@ -411,6 +430,7 @@ const handleMessage = (event: MessageEvent<string>) => {
     if (knownDrawIds.has(drawn.draw.draw_id)) return;
     const roundId = drawn.round_id;
     if (roundId) {
+      selectedPrizeId.value = drawn.draw.prize_id;
       knownDrawIds.add(drawn.draw.draw_id);
       appendDraw(drawn.draw);
       if (activeRound.value?.round_id === roundId) {
@@ -426,6 +446,7 @@ const handleMessage = (event: MessageEvent<string>) => {
         }
       }
     } else {
+      selectedPrizeId.value = drawn.draw.prize_id;
       rollNamesByDraw.set(drawn.draw.draw_id, drawn.roll_names || []);
       queue.value = enqueueLotteryDraw(knownDrawIds, queue.value, drawn.draw);
       rollingNames.value = drawn.roll_names || [];

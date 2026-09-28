@@ -24,6 +24,7 @@ export function useLotteryRoundControl(options: LotteryRoundControlOptions) {
   const activeRound = ref<LotteryRound | null>(null);
   const pendingRoundId = ref<string>();
   const resetBusy = ref(false);
+  const confirmedPrizeId = ref<number>();
   const drawBusy = computed(() => phase.value !== "idle");
   const roundLocked = computed(() => phase.value !== "idle");
   const drawButtonLabel = computed(() => ({
@@ -42,6 +43,14 @@ export function useLotteryRoundControl(options: LotteryRoundControlOptions) {
 
   const createRoundId = () => globalThis.crypto?.randomUUID?.()
     || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  const selectPrize = (prizeId: number | undefined) => {
+    if (phase.value !== "idle" || !prizeId) return;
+    if (!options.send({ type: "lottery.prize.select", prize_id: prizeId })) {
+      options.selectedPrizeId.value = confirmedPrizeId.value;
+      ElMessage.warning("实时连接未就绪，奖品切换未同步");
+    }
+  };
 
   const startDraw = () => {
     if (phase.value !== "idle" || !options.selectedPrizeId.value) return;
@@ -94,7 +103,13 @@ export function useLotteryRoundControl(options: LotteryRoundControlOptions) {
       const ready = payload as unknown as LotterySnapshot;
       options.applySnapshot(ready);
       activeRound.value = ready.active_round || null;
-      if (activeRound.value) options.selectedPrizeId.value = activeRound.value.prize_id;
+      if (activeRound.value) {
+        options.selectedPrizeId.value = activeRound.value.prize_id;
+        confirmedPrizeId.value = activeRound.value.prize_id;
+      } else if (typeof ready.selected_prize_id === "number") {
+        options.selectedPrizeId.value = ready.selected_prize_id;
+        confirmedPrizeId.value = ready.selected_prize_id;
+      }
       pendingRoundId.value = activeRound.value?.round_id;
       phase.value = activeRound.value?.phase === "stopping" ? "stopping" : activeRound.value ? "rolling" : "idle";
       resetBusy.value = false;
@@ -105,7 +120,16 @@ export function useLotteryRoundControl(options: LotteryRoundControlOptions) {
       activeRound.value = round;
       pendingRoundId.value = round.round_id;
       options.selectedPrizeId.value = round.prize_id;
+      confirmedPrizeId.value = round.prize_id;
       phase.value = round.phase === "stopping" ? "stopping" : "rolling";
+      return true;
+    }
+    if (payload.type === "lottery.prize.selected") {
+      const prizeId = payload.selected_prize_id;
+      if (typeof prizeId === "number" && prizeId > 0) {
+        options.selectedPrizeId.value = prizeId;
+        confirmedPrizeId.value = prizeId;
+      }
       return true;
     }
     if (payload.type === "lottery.draw.stopping") {
@@ -139,6 +163,9 @@ export function useLotteryRoundControl(options: LotteryRoundControlOptions) {
         pendingRoundId.value = undefined;
         phase.value = "idle";
       }
+      if (!roundId && confirmedPrizeId.value !== undefined) {
+        options.selectedPrizeId.value = confirmedPrizeId.value;
+      }
       resetBusy.value = false;
       ElMessage.error(String(payload.detail || "开奖失败"));
       if (payload.code === "unauthorized") window.dispatchEvent(new CustomEvent("admin-unauthorized"));
@@ -162,6 +189,7 @@ export function useLotteryRoundControl(options: LotteryRoundControlOptions) {
     resetBusy,
     drawButtonLabel,
     drawButtonDisabled,
+    selectPrize,
     toggleDraw,
     resetLottery,
     handleLotteryMessage,

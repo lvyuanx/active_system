@@ -41,7 +41,7 @@ from app.modules.lottery.service import (
     update_lottery_config,
 )
 from .protocol import handle_admin_lottery_message, send_lottery_error
-from .round_state import lottery_round_store
+from .round_state import lottery_round_store, lottery_selection_store
 from .state import lottery_operation_lock
 
 
@@ -315,6 +315,7 @@ async def _ready_payload(
     return {
         "type": "lottery.ready",
         **snapshot,
+        "selected_prize_id": current.prize_id if current else lottery_selection_store.get(activity_id),
         "active_round": current.public_payload() if current else None,
     }
 

@@ -187,7 +187,8 @@
                   v-model="selectedPrizeId"
                   class="prize-select"
                   placeholder="请选择奖品"
-                  :disabled="roundLocked"
+                  :disabled="roundLocked || !connected"
+                  @change="selectPrize"
                 >
                   <el-option
                     v-for="prize in savedPrizes"
@@ -492,6 +493,7 @@ const {
   resetBusy,
   drawButtonLabel,
   drawButtonDisabled,
+  selectPrize,
   toggleDraw,
   resetLottery,
   handleLotteryMessage,

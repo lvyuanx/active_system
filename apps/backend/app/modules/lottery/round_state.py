@@ -78,4 +78,25 @@ class LotteryRoundStore:
             self._rounds.clear()
 
 
+class LotterySelectionStore:
+    """保存活动当前选中的奖品，供管理端切换和大屏重连恢复使用。"""
+
+    def __init__(self) -> None:
+        self._selected_prizes: dict[str, int] = {}
+        self._lock = RLock()
+
+    def get(self, activity_id: str) -> int | None:
+        with self._lock:
+            return self._selected_prizes.get(activity_id)
+
+    def set(self, activity_id: str, prize_id: int) -> None:
+        with self._lock:
+            self._selected_prizes[activity_id] = prize_id
+
+    def clear_all(self) -> None:
+        with self._lock:
+            self._selected_prizes.clear()
+
+
 lottery_round_store = LotteryRoundStore()
+lottery_selection_store = LotterySelectionStore()

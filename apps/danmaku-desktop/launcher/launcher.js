@@ -6,6 +6,8 @@ const status = document.querySelector("#status");
 const startButton = document.querySelector("#start-button");
 const resumeButton = document.querySelector("#resume-button");
 const stopButton = document.querySelector("#stop-button");
+const defaultApiBaseUrl = apiBaseUrl.value;
+let rememberedDisplayIds;
 
 const setStatus = (message, type = "") => {
   status.textContent = message;
@@ -22,10 +24,27 @@ const setLoading = (loading) => {
 const selectedDisplayIds = () => Array.from(
   displayList.querySelectorAll("input[name=\"display-id\"]:checked"),
 ).map((input) => Number(input.value));
+const loadRememberedLaunchConfig = async () => {
+  try {
+    const rememberedConfig = await window.danmakuDesktop.getRememberedLaunchConfig();
+    if (!rememberedConfig || typeof rememberedConfig !== "object") return;
+    if (typeof rememberedConfig.apiBaseUrl === "string" && apiBaseUrl.value === defaultApiBaseUrl) {
+      apiBaseUrl.value = rememberedConfig.apiBaseUrl;
+    }
+    if (Array.isArray(rememberedConfig.displayIds)) {
+      const displayIds = rememberedConfig.displayIds.filter((id) => Number.isInteger(id));
+      if (displayIds.length > 0) rememberedDisplayIds = new Set(displayIds);
+    }
+  } catch {
+    // 配置文件不可用时使用默认 API 地址和显示器选择。
+  }
+};
 const loadDisplays = async () => {
   try {
     const displays = await window.danmakuDesktop.listDisplays();
     if (displays.length === 0) throw new Error("没有可用的投屏显示器");
+    const hasRememberedDisplay = rememberedDisplayIds
+      && displays.some((display) => rememberedDisplayIds.has(display.id));
     displayList.replaceChildren(...displays.map((display) => {
       const option = document.createElement("label");
       option.className = "display-option";
@@ -33,7 +52,9 @@ const loadDisplays = async () => {
       checkbox.type = "checkbox";
       checkbox.name = "display-id";
       checkbox.value = String(display.id);
-      checkbox.checked = display.isPrimary || displays.length === 1;
+      checkbox.checked = hasRememberedDisplay
+        ? rememberedDisplayIds.has(display.id)
+        : display.isPrimary || displays.length === 1;
       const copy = document.createElement("span");
       copy.className = "display-option-copy";
       copy.textContent = `${display.label} - ${display.width} x ${display.height}${display.isPrimary ? "（主屏）" : ""}`;
@@ -54,6 +75,11 @@ const loadRememberedToken = async () => {
   } catch {
     // 安全存储不可用时保持空输入，不影响本次手动启动。
   }
+};
+
+const initializeLauncher = async () => {
+  await loadRememberedLaunchConfig();
+  await Promise.all([loadDisplays(), loadRememberedToken()]);
 };
 
 form.addEventListener("submit", async (event) => {
@@ -102,5 +128,4 @@ stopButton.addEventListener("click", async () => {
   }
 });
 
-loadDisplays();
-loadRememberedToken();
+initializeLauncher();

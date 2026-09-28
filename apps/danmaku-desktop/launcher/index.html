@@ -18,7 +18,7 @@
         <input id="api-base-url" name="api-base-url" type="url" value="http://localhost:8000/api/v1" required />
         <label for="token">弹幕 token</label>
         <textarea id="token" name="token" rows="3" required spellcheck="false"></textarea>
-        <p class="field-hint">成功启动后会通过系统安全存储记住最近一次 token，下次打开自动填充。</p>
+        <p class="field-hint">成功启动后会记住 API 地址、token 和显示器选择，下次打开自动填充；token 使用系统安全存储。</p>
         <label>投屏显示器（可多选）</label>
         <div id="display-list" class="display-list" role="group" aria-label="投屏显示器"></div>
         <p class="field-hint">可同时选择多个显示器，弹幕会同步显示在所有选中的屏幕。</p>

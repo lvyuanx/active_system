@@ -114,7 +114,7 @@ import "./activity.css";
 import "./activity-auth.css";
 import activityLogo from "../../assets/active-logo.png";
 import { activitySessionKey, type ActivitySession } from "./session";
-import { useKeyboardViewport } from "./useKeyboardViewport";
+import { activityKeyboardVisibleKey, useKeyboardViewport } from "./useKeyboardViewport";
 import {
   ApiError,
   clearActivityToken,
@@ -144,6 +144,7 @@ const activeTab = computed(() => {
   return 0;
 });
 const { keyboardVisible, viewportStyle } = useKeyboardViewport(computed(() => route.name === "activity-chat"));
+provide(activityKeyboardVisibleKey, keyboardVisible);
 
 const logout = () => {
   clearActivityToken(activityId);

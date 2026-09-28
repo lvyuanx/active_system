@@ -28,6 +28,13 @@ body {
   min-height: 100dvh;
 }
 
+html.activity-keyboard-lock,
+html.activity-keyboard-lock body,
+html.activity-keyboard-lock #app {
+  height: 100%;
+  overflow: hidden;
+}
+
 button,
 input {
   font: inherit;

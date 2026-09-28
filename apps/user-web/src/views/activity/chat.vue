@@ -76,7 +76,7 @@
           type="textarea"
           placeholder="输入消息"
           @click="stickerPickerOpen = false"
-          @focus="stickerPickerOpen = false"
+          @focus="handleComposerFocus(); stickerPickerOpen = false"
         />
         <VanButton
           native-type="button"
@@ -107,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { Button as VanButton, Field as VanField, Loading as VanLoading, showToast } from "vant";
 import "./chat.css";
 import chatSendIcon from "../../assets/icons/chat-send.svg";
@@ -126,6 +126,7 @@ import {
 } from "../../api/client";
 import ActivityAvatar from "../../components/ActivityAvatar.vue";
 import { activitySessionKey, type ActivitySession } from "./session";
+import { activityKeyboardVisibleKey } from "./useKeyboardViewport";
 
 const props = defineProps<{ activity: Activity; user: ActivityUserResponse }>();
 const messages = ref<ChatMessage[]>([]);
@@ -143,8 +144,10 @@ const connectionState = ref<"connecting" | "connected" | "offline">("connecting"
 const socket = ref<WebSocket>();
 const stopped = ref(false);
 const session = inject<ActivitySession>(activitySessionKey);
+const keyboardVisible = inject(activityKeyboardVisibleKey, ref(false));
 let reconnectTimer: number | undefined;
 let reconnectAttempt = 0;
+let keyboardScrollFrame = 0;
 const ACTIVITY_AVATAR_COUNT = 20;
 const FALLBACK_AVATAR_ID: ActivityAvatarId = 1;
 
@@ -179,6 +182,28 @@ const scrollToLatest = (behavior: ScrollBehavior = "smooth") => {
   if (!element) return;
   element.scrollTo({ top: element.scrollHeight, behavior });
 };
+const isTextInputFocused = () => {
+  const element = document.activeElement;
+  return element instanceof HTMLInputElement
+    || element instanceof HTMLTextAreaElement
+    || element instanceof HTMLSelectElement
+    || element instanceof HTMLElement && element.isContentEditable;
+};
+const scheduleKeyboardScroll = (force = false, allowBlurred = false) => {
+  if (!force && (!keyboardVisible.value || !isTextInputFocused())) return;
+  if (keyboardScrollFrame) window.cancelAnimationFrame(keyboardScrollFrame);
+  keyboardScrollFrame = window.requestAnimationFrame(() => {
+    keyboardScrollFrame = window.requestAnimationFrame(() => {
+      keyboardScrollFrame = 0;
+      if ((force || keyboardVisible.value) && (allowBlurred || isTextInputFocused())) {
+        scrollToLatest("auto");
+      }
+    });
+  });
+};
+const isTouchDevice = () => navigator.maxTouchPoints > 0 || "ontouchstart" in window;
+const handleComposerFocus = () => scheduleKeyboardScroll(isTouchDevice());
+const handleViewportResize = () => scheduleKeyboardScroll();
 const revealNewMessages = async (previous: ChatScrollSnapshot) => {
   await nextTick();
   const element = messageList.value;
@@ -320,9 +345,15 @@ const canSendSticker = computed(() =>
   && connectionState.value === "connected"
 );
 
+watch(keyboardVisible, (visible) => {
+  if (visible) scheduleKeyboardScroll();
+  else scheduleKeyboardScroll(true, true);
+});
+
 onMounted(async () => {
   document.addEventListener("pointerdown", handleDocumentPointerDown);
   document.addEventListener("keydown", handleDocumentKeydown);
+  window.visualViewport?.addEventListener("resize", handleViewportResize);
   await Promise.all([
     fetchMessages().catch(() => showToast("消息加载失败")),
     fetchStickers(),
@@ -335,6 +366,8 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   document.removeEventListener("pointerdown", handleDocumentPointerDown);
   document.removeEventListener("keydown", handleDocumentKeydown);
+  window.visualViewport?.removeEventListener("resize", handleViewportResize);
+  if (keyboardScrollFrame) window.cancelAnimationFrame(keyboardScrollFrame);
   stopped.value = true;
   if (reconnectTimer) window.clearTimeout(reconnectTimer);
   socket.value?.close();

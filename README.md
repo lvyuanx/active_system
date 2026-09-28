@@ -69,8 +69,9 @@ Nginx 已配置 WebSocket Upgrade。
 `GET/PUT /api/v1/admin/activities/{activity_id}/lottery` 配置；管理端“特殊配置”入口需先调用
 `POST /api/v1/admin/activities/{activity_id}/lottery/security-code/verify` 校验 `LOTTERY_SECURITY_CODE`，名单通过
 `GET/PUT /api/v1/admin/activities/{activity_id}/lottery/entries?prize_id={prize_id}` 按指定奖品分页搜索和单行即时保存；不同奖品分别维护黑白名单，参与者统计和规则说明仅在验证后的弹窗内展示，中奖历史通过
-`GET /api/v1/admin/activities/{activity_id}/lottery/history` 查询。抽奖先发送 `lottery.draw.start` 开始球体动画，
-收到 `lottery.draw.started` 后发送 `lottery.draw.stop` 才会开奖；开奖事务提交后才广播，轮次 ID保证重复停止幂等。
+`GET /api/v1/admin/activities/{activity_id}/lottery/history` 查询。管理端切换奖品时通过 WebSocket 发送
+`lottery.prize.select`，服务端广播 `lottery.prize.selected` 并在 `lottery.ready` 中恢复当前选中项；抽奖先发送
+`lottery.draw.start` 开始球体动画，收到 `lottery.draw.started` 后发送 `lottery.draw.stop` 才会开奖；开奖事务提交后才广播，轮次 ID保证重复停止幂等。
 
 公开大屏连接 `/api/v1/activities/{activity_id}/lottery/ws`，不携带管理员凭证；连接成功通过 `lottery.ready` 恢复快照和进行中的轮次，
 开始事件包含开始时冻结的活动用户头像与用户名，停止时先广播仅含轮次 ID 的 `lottery.draw.stopping` 让球体立即冻结并打散，
@@ -101,7 +102,8 @@ Nginx 已配置 WebSocket Upgrade。
 pnpm dist:danmaku:win
 ```
 
-输出位于 `apps/danmaku-desktop/release/`。桌面工具不把 token 写入本地存储、文件或安装包配置。
+输出位于 `apps/danmaku-desktop/release/`。桌面工具会在启动成功后记住 API 地址和显示器选择，下次打开时自动恢复；token
+只通过 Electron `safeStorage` 加密保存，不会写入明文本地存储、日志或安装包配置。
 
 ## 验证
 

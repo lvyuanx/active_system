@@ -1,8 +1,11 @@
-import { computed, onBeforeUnmount, onMounted, ref, watch, type Ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch, type InjectionKey, type Ref } from "vue";
 
 const KEYBOARD_OPEN_DELTA = 150;
 const KEYBOARD_CLOSE_DELTA = 100;
 const KEYBOARD_FOCUS_FALLBACK_DELAY = 300;
+const KEYBOARD_LOCK_CLASS = "activity-keyboard-lock";
+
+export const activityKeyboardVisibleKey: InjectionKey<Ref<boolean>> = Symbol("activity-keyboard-visible");
 
 type ViewportSnapshot = {
   height: number;
@@ -40,6 +43,7 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
   let animationFrame = 0;
   let focusResetTimer = 0;
   let keyboardFallbackTimer = 0;
+  let documentScrollRestoreFrame = 0;
 
   const resetBaseline = (height: number) => {
     baselineHeight = height;
@@ -88,6 +92,34 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
     animationFrame = window.requestAnimationFrame(updateViewport);
   };
 
+  const setDocumentKeyboardLock = (locked: boolean) => {
+    if (typeof document === "undefined") return;
+    document.documentElement.classList.toggle(KEYBOARD_LOCK_CLASS, locked);
+  };
+
+  const restoreDocumentScroll = () => {
+    if (typeof document === "undefined") return;
+    const restore = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    restore();
+    if (documentScrollRestoreFrame) window.cancelAnimationFrame(documentScrollRestoreFrame);
+    documentScrollRestoreFrame = window.requestAnimationFrame(() => {
+      documentScrollRestoreFrame = 0;
+      restore();
+    });
+  };
+
+  const restoreViewportAfterKeyboard = () => {
+    if (baselineHeight > 0) {
+      viewportHeight.value = Math.max(baselineHeight, readViewport().height);
+      viewportOffsetTop.value = 0;
+    }
+    restoreDocumentScroll();
+  };
+
   const isTouchDevice = () => navigator.maxTouchPoints > 0 || "ontouchstart" in window;
 
   const clearKeyboardFallback = () => {
@@ -120,7 +152,10 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
     window.clearTimeout(focusResetTimer);
     focusResetTimer = window.setTimeout(() => {
       textInputFocused = isTextEntryElement(document.activeElement);
-      if (!textInputFocused) clearKeyboardFallback();
+      if (!textInputFocused) {
+        clearKeyboardFallback();
+        restoreDocumentScroll();
+      }
       scheduleViewportUpdate();
     }, 0);
   };
@@ -151,6 +186,8 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
     clearKeyboardFallback();
     if (animationFrame) window.cancelAnimationFrame(animationFrame);
     animationFrame = 0;
+    if (documentScrollRestoreFrame) window.cancelAnimationFrame(documentScrollRestoreFrame);
+    documentScrollRestoreFrame = 0;
   };
 
   const viewportStyle = computed<Record<string, string>>(() => ({
@@ -159,6 +196,7 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
   }));
 
   onMounted(() => {
+    setDocumentKeyboardLock(false);
     document.addEventListener("focusin", handleFocusIn);
     document.addEventListener("focusout", handleFocusOut);
     window.addEventListener("resize", handleViewportChange);
@@ -172,6 +210,15 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
     else deactivate();
   });
 
+  watch(
+    keyboardVisible,
+    (visible) => {
+      setDocumentKeyboardLock(visible);
+      if (!visible) restoreViewportAfterKeyboard();
+    },
+    { flush: "sync" },
+  );
+
   onBeforeUnmount(() => {
     document.removeEventListener("focusin", handleFocusIn);
     document.removeEventListener("focusout", handleFocusOut);
@@ -179,6 +226,7 @@ export const useKeyboardViewport = (active: Ref<boolean>) => {
     window.visualViewport?.removeEventListener("resize", handleViewportChange);
     window.visualViewport?.removeEventListener("scroll", handleViewportChange);
     deactivate();
+    setDocumentKeyboardLock(false);
   });
 
   return { keyboardVisible, viewportStyle };
