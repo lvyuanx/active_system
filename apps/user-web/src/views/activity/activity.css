@@ -347,10 +347,6 @@
   font-size: 12px;
 }
 
-.activity-page .service-value {
-  white-space: nowrap;
-}
-
 .activity-page .service-list .van-cell::after {
   right: 16px;
   left: 66px;

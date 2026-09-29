@@ -22,13 +22,9 @@
     <section class="service-section" aria-labelledby="service-heading">
       <div class="section-heading">
         <div><p class="section-kicker">参与服务</p><h2 id="service-heading">活动服务</h2></div>
-        <span class="section-count">{{ user.can_mobile_lottery ? 3 : 2 }} 项</span>
+        <span class="section-count">{{ user.can_mobile_lottery ? 2 : 1 }} 项</span>
       </div>
       <VanCellGroup class="service-list">
-        <VanCell title="活动首页" label="报名、签到和活动内容将在这里开放">
-          <template #icon><span class="service-icon" aria-hidden="true"><VanIcon name="apps-o" /></span></template>
-          <template #value><span class="service-value">已进入</span></template>
-        </VanCell>
         <VanCell
           title="活动聊天室"
           label="与同场活动参与者实时交流"
