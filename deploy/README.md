@@ -75,6 +75,14 @@ Shell 中同名环境变量优先于 --env-file，请避免意外覆盖。必填
 | LOTTERY_SECURITY_CODE | 必填 | 抽奖特殊配置安全码 |
 | DANMAKU_TOKEN_SECRET | 空 | 空时沿用 JWT_SECRET |
 | APP_CORS_ORIGINS | 空 | 直接跨源调用 API 时允许的来源，逗号分隔 |
+| ALIBABA_CLOUD_ACCESS_KEY_ID | 空 | 阿里云凭据链 AccessKey ID，可改用运行环境身份 |
+| ALIBABA_CLOUD_ACCESS_KEY_SECRET | 空 | 阿里云凭据链 AccessKey Secret |
+| ALIYUN_SMS_ENDPOINT | dypnsapi.aliyuncs.com | 阿里云号码认证服务 Endpoint |
+| ALIYUN_SMS_SIGN_NAME | 空 | 已审核的短信签名 |
+| ALIYUN_SMS_TEMPLATE_CODE | 空 | 已审核的短信验证码模板编号 |
+| ALIYUN_SMS_SCHEME_NAME | 空 | 阿里云短信方案名，空值使用默认方案 |
+| ALIYUN_SMS_CODE_LENGTH | 6 | 验证码长度 |
+| ALIYUN_SMS_VALID_TIME | 300 | 验证码有效期，单位为秒 |
 
 外部网关接入 `open-getaway-network` 后统一转发至 Nginx。默认访问：
 
@@ -94,6 +102,9 @@ client.conf 定义站点并在 server 内包含 backend.conf 的 /api location�
 HTTPS 由外部代理提供，需要保留 Host、X-Forwarded-Proto 和 WebSocket Upgrade。
 正式公网访问及上传统一使用外部网关入口；后端和 Nginx 端口仅在 Docker 网络内部可达。
 `open-getaway-network` 由网关侧负责创建和保留，`docker compose down` 不会删除该共享网络。
+
+短信接口为 `POST /api/v1/activities/{activity_id}/auth/sms-code`，核验接口为其 `/verify` 子路径。
+短信签名和模板未配置时接口返回 503；同一手机号每 60 秒最多发送一次，限流记录保存在后端 SQLite 数据库中。
 
 ## 挂载与持久化
 

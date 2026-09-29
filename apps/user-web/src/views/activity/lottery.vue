@@ -6,7 +6,7 @@
       </button>
       <div>
         <p class="section-kicker">MOBILE LOTTERY</p>
-        <h1>移动端抽奖</h1>
+        <h1>抽奖控制</h1>
       </div>
       <VanTag class="mobile-lottery-connection" :type="connectionTagType">
         {{ connectionLabel }}

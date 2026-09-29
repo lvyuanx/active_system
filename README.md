@@ -47,19 +47,24 @@ Electron 仅通过 `?danmaku-overlay=1` 加载透明弹幕渲染层。
 启动后端前复制 `.env.example` 为 `.env`，设置 `SUPERUSER_USERNAME`、`SUPERUSER_PASSWORD`、`LOTTERY_SECURITY_CODE` 和随机的 `JWT_SECRET`。
 管理员和活动用户登录 JWT 默认有效期为 24 小时，可通过 `JWT_EXPIRE_MINUTES` 调整。
 可选设置独立的 `DANMAKU_TOKEN_SECRET`；为空时弹幕 token 使用 `JWT_SECRET` 派生。后端首次启动会初始化 SQLite 数据库和超级用户；只有该超级用户可以登录管理端。
+短信验证码通过 `POST /api/v1/activities/{activity_id}/auth/sms-code` 发送。接口只接受中国大陆手机号，按手机号全局限制每 60 秒一次；
+配置 `ALIBABA_CLOUD_ACCESS_KEY_ID`、`ALIBABA_CLOUD_ACCESS_KEY_SECRET`、`ALIYUN_SMS_SIGN_NAME` 和
+`ALIYUN_SMS_TEMPLATE_CODE` 后，阿里云会生成并发送验证码，后端不会保存或返回验证码。核验接口为
+`POST /api/v1/activities/{activity_id}/auth/sms-code/verify`，返回 `verified=true/false` 表示核验通过或验证码错误/失效。
 奖品图片和聊天表情包由管理员通过独立 multipart 接口上传，默认保存到 `MEDIA_ROOT=./data/media`；奖品支持 JPEG、PNG、WebP，
 聊天表情额外支持 GIF，单文件上限均为 5 MiB。Docker 部署将数据库和媒体一起持久化，配置 JSON 和聊天消息不承载图片二进制。
 
 登录后默认进入活动选择页。活动状态为“已关闭”“进行中”“已结束”：新建活动默认为已关闭，可在已关闭和进行中之间反复切换；管理员手动结束后不可再次开启或关闭。活动名称必填，描述、开始时间和结束时间可选，若同时填写时间则结束时间必须晚于开始时间。
 
-点击活动卡片进入活动管理页；活动列表卡片底部和活动管理首页的“活动入口”面板都提供“打开抽奖大屏”按钮，会在新标签页打开该活动的实时抽奖大屏。大屏地址由管理端 `VITE_SCREEN_WEB_BASE_URL` 配置（默认 `http://localhost:5174`），并自动附加当前活动的 `activity_id`。活动管理首页会生成用户端地址和二维码。二维码地址由管理端 `VITE_USER_WEB_BASE_URL` 配置（默认 `http://localhost:5175`）。用户端按活动收集用户名和手机号，手机号在同一活动内唯一；登录 token 按活动 ID 缓存，缓存有效时扫码可直接进入活动首页。
+点击活动卡片进入活动管理页；活动列表卡片底部和活动管理首页的“活动入口”面板都提供“打开抽奖大屏”按钮，会在新标签页打开该活动的实时抽奖大屏。大屏地址由管理端 `VITE_SCREEN_WEB_BASE_URL` 配置（默认 `http://localhost:5174`），并自动附加当前活动的 `activity_id`。活动管理首页会生成用户端地址和二维码。二维码地址由管理端 `VITE_USER_WEB_BASE_URL` 配置（默认 `http://localhost:5175`）。用户端按活动收集手机号并发送短信验证码登录；新手机号首次登录时补充姓名，手机号在同一活动内唯一；登录 token 按活动 ID 缓存，缓存有效时扫码可直接进入活动首页。
 
 登录活动后，用户端底部提供“首页 / 聊天 / 我的”三个入口。每个活动自动拥有聊天室：`open` 活动可发送
 1–500 字符文本或点击发送活动表情，`closed` 或 `ended` 活动可查看历史但只读。表情包在管理端的活动级“聊天表情包”页面维护，
 移动端只显示当前活动启用的表情；聊天消息通过 HTTP 游标接口读取，并使用首帧认证的 WebSocket 实时广播。
 Nginx 已配置 WebSocket Upgrade。
 
-管理员可在活动参与者页面逐人授予或取消“移动端抽奖”权限。已授权用户的活动首页会显示移动端抽奖入口，
+活动用户登录后，活动首页会显示“抽奖活动”查看入口，可通过轮播查看当前启用奖品、库存和已揭晓的中奖人。
+管理员仍可在活动参与者页面逐人授予或取消“移动端抽奖”权限；已授权用户会额外看到“抽奖控制”入口，
 只能选择管理端已配置的启用奖品并发起开奖；奖品数量、库存、黑白名单、跨奖品不重复等配置仍只能由管理端维护。
 移动端通过 `/api/v1/activities/{activity_id}/lottery/mobile/ws` 建立首帧认证的活动用户 WebSocket，
 发送与管理端一致的 `lottery.prize.select`、`lottery.draw.start` 和 `lottery.draw.stop` 消息；连接和每次控制都要求移动端抽奖权限。

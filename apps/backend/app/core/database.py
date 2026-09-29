@@ -160,6 +160,10 @@ CREATE TABLE IF NOT EXISTS activity_danmaku_settings (
     updated_at TEXT NOT NULL,
     CHECK(display_bottom > display_top)
 );
+CREATE TABLE IF NOT EXISTS sms_verification_sends (
+    phone TEXT PRIMARY KEY,
+    last_sent_at INTEGER NOT NULL CHECK(last_sent_at >= 0)
+);
 """
 
 

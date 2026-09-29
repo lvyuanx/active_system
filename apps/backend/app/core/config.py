@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     lottery_security_code: str = ""
     superuser_username: str = "admin"
     superuser_password: str = ""
+    aliyun_sms_endpoint: str = "dypnsapi.aliyuncs.com"
+    aliyun_sms_sign_name: str = ""
+    aliyun_sms_template_code: str = ""
+    aliyun_sms_scheme_name: str = ""
+    aliyun_sms_code_length: int = 6
+    aliyun_sms_valid_time: int = 300
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

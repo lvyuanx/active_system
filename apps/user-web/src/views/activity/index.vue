@@ -52,25 +52,13 @@
           <div class="login-kicker" aria-hidden="true"><span></span><strong>活动入口</strong><span></span></div>
           <img class="activity-logo" :src="activityLogo" alt="ACTIVE 活动标识" />
           <p class="activity-context">{{ activity?.name || "当前活动" }}</p>
-          <h1 class="login-title">登录活动</h1>
-          <p class="login-description">填写以下信息，即可进入当前活动。</p>
+          <h1 class="login-title">{{ needsName ? "补充姓名" : "短信登录" }}</h1>
+          <p class="login-description">
+            {{ needsName ? "验证码已通过，请输入姓名完成登录。" : "使用手机号接收验证码，验证后进入活动。" }}
+          </p>
         </header>
         <VanForm class="login-form" :show-error="true" :show-error-message="false" @submit="submit">
           <section class="field-stack">
-            <div class="field-item">
-              <label for="activity-username">用户名</label>
-              <VanField
-                id="activity-username"
-                v-model="form.username"
-                name="username"
-                center
-                left-icon="contact-o"
-                placeholder="请输入用户名"
-                autocomplete="username"
-                clearable
-                :rules="[{ required: true, message: '请输入用户名' }]"
-              />
-            </div>
             <div class="field-item">
               <label for="activity-phone">手机号</label>
               <VanField
@@ -83,22 +71,71 @@
                 placeholder="请输入手机号"
                 autocomplete="tel"
                 clearable
+                :readonly="needsName"
                 :rules="[{ required: true, message: '请输入手机号' }]"
               />
             </div>
+            <div class="field-item">
+              <label for="activity-sms-code">验证码</label>
+              <VanField
+                id="activity-sms-code"
+                v-model="form.code"
+                name="code"
+                center
+                left-icon="shield-o"
+                type="tel"
+                maxlength="8"
+                placeholder="请输入短信验证码"
+                autocomplete="one-time-code"
+                clearable
+                :rules="[{ required: true, message: '请输入验证码' }]"
+              >
+                <template #button>
+                  <VanButton
+                    size="small"
+                    type="primary"
+                    native-type="button"
+                    class="code-send-button"
+                    :loading="sendingCode"
+                    :disabled="sendingCode || codeCountdown > 0"
+                    @click="sendCode"
+                  >
+                    {{ codeCountdown > 0 ? codeCountdown + "s" : "发送验证码" }}
+                  </VanButton>
+                </template>
+              </VanField>
+            </div>
+            <div v-if="needsName" class="field-item">
+              <label for="activity-username">姓名</label>
+              <VanField
+                id="activity-username"
+                v-model="form.username"
+                name="username"
+                center
+                left-icon="contact-o"
+                placeholder="请输入姓名"
+                autocomplete="name"
+                maxlength="100"
+                clearable
+                :rules="[{ required: true, message: '请输入姓名' }]"
+              />
+            </div>
             <VanButton block type="primary" native-type="submit" :loading="submitting" class="login-submit">
-              登录并进入
+              {{ needsName ? "完成登录" : "验证并进入" }}
             </VanButton>
           </section>
         </VanForm>
-        <p class="auto-register-note"><VanIcon name="info-o" aria-hidden="true" /><span>未注册用户会自动注册</span></p>
+        <p class="auto-register-note">
+          <VanIcon name="info-o" aria-hidden="true" />
+          <span>{{ needsName ? "姓名仅在首次进入活动时填写" : "新用户验证后补充姓名即可进入" }}</span>
+        </p>
       </div>
     </section>
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, provide, reactive, ref } from "vue";
+import { computed, onMounted, onUnmounted, provide, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   Button as VanButton,
@@ -116,14 +153,13 @@ import activityLogo from "../../assets/active-logo.png";
 import { activitySessionKey, type ActivitySession } from "./session";
 import { activityKeyboardVisibleKey, useKeyboardViewport } from "./useKeyboardViewport";
 import {
-  ApiError,
   clearActivityToken,
   getActivity,
   getActivityMe,
   getActivityToken,
-  loginActivityUser,
-  registerActivityUser,
+  sendActivitySmsCode,
   setActivityToken,
+  smsLoginActivityUser,
   type Activity,
   type ActivityUserResponse,
 } from "../../api/client";
@@ -131,16 +167,21 @@ import {
 const route = useRoute();
 const router = useRouter();
 const activityId = String(route.params.activityId);
-const basePath = `/activity/${activityId}`;
+const basePath = "/activity/" + activityId;
 const activity = ref<Activity>();
 const user = ref<ActivityUserResponse>();
 const loading = ref(true);
 const submitting = ref(false);
+const sendingCode = ref(false);
+const needsName = ref(false);
+const codeCountdown = ref(0);
 const error = ref("");
-const form = reactive({ username: "", phone: "" });
+const form = reactive({ username: "", phone: "", code: "" });
+const phonePattern = /^1[3-9][0-9]{9}$/;
+let countdownTimer: number | undefined;
 const activeTab = computed(() => {
-  if (route.path === `${basePath}/chat`) return 1;
-  if (route.path === `${basePath}/me`) return 2;
+  if (route.path === basePath + "/chat") return 1;
+  if (route.path === basePath + "/me") return 2;
   return 0;
 });
 const { keyboardVisible, viewportStyle } = useKeyboardViewport(computed(() => route.name === "activity-chat"));
@@ -172,22 +213,80 @@ const load = async () => {
     loading.value = false;
   }
 };
+
+const stopCountdown = () => {
+  if (countdownTimer === undefined) return;
+  window.clearInterval(countdownTimer);
+  countdownTimer = undefined;
+};
+
+const startCountdown = (seconds: number) => {
+  stopCountdown();
+  codeCountdown.value = Math.max(1, Math.ceil(seconds));
+  countdownTimer = window.setInterval(() => {
+    codeCountdown.value -= 1;
+    if (codeCountdown.value <= 0) {
+      codeCountdown.value = 0;
+      stopCountdown();
+    }
+  }, 1000);
+};
+
+const sendCode = async () => {
+  const phone = form.phone.trim();
+  if (!phonePattern.test(phone)) {
+    showToast("请输入有效的手机号");
+    return;
+  }
+  sendingCode.value = true;
+  try {
+    const result = await sendActivitySmsCode(activityId, phone);
+    form.phone = phone;
+    form.code = "";
+    form.username = "";
+    needsName.value = false;
+    startCountdown(result.retry_after);
+    showToast(result.message);
+  } catch (err) {
+    showToast(err instanceof Error ? err.message : "验证码发送失败，请稍后重试");
+  } finally {
+    sendingCode.value = false;
+  }
+};
+
 const submit = async () => {
+  const phone = form.phone.trim();
+  const code = form.code.trim();
+  if (!phonePattern.test(phone)) {
+    showToast("请输入有效的手机号");
+    return;
+  }
+  if (!/^[0-9]{4,8}$/.test(code)) {
+    showToast("请输入 4-8 位数字验证码");
+    return;
+  }
+  const username = form.username.trim();
+  if (needsName.value && !username) {
+    showToast("请输入姓名");
+    return;
+  }
   submitting.value = true;
   try {
-    const credentials = { username: form.username.trim(), phone: form.phone.trim() };
-    let result: ActivityUserResponse;
-    let automaticallyRegistered = false;
-    try {
-      result = await loginActivityUser(activityId, credentials);
-    } catch (err) {
-      if (!(err instanceof ApiError) || err.status !== 401) throw err;
-      result = await registerActivityUser(activityId, credentials);
-      automaticallyRegistered = true;
+    const result = await smsLoginActivityUser(
+      activityId,
+      needsName.value ? { phone, code, username } : { phone, code },
+    );
+    if (result.needs_name) {
+      needsName.value = true;
+      showToast("请输入姓名");
+      return;
     }
-    setActivityToken(activityId, result.access_token);
-    user.value = result;
-    showToast(automaticallyRegistered ? "已自动注册并进入活动" : "登录成功");
+    if (!result.user) {
+      throw new Error("登录响应缺少用户信息");
+    }
+    setActivityToken(activityId, result.user.access_token);
+    user.value = result.user;
+    showToast("登录成功");
   } catch (err) {
     showToast(err instanceof Error ? err.message : "操作失败，请稍后重试");
   } finally {
@@ -196,4 +295,5 @@ const submit = async () => {
 };
 
 onMounted(load);
+onUnmounted(stopCountdown);
 </script>

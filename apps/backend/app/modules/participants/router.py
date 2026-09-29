@@ -18,6 +18,13 @@ from app.modules.participants.avatar import (
     ensure_avatar_id,
     random_avatar_id,
 )
+from app.modules.sms.service import (
+    SmsConfigurationError,
+    SmsProviderError,
+    check_sms_code,
+    normalize_phone,
+    normalize_sms_code,
+)
 
 
 router = APIRouter(prefix="/activities", tags=["activity-auth"])
@@ -46,6 +53,36 @@ class ActivityUserResponse(BaseModel):
     joined_at: datetime
     avatar_id: int = Field(ge=AVATAR_ID_MIN, le=AVATAR_ID_MAX)
     can_mobile_lottery: bool = False
+
+
+class SmsLoginRequest(BaseModel):
+    phone: str = Field(min_length=11, max_length=11)
+    code: str = Field(min_length=4, max_length=8)
+    username: str | None = Field(default=None, max_length=100)
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def validate_phone(cls, value: object) -> str:
+        return normalize_phone(value)
+
+    @field_validator("code", mode="before")
+    @classmethod
+    def validate_code(cls, value: object) -> str:
+        return normalize_sms_code(value)
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def strip_username(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            raise ValueError("姓名必须是文本")
+        return value.strip() or None
+
+
+class SmsLoginResponse(BaseModel):
+    needs_name: bool = False
+    user: ActivityUserResponse | None = None
 
 
 @dataclass(frozen=True)
@@ -254,6 +291,51 @@ def login_activity_user(
     if not bool(user["is_active"]):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="该活动用户已停用")
     return make_user_response(activity_id, payload.username, settings, activity_user_id=int(user["id"]))
+
+
+@router.post("/{activity_id}/auth/sms-login", response_model=SmsLoginResponse)
+def sms_login_activity_user(
+    activity_id: str,
+    payload: SmsLoginRequest,
+    settings: Settings = Depends(get_settings),
+) -> SmsLoginResponse:
+    get_activity(activity_id, settings)
+    try:
+        verified = check_sms_code(payload.phone, payload.code, settings)
+    except SmsConfigurationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="短信服务未配置",
+        ) from error
+    except SmsProviderError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="短信核验失败，请稍后重试",
+        ) from error
+    if not verified:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="验证码错误或已失效")
+
+    with transaction(settings) as connection:
+        user = connection.execute(
+            "SELECT id, username, is_active FROM activity_users "
+            "WHERE activity_id = ? AND phone = ?",
+            (activity_id, payload.phone),
+        ).fetchone()
+    if user:
+        if not bool(user["is_active"]):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="该活动用户已停用")
+        return SmsLoginResponse(
+            user=make_user_response(activity_id, str(user["username"]), settings, activity_user_id=int(user["id"]))
+        )
+    if not payload.username:
+        return SmsLoginResponse(needs_name=True)
+
+    created = register_activity_user(
+        activity_id,
+        ActivityCredentials(username=payload.username, phone=payload.phone),
+        settings,
+    )
+    return SmsLoginResponse(user=created)
 
 
 @router.get("/{activity_id}/me", response_model=ActivityUserResponse)

@@ -22,9 +22,17 @@
     <section class="service-section" aria-labelledby="service-heading">
       <div class="section-heading">
         <div><p class="section-kicker">参与服务</p><h2 id="service-heading">活动服务</h2></div>
-        <span class="section-count">{{ user.can_mobile_lottery ? 2 : 1 }} 项</span>
+        <span class="section-count">{{ user.can_mobile_lottery ? 3 : 2 }} 项</span>
       </div>
       <VanCellGroup class="service-list">
+        <VanCell
+          title="抽奖活动"
+          label="查看奖品和中奖结果"
+          is-link
+          :to="{ name: 'activity-lottery-results', params: { activityId: activity.activity_id } }"
+        >
+          <template #icon><span class="service-icon" aria-hidden="true"><VanIcon name="apps-o" /></span></template>
+        </VanCell>
         <VanCell
           title="活动聊天室"
           label="与同场活动参与者实时交流"
@@ -35,7 +43,7 @@
         </VanCell>
         <VanCell
           v-if="user.can_mobile_lottery"
-          title="移动端抽奖"
+          title="抽奖控制"
           label="切换奖品并发起抽奖"
           is-link
           :to="{ name: 'activity-lottery', params: { activityId: activity.activity_id } }"

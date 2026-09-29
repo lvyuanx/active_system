@@ -11,14 +11,14 @@ deploy/build.py 指定 Vite `/user/` base，产物在 deploy/nginx/html/user，�
 
 ## 当前已实现功能
 
-- src/views/activity/：活动级入口页，按活动 ID读取公开信息、注册/登录并展示活动首页；有权限的用户可进入移动端抽奖页。
+- src/views/activity/：活动级入口页，按活动 ID读取公开信息、手机号验证码登录并展示活动首页和抽奖活动查看页；有权限的用户可进入抽奖控制页。
 - src/views/activity/activity.css、chat.css、activity-auth.css：活动入口专属视觉样式，分别负责页面公共、聊天页和认证页的黑金主题、Vant 覆盖、移动断点与安全区适配。
-- src/api/client.ts：活动公开详情、活动用户注册/登录、缓存 token 校验接口。
+- src/api/client.ts：活动公开详情、短信验证码发送与登录、兼容旧注册/登录、缓存 token 校验接口。
 - src/components/ActivityAvatar.vue 与 src/assets/avatars/：受信任的二十款本地卡通静态 SVG 头像映射和展示封装。
 - 活动用户 token 使用 active_user_token:{activity_id} 本地存储键，活动之间相互隔离。
 - 登录后的活动壳不渲染全局顶部 NavBar，通过顶部 safe-area 直接展示首页、聊天、我的三个嵌套路由；
   底部 Tabbar 使用命名路由持续匹配当前项，当前项以金色图标、金色加粗文字和包裹背景高亮。
-- `can_mobile_lottery` 为活动用户独立权限；首页仅对已授权用户显示移动端抽奖入口，抽奖页只能切换管理端已配置的启用奖品并发起开奖。
+- `can_mobile_lottery` 为活动用户独立权限；首页仅对已授权用户显示抽奖控制入口，抽奖控制页只能切换管理端已配置的启用奖品并发起开奖。
 - 聊天页使用 HTTP 历史游标和首帧认证 WebSocket，
   断线按指数退避重连并以 after_id 补齐消息；登录后读取当前活动启用表情，点击表情立即发送 sticker-only 消息；消息行以发送者用户名、头像和左右气泡展示，
   消息列表仅在追加前位于底部阈值内时自动滚动；输入框默认一行且与发送按钮同高，最多可视三行，超过三行后在控件内部滚动。
@@ -26,7 +26,7 @@ deploy/build.py 指定 Vite `/user/` base，产物在 deploy/nginx/html/user，�
 - `views/activity/home.vue` 和 `views/activity/me.vue` 展示当前活动用户头像；
   `views/activity/me.vue` 仍仅清除当前活动 token，展示活动用户稳定 ID 与加入时间。
 
-活动入口只提供“登录并进入”活动按钮：先使用用户名和手机号登录，接口返回未认证时自动注册新用户；手机号已被其他用户名使用时显示后端冲突提示。
+活动入口使用手机号发送验证码登录。已有手机号核验成功后直接进入活动；新手机号首次核验成功后在同一页面补充姓名，再完成活动用户创建。旧用户名/手机号接口保留给兼容调用方，当前页面不再调用。
 
 活动入口页使用 Vant 4 移动端组件体系：CellGroup、Cell、Form、Field、Button、Tag、Icon、Loading 和 Tabbar。
 认证页保留 B 方案的金线活动入口标题、居中圆环 A 标识、活动上下文、登录标题、独立字段信息流和单一金色主操作；

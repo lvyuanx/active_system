@@ -52,7 +52,8 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 超级用户由环境变量初始化，密码使用 PBKDF2 哈希保存。活动状态为 `closed`、`open`、`ended`，
 状态转换由后端校验：`closed <-> open` 可反复切换，非结束状态可手动转为 `ended`，结束后不可恢复。
 
-活动用户存储在 `activity_users` 表中，以 `activity_id` 隔离；同一活动内手机号唯一。
+活动用户存储在 `activity_users` 表中，以 `activity_id` 隔离；同一活动内手机号唯一。用户端通过短信验证码登录，
+已有手机号直接签发活动用户 token，新手机号在验证码核验成功后补充姓名才创建记录。
 用户 JWT 携带活动 ID，用户端按 `active_user_token:{activity_id}` 缓存 token。
 管理端二维码目标地址使用 `VITE_USER_WEB_BASE_URL` 拼接 `/activity/{activity_id}`。
 
@@ -60,6 +61,16 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 `activity_users.is_muted` 为持久禁言标记，禁言只禁止聊天室发言；`is_active` 为可恢复的停用标记，停用会递增
 `session_version`，使已有活动用户 token 失效，恢复后必须重新登录。`can_mobile_lottery` 独立保存移动端抽奖授权，停用期间不能使用，恢复后权限保留。
 用户名、手机号、加入时间、状态和移动端抽奖权限由管理端展示。
+
+### 短信验证码
+
+短信发送接口为 `/api/v1/activities/{activity_id}/auth/sms-code`，活动必须存在，请求体只包含中国大陆手机号。
+短信模块调用阿里云 `SendSmsVerifyCode`，使用 `##code##` 由阿里云生成验证码，后端不保存或返回验证码。
+`sms_verification_sends` 以手机号为主键保存最后发送时间，使用 SQLite `BEGIN IMMEDIATE` 实现跨活动、跨重启的每 60 秒一次限流。
+阿里云凭据使用默认凭据链，签名、模板、Endpoint、方案名、验证码长度和有效期由 `ALIYUN_SMS_*` 环境变量提供。
+核验接口为 `/api/v1/activities/{activity_id}/auth/sms-code/verify`，请求体包含手机号和 4–8 位数字验证码，
+直接调用 `CheckSmsVerifyCode`。阿里云返回 `PASS` 时返回 `verified=true`，返回 `UNKNOWN` 时返回 `verified=false`，
+两种结果均为 HTTP 200；供应商调用失败才返回 502，配置或 SDK 缺失返回 503。
 
 ### 活动用户头像
 

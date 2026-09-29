@@ -10,6 +10,10 @@ export const chatWebSocketURL = (activityId: string) => {
   const url = new URL(apiURL(`/activities/${activityId}/chat/ws`), window.location.href).toString();
   return url.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 };
+export const lotteryWebSocketURL = (activityId: string) => {
+  const url = new URL(apiURL(`/activities/${activityId}/lottery/ws`), window.location.href).toString();
+  return url.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
+};
 export const mobileLotteryWebSocketURL = (activityId: string) => {
   const url = new URL(apiURL(`/activities/${activityId}/lottery/mobile/ws`), window.location.href).toString();
   return url.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
@@ -135,6 +139,17 @@ export interface ActivityCredentials {
   phone: string;
 }
 
+export interface SmsCodeSendResponse {
+  message: string;
+  expires_in: number;
+  retry_after: number;
+}
+
+export interface SmsLoginResponse {
+  needs_name: boolean;
+  user: ActivityUserResponse | null;
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -177,6 +192,19 @@ export const loginActivityUser = (
   payload: ActivityCredentials,
 ) =>
   request<ActivityUserResponse>(`/activities/${activityId}/auth/login`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+export const sendActivitySmsCode = (activityId: string, phone: string) =>
+  request<SmsCodeSendResponse>(`/activities/${activityId}/auth/sms-code`, {
+    method: "POST",
+    body: JSON.stringify({ phone }),
+  });
+export const smsLoginActivityUser = (
+  activityId: string,
+  payload: { phone: string; code: string; username?: string },
+) =>
+  request<SmsLoginResponse>(`/activities/${activityId}/auth/sms-login`, {
     method: "POST",
     body: JSON.stringify(payload),
   });

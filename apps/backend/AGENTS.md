@@ -35,6 +35,7 @@ Docker 部署保留单 uvicorn，数据库和媒体均由 Compose 绑定在 `/ap
 - `app/modules/danmaku/`：活动弹幕配置、版本化 HMAC token、只读会话和独立实时广播。
 - `app/modules/files/`：按命名空间管理奖品图片和聊天表情媒体的临时存储、真实 MIME 校验、随机 key、原子落盘和孤儿清理；根目录由 `MEDIA_ROOT` 配置。
 - `app/modules/lottery/`：活动抽奖配置、按奖品隔离的分页名单和单行规则更新、事务开奖、request_id 幂等、移动端授权开奖、管理员/公开 WebSocket 和安全快照广播；图片变更提交后广播最新安全配置。
+- `app/modules/sms/`：活动入口短信验证码发送与核验、阿里云 `SendSmsVerifyCode`/`CheckSmsVerifyCode` 调用和按手机号全局每分钟一次的持久化限流。
 
 ## 活动状态
 
@@ -47,6 +48,6 @@ Docker 部署保留单 uvicorn，数据库和媒体均由 Compose 绑定在 `/ap
 ## 配置
 
 通过 `DATABASE_PATH`、`JWT_SECRET`、`JWT_EXPIRE_MINUTES`、`DANMAKU_TOKEN_SECRET`、`LOTTERY_SECURITY_CODE`、
-`SUPERUSER_USERNAME` 和 `SUPERUSER_PASSWORD` 配置数据库、令牌、抽奖特殊配置安全码和初始超级用户。
+`SUPERUSER_USERNAME`、`SUPERUSER_PASSWORD` 以及 `ALIYUN_SMS_*` 配置数据库、令牌、抽奖特殊配置安全码、初始超级用户和短信服务。
 `JWT_EXPIRE_MINUTES` 默认值为 1440（24 小时）。
 `DANMAKU_TOKEN_SECRET` 为空时回退使用 `JWT_SECRET`；启动时会创建表，并在密码变量非空时初始化或更新超级用户。

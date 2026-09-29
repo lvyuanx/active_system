@@ -29,6 +29,7 @@ activate-nginx:8080 统一暴露服务，Nginx 通过 activate-backend:8000 访�
 
 deploy/.env 是 Compose 标准配置文件；两个容器仅声明固定的内部端口 8080/8000，宿主机不直接映射，
 由接入 open-getaway-network 的外部网关负责对外监听；启动前需确保该 external 网络已存在；nginx.conf 无 80 监听。
+短信功能的阿里云凭据、签名、模板和验证码参数通过 deploy/.env 注入后端，不写入镜像或代码。
 必填凭据不设可用默认值。client.conf 在 server 内包含 backend.conf，不能在 http 层通配包含。
 两服务健康检查和依赖确保后端健康后启动 Nginx；生产同源 API 保持不变。
 
