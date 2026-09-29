@@ -232,6 +232,7 @@ class DanmakuTestManager:
             activity_user_id=user.activity_user_id,
             username=user.username,
             joined_at=user.joined_at,
+            can_mobile_lottery=False,
         )
         message_index = user_index
         while True:

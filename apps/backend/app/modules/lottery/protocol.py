@@ -74,6 +74,8 @@ async def _handle_prize_select(
     websocket: WebSocket,
     message: dict[str, object],
     settings: Settings,
+    *,
+    mobile_activity_user_id: int | None = None,
 ) -> None:
     prize_id = _positive_int(message.get("prize_id"))
     if prize_id is None:
@@ -84,7 +86,13 @@ async def _handle_prize_select(
             await send_lottery_error(websocket, "draw_in_progress", "抽奖进行中，暂不能切换奖品")
             return
         try:
-            await asyncio.to_thread(validate_lottery_prize_selection, activity_id, prize_id, settings)
+            await asyncio.to_thread(
+                validate_lottery_prize_selection,
+                activity_id,
+                prize_id,
+                settings,
+                mobile_activity_user_id=mobile_activity_user_id,
+            )
         except (LotteryConfigError, LotteryDrawError) as error:
             await send_lottery_error(websocket, error.code, error.detail)
             return
@@ -100,6 +108,8 @@ async def _handle_start(
     websocket: WebSocket,
     message: dict[str, object],
     settings: Settings,
+    *,
+    mobile_activity_user_id: int | None = None,
 ) -> None:
     round_id = _round_id(message.get("round_id"))
     prize_id = _positive_int(message.get("prize_id"))
@@ -129,6 +139,7 @@ async def _handle_start(
                 prize_id,
                 round_id,
                 settings,
+                mobile_activity_user_id=mobile_activity_user_id,
             )
         except LotteryDrawError as error:
             await send_lottery_error(websocket, error.code, error.detail, round_id=round_id)
@@ -145,6 +156,8 @@ async def _handle_stop(
     websocket: WebSocket,
     message: dict[str, object],
     settings: Settings,
+    *,
+    mobile_activity_user_id: int | None = None,
 ) -> None:
     round_id = _round_id(message.get("round_id"))
     prize_id = _positive_int(message.get("prize_id"))
@@ -172,6 +185,7 @@ async def _handle_stop(
                 settings,
                 candidate_user_ids=current.candidate_user_ids if current else None,
                 existing_only=current is None,
+                mobile_activity_user_id=mobile_activity_user_id,
             )
         except LotteryDrawError as error:
             if current:
@@ -199,6 +213,16 @@ async def _handle_stop(
         await lottery_manager.broadcast_role(
             activity_id,
             "screen",
+            {
+                "type": "lottery.drawn",
+                "round_id": round_id,
+                "draw": outcome.public_draw.model_dump(mode="json"),
+                "roll_names": outcome.roll_names,
+            },
+        )
+        await lottery_manager.broadcast_role(
+            activity_id,
+            "mobile",
             {
                 "type": "lottery.drawn",
                 "round_id": round_id,
@@ -314,4 +338,45 @@ async def handle_admin_lottery_message(
         await send_lottery_error(websocket, "protocol_error", "不支持的消息类型")
 
 
-__all__ = ["handle_admin_lottery_message", "send_lottery_error"]
+async def handle_mobile_lottery_message(
+    activity_id: str,
+    websocket: WebSocket,
+    message: object,
+    settings: Settings,
+    activity_user_id: int,
+) -> None:
+    if not isinstance(message, dict):
+        await send_lottery_error(websocket, "protocol_error", "消息格式不正确")
+        return
+    message_type = message.get("type")
+    if message_type in {"lottery.ping", "ping"}:
+        await websocket.send_json({"type": "lottery.pong"})
+    elif message_type == "lottery.prize.select":
+        await _handle_prize_select(
+            activity_id,
+            websocket,
+            message,
+            settings,
+            mobile_activity_user_id=activity_user_id,
+        )
+    elif message_type == "lottery.draw.start":
+        await _handle_start(
+            activity_id,
+            websocket,
+            message,
+            settings,
+            mobile_activity_user_id=activity_user_id,
+        )
+    elif message_type == "lottery.draw.stop":
+        await _handle_stop(
+            activity_id,
+            websocket,
+            message,
+            settings,
+            mobile_activity_user_id=activity_user_id,
+        )
+    else:
+        await send_lottery_error(websocket, "read_only", "移动端连接只允许切换奖品和控制抽奖")
+
+
+__all__ = ["handle_admin_lottery_message", "handle_mobile_lottery_message", "send_lottery_error"]

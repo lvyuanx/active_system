@@ -19,6 +19,8 @@ class ParticipantAction(str, Enum):
     UNMUTE = "unmute"
     DEACTIVATE = "deactivate"
     ACTIVATE = "activate"
+    GRANT_MOBILE_LOTTERY = "mobile-lottery/grant"
+    REVOKE_MOBILE_LOTTERY = "mobile-lottery/revoke"
 
 
 class ActivityParticipantResponse(BaseModel):
@@ -29,6 +31,7 @@ class ActivityParticipantResponse(BaseModel):
     joined_at: datetime
     is_active: bool
     is_muted: bool
+    can_mobile_lottery: bool
 
 
 def _participant_from_row(row: sqlite3.Row) -> ActivityParticipantResponse:
@@ -40,6 +43,7 @@ def _participant_from_row(row: sqlite3.Row) -> ActivityParticipantResponse:
         joined_at=datetime.fromisoformat(str(row["created_at"])),
         is_active=bool(row["is_active"]),
         is_muted=bool(row["is_muted"]),
+        can_mobile_lottery=bool(row["can_mobile_lottery"]),
     )
 
 
@@ -52,7 +56,7 @@ def _change_participant(
     get_activity(activity_id, settings)
     with transaction(settings) as connection:
         row = connection.execute(
-            "SELECT id, activity_id, username, phone, created_at, is_active, is_muted "
+            "SELECT id, activity_id, username, phone, created_at, is_active, is_muted, can_mobile_lottery "
             "FROM activity_users WHERE activity_id = ? AND id = ?",
             (activity_id, activity_user_id),
         ).fetchone()
@@ -75,6 +79,16 @@ def _change_participant(
                 "WHERE activity_id = ? AND id = ? AND is_active = 1",
                 (activity_id, activity_user_id),
             )
+        elif action == ParticipantAction.GRANT_MOBILE_LOTTERY:
+            connection.execute(
+                "UPDATE activity_users SET can_mobile_lottery = 1 WHERE activity_id = ? AND id = ?",
+                (activity_id, activity_user_id),
+            )
+        elif action == ParticipantAction.REVOKE_MOBILE_LOTTERY:
+            connection.execute(
+                "UPDATE activity_users SET can_mobile_lottery = 0 WHERE activity_id = ? AND id = ?",
+                (activity_id, activity_user_id),
+            )
         else:
             connection.execute(
                 "UPDATE activity_users SET is_active = 1 WHERE activity_id = ? AND id = ?",
@@ -82,7 +96,7 @@ def _change_participant(
             )
 
         updated = connection.execute(
-            "SELECT id, activity_id, username, phone, created_at, is_active, is_muted "
+            "SELECT id, activity_id, username, phone, created_at, is_active, is_muted, can_mobile_lottery "
             "FROM activity_users WHERE activity_id = ? AND id = ?",
             (activity_id, activity_user_id),
         ).fetchone()
@@ -100,7 +114,7 @@ def list_participants(
     get_activity(activity_id, settings)
     with transaction(settings) as connection:
         rows = connection.execute(
-            "SELECT id, activity_id, username, phone, created_at, is_active, is_muted "
+            "SELECT id, activity_id, username, phone, created_at, is_active, is_muted, can_mobile_lottery "
             "FROM activity_users WHERE activity_id = ? ORDER BY created_at DESC, id DESC",
             (activity_id,),
         ).fetchall()
@@ -157,3 +171,39 @@ def activate_participant(
     settings: Settings = Depends(get_settings),
 ) -> ActivityParticipantResponse:
     return _change_participant(activity_id, activity_user_id, ParticipantAction.ACTIVATE, settings)
+
+
+@admin_router.post(
+    "/{activity_id}/participants/{activity_user_id}/mobile-lottery/grant",
+    response_model=ActivityParticipantResponse,
+)
+def grant_mobile_lottery(
+    activity_id: str,
+    activity_user_id: int,
+    _: str = Depends(require_superuser),
+    settings: Settings = Depends(get_settings),
+) -> ActivityParticipantResponse:
+    return _change_participant(
+        activity_id,
+        activity_user_id,
+        ParticipantAction.GRANT_MOBILE_LOTTERY,
+        settings,
+    )
+
+
+@admin_router.post(
+    "/{activity_id}/participants/{activity_user_id}/mobile-lottery/revoke",
+    response_model=ActivityParticipantResponse,
+)
+def revoke_mobile_lottery(
+    activity_id: str,
+    activity_user_id: int,
+    _: str = Depends(require_superuser),
+    settings: Settings = Depends(get_settings),
+) -> ActivityParticipantResponse:
+    return _change_participant(
+        activity_id,
+        activity_user_id,
+        ParticipantAction.REVOKE_MOBILE_LOTTERY,
+        settings,
+    )

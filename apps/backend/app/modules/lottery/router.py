@@ -10,6 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from app.core.config import Settings, get_settings
 from app.core.security import decode_access_token_payload
 from app.modules.auth import require_superuser
+from app.modules.participants.router import ActivityPrincipal, get_activity_principal
 from app.modules.lottery.manager import lottery_manager
 from app.modules.lottery.models import (
     LotteryEntryPage,
@@ -40,7 +41,7 @@ from app.modules.lottery.service import (
     update_lottery_entry,
     update_lottery_config,
 )
-from .protocol import handle_admin_lottery_message, send_lottery_error
+from .protocol import handle_admin_lottery_message, handle_mobile_lottery_message, send_lottery_error
 from .round_state import lottery_round_store, lottery_selection_store
 from .state import lottery_operation_lock
 
@@ -299,6 +300,18 @@ def _authenticate_admin_websocket(
     return require_superuser(credentials, settings)
 
 
+def _authenticate_mobile_websocket(
+    activity_id: str,
+    token: str,
+    settings: Settings,
+) -> ActivityPrincipal:
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+    principal = get_activity_principal(activity_id, credentials, settings)
+    if not principal.can_mobile_lottery:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="你没有移动端抽奖权限")
+    return principal
+
+
 async def _ready_payload(
     activity_id: str,
     settings: Settings,
@@ -381,6 +394,83 @@ async def admin_lottery_websocket(
                 await send_lottery_error(websocket, "protocol_error", "消息必须是合法 JSON")
                 continue
             await handle_admin_lottery_message(activity_id, websocket, message, settings)
+    finally:
+        if connected:
+            await lottery_manager.disconnect(activity_id, websocket)
+
+
+@router.websocket("/{activity_id}/lottery/mobile/ws")
+async def mobile_lottery_websocket(
+    activity_id: str,
+    websocket: WebSocket,
+    settings: Settings = Depends(get_settings),
+) -> None:
+    await websocket.accept()
+    connected = False
+    try:
+        try:
+            raw_auth_message = await asyncio.wait_for(websocket.receive_text(), timeout=10)
+            try:
+                auth_message = loads(raw_auth_message)
+            except JSONDecodeError:
+                auth_message = raw_auth_message
+        except asyncio.TimeoutError:
+            await send_lottery_error(websocket, "unauthorized", "移动端连接需要首帧 JWT")
+            await websocket.close(code=1008)
+            return
+        except WebSocketDisconnect:
+            return
+        except (JSONDecodeError, ValueError, TypeError):
+            await send_lottery_error(websocket, "protocol_error", "首帧必须是合法 JSON")
+            await websocket.close(code=1008)
+            return
+        token: str | None = None
+        if isinstance(auth_message, str):
+            token = auth_message
+        elif isinstance(auth_message, dict) and auth_message.get("type") == "auth":
+            value = auth_message.get("token")
+            token = value if isinstance(value, str) else None
+        if not token:
+            await send_lottery_error(websocket, "unauthorized", "移动端连接需要有效 JWT")
+            await websocket.close(code=1008)
+            return
+        try:
+            principal = await asyncio.to_thread(
+                _authenticate_mobile_websocket,
+                activity_id,
+                token,
+                settings,
+            )
+            await lottery_manager.connect_and_send_ready(
+                activity_id,
+                websocket,
+                "mobile",
+                lambda: _ready_payload(activity_id, settings, include_sensitive=False),
+            )
+        except HTTPException as error:
+            await send_lottery_error(websocket, "unauthorized", str(error.detail))
+            await websocket.close(code=1008)
+            return
+        except LotteryConfigError as error:
+            await send_lottery_error(websocket, error.code, error.detail)
+            await websocket.close(code=1008)
+            return
+        connected = True
+        while True:
+            try:
+                message = await websocket.receive_json()
+            except WebSocketDisconnect:
+                break
+            except (JSONDecodeError, ValueError, TypeError):
+                await send_lottery_error(websocket, "protocol_error", "消息必须是合法 JSON")
+                continue
+            await handle_mobile_lottery_message(
+                activity_id,
+                websocket,
+                message,
+                settings,
+                principal.activity_user_id,
+            )
     finally:
         if connected:
             await lottery_manager.disconnect(activity_id, websocket)

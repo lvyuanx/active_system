@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS activity_users (
     avatar_id INTEGER,
     is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
     is_muted INTEGER NOT NULL DEFAULT 0 CHECK(is_muted IN (0, 1)),
+    can_mobile_lottery INTEGER NOT NULL DEFAULT 0 CHECK(can_mobile_lottery IN (0, 1)),
     session_version INTEGER NOT NULL DEFAULT 0 CHECK(session_version >= 0),
     UNIQUE(activity_id, phone)
 );
@@ -205,6 +206,11 @@ def init_database(settings: Settings) -> None:
             connection.execute(
                 "ALTER TABLE activity_users ADD COLUMN is_muted INTEGER NOT NULL DEFAULT 0 "
                 "CHECK(is_muted IN (0, 1))"
+            )
+        if "can_mobile_lottery" not in columns:
+            connection.execute(
+                "ALTER TABLE activity_users ADD COLUMN can_mobile_lottery INTEGER NOT NULL DEFAULT 0 "
+                "CHECK(can_mobile_lottery IN (0, 1))"
             )
         if "session_version" not in columns:
             connection.execute(

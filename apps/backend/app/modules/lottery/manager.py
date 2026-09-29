@@ -6,7 +6,7 @@ from typing import Any, Literal
 from starlette.websockets import WebSocket
 
 
-LotteryRole = Literal["admin", "screen"]
+LotteryRole = Literal["admin", "screen", "mobile"]
 ReadyPayload = dict[str, Any] | Callable[[], Awaitable[dict[str, Any]]]
 
 

@@ -333,6 +333,20 @@ def _eligible_candidates(
     ).fetchall()
 
 
+def _ensure_mobile_lottery_permission(
+    connection: sqlite3.Connection,
+    activity_id: str,
+    activity_user_id: int,
+) -> None:
+    row = connection.execute(
+        "SELECT is_active, can_mobile_lottery FROM activity_users "
+        "WHERE activity_id = ? AND id = ?",
+        (activity_id, activity_user_id),
+    ).fetchone()
+    if not row or not bool(row["is_active"]) or not bool(row["can_mobile_lottery"]):
+        raise LotteryDrawError("mobile_lottery_forbidden", "你没有移动端抽奖权限")
+
+
 def _draw_prize_row(
     connection: sqlite3.Connection,
     activity_id: str,
@@ -350,9 +364,13 @@ def validate_lottery_prize_selection(
     activity_id: str,
     prize_id: int,
     settings: Settings,
+    *,
+    mobile_activity_user_id: int | None = None,
 ) -> None:
     with transaction(settings) as connection:
         activity_or_raise(connection, activity_id)
+        if mobile_activity_user_id is not None:
+            _ensure_mobile_lottery_permission(connection, activity_id, mobile_activity_user_id)
         prize = _draw_prize_row(connection, activity_id, prize_id)
         if not prize:
             raise LotteryDrawError("invalid_prize", "奖品不存在或不属于当前活动")
@@ -374,12 +392,16 @@ def prepare_lottery_round(
     prize_id: int,
     round_id: str,
     settings: Settings,
+    *,
+    mobile_activity_user_id: int | None = None,
 ) -> LotteryRound:
     round_id = round_id.strip()
     if not round_id or len(round_id) > 100:
         raise LotteryDrawError("invalid_request", "round_id 必须是 1 至 100 个字符")
     with transaction(settings) as connection:
         connection.execute("BEGIN IMMEDIATE")
+        if mobile_activity_user_id is not None:
+            _ensure_mobile_lottery_permission(connection, activity_id, mobile_activity_user_id)
         activity = activity_or_raise(connection, activity_id)
         if activity["status"] != "open":
             raise LotteryDrawError("activity_not_started", "活动尚未开始或已经结束")
@@ -434,12 +456,15 @@ def draw_lottery(
     *,
     candidate_user_ids: Collection[int] | None = None,
     existing_only: bool = False,
+    mobile_activity_user_id: int | None = None,
 ) -> LotteryDrawOutcome:
     request_id = request_id.strip()
     if not request_id or len(request_id) > 100:
         raise LotteryDrawError("invalid_request", "request_id 必须是 1 至 100 个字符")
     with transaction(settings) as connection:
         connection.execute("BEGIN IMMEDIATE")
+        if mobile_activity_user_id is not None:
+            _ensure_mobile_lottery_permission(connection, activity_id, mobile_activity_user_id)
         existing = connection.execute(
             "SELECT draw_id FROM lottery_draws WHERE activity_id = ? AND request_id = ?",
             (activity_id, request_id),

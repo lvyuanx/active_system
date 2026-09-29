@@ -71,6 +71,7 @@ Shell 中同名环境变量优先于 --env-file，请避免意外覆盖。必填
 | SUPERUSER_USERNAME | admin | 管理员账号 |
 | SUPERUSER_PASSWORD | 必填 | 管理员密码 |
 | JWT_SECRET | 必填 | JWT 签名密钥 |
+| JWT_EXPIRE_MINUTES | 1440 | 登录 JWT 有效期，单位为分钟（24 小时） |
 | LOTTERY_SECURITY_CODE | 必填 | 抽奖特殊配置安全码 |
 | DANMAKU_TOKEN_SECRET | 空 | 空时沿用 JWT_SECRET |
 | APP_CORS_ORIGINS | 空 | 直接跨源调用 API 时允许的来源，逗号分隔 |

@@ -10,6 +10,10 @@ export const chatWebSocketURL = (activityId: string) => {
   const url = new URL(apiURL(`/activities/${activityId}/chat/ws`), window.location.href).toString();
   return url.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 };
+export const mobileLotteryWebSocketURL = (activityId: string) => {
+  const url = new URL(apiURL(`/activities/${activityId}/lottery/mobile/ws`), window.location.href).toString();
+  return url.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
+};
 
 export interface Activity {
   activity_id: string;
@@ -46,6 +50,63 @@ export interface ActivityUserResponse {
   username: string;
   joined_at: string;
   avatar_id: ActivityAvatarId;
+  can_mobile_lottery: boolean;
+}
+export interface MobileLotteryPrize {
+  prize_id: number;
+  award_id: number;
+  name: string;
+  quantity: number;
+  remaining_quantity: number;
+  sort_order: number;
+  is_enabled: boolean;
+  image_url: string | null;
+}
+export interface MobileLotteryDraw {
+  draw_id: number;
+  activity_id: string;
+  award_id: number;
+  prize_id: number;
+  award_name: string;
+  prize_name: string;
+  draw_number: number;
+  remaining_quantity: number;
+  prize_image_url: string | null;
+  winner: { activity_user_id: number; username: string };
+  drawn_at: string;
+}
+export interface MobileLotteryAward {
+  award_id: number;
+  name: string;
+  sort_order: number;
+  prizes: MobileLotteryPrize[];
+  draws: MobileLotteryDraw[];
+}
+export interface MobileLotteryRoundParticipant {
+  activity_user_id: number;
+  username: string;
+  avatar_id: number;
+}
+export interface MobileLotteryRound {
+  round_id: string;
+  award_id: number;
+  award_name: string;
+  prize_id: number;
+  prize_name: string;
+  phase: "rolling" | "stopping";
+  participants: MobileLotteryRoundParticipant[];
+  started_at: string;
+}
+export interface MobileLotterySnapshot {
+  activity_id: string;
+  activity_name: string;
+  activity_status: "closed" | "open" | "ended";
+  config: { no_repeat_across_prizes: boolean; rolling_name_count: number };
+  awards: MobileLotteryAward[];
+  draws: MobileLotteryDraw[];
+  latest_draw_id: number;
+  selected_prize_id: number | null;
+  active_round: MobileLotteryRound | null;
 }
 export interface ChatMessage {
   message_id: number;

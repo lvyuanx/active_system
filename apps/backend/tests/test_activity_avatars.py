@@ -292,6 +292,7 @@ def test_old_database_migration_keeps_existing_avatar_null_until_me(tmp_path: Pa
             columns = {row["name"] for row in connection.execute("PRAGMA table_info(activity_users)")}
             row = connection.execute("SELECT avatar_id FROM activity_users WHERE id = 1").fetchone()
         assert "avatar_id" in columns
+        assert "can_mobile_lottery" in columns
         assert row["avatar_id"] is None
         init_database(settings)
 
@@ -302,6 +303,7 @@ def test_old_database_migration_keeps_existing_avatar_null_until_me(tmp_path: Pa
         )
         assert me.status_code == 200
         assert AVATAR_ID_MIN <= me.json()["avatar_id"] <= AVATAR_ID_MAX
+        assert me.json()["can_mobile_lottery"] is False
     finally:
         app.dependency_overrides.clear()
 

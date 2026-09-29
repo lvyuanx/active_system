@@ -29,12 +29,12 @@ Docker 部署保留单 uvicorn，数据库和媒体均由 Compose 绑定在 `/ap
 - `app/modules/auth/router.py`：超级用户初始化、登录和管理员权限依赖。
 - `app/modules/activities/router.py`：活动 CRUD 列表、创建和生命周期状态转换接口。
 - `app/modules/participants/router.py`：活动公开详情、活动用户注册/登录、token 校验和用户身份接口。
-- `app/modules/participants/admin_router.py`：超级用户使用的参与者列表、禁言/解除禁言和停用/恢复接口。
+- `app/modules/participants/admin_router.py`：超级用户使用的参与者列表、禁言/解除禁言、停用/恢复和移动端抽奖授权接口。
 - `app/modules/participants/avatar.py`：活动用户头像范围校验、安全随机分配和空值惰性补齐。
 - `app/modules/chat/`：活动聊天室历史消息、活动级表情库、游标查询、WebSocket 认证和广播。
 - `app/modules/danmaku/`：活动弹幕配置、版本化 HMAC token、只读会话和独立实时广播。
 - `app/modules/files/`：按命名空间管理奖品图片和聊天表情媒体的临时存储、真实 MIME 校验、随机 key、原子落盘和孤儿清理；根目录由 `MEDIA_ROOT` 配置。
-- `app/modules/lottery/`：活动抽奖配置、按奖品隔离的分页名单和单行规则更新、事务开奖、request_id 幂等、管理员/公开 WebSocket 和安全快照广播；图片变更提交后广播最新安全配置。
+- `app/modules/lottery/`：活动抽奖配置、按奖品隔离的分页名单和单行规则更新、事务开奖、request_id 幂等、移动端授权开奖、管理员/公开 WebSocket 和安全快照广播；图片变更提交后广播最新安全配置。
 
 ## 活动状态
 
@@ -48,4 +48,5 @@ Docker 部署保留单 uvicorn，数据库和媒体均由 Compose 绑定在 `/ap
 
 通过 `DATABASE_PATH`、`JWT_SECRET`、`JWT_EXPIRE_MINUTES`、`DANMAKU_TOKEN_SECRET`、`LOTTERY_SECURITY_CODE`、
 `SUPERUSER_USERNAME` 和 `SUPERUSER_PASSWORD` 配置数据库、令牌、抽奖特殊配置安全码和初始超级用户。
+`JWT_EXPIRE_MINUTES` 默认值为 1440（24 小时）。
 `DANMAKU_TOKEN_SECRET` 为空时回退使用 `JWT_SECRET`；启动时会创建表，并在密码变量非空时初始化或更新超级用户。

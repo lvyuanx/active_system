@@ -17,7 +17,7 @@ WebSocket 先用 URL 解析为绝对地址再转换 ws/wss。`src/app-links.ts` 
 - `src/api/client.ts`：认证令牌、活动接口和统一 401 处理。
 - `src/router/index.ts`：登录路由和管理员路由守卫。
 - `src/views/activity/`：单个活动管理页，展示活动移动端地址、二维码，并提供打开移动端和抽奖大屏的入口操作。
-- `src/views/participants/`：活动参与者列表，以及禁言/解除禁言、停用/恢复操作。
+- `src/views/participants/`：活动参与者列表，以及禁言/解除禁言、停用/恢复和移动端抽奖授权/取消授权操作。
 - `src/views/stickers/`：活动级聊天表情包批量上传、预览、下架和恢复。
 - `src/views/danmaku/`：活动级弹幕配置、当前 token 复制和 token 轮换页面。
 - `src/views/lottery/`：活动级奖项/奖品配置、奖品图片选择/预览/替换/移除、经过安全码验证并按奖品切换的按需分页名单弹窗、管理员 WebSocket 开奖控制、中奖历史和重置页面。

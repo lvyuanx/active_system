@@ -49,8 +49,15 @@ export interface ActivityParticipant {
   joined_at: string;
   is_active: boolean;
   is_muted: boolean;
+  can_mobile_lottery: boolean;
 }
-export type ParticipantAction = "mute" | "unmute" | "deactivate" | "activate";
+export type ParticipantAction =
+  | "mute"
+  | "unmute"
+  | "deactivate"
+  | "activate"
+  | "mobile-lottery/grant"
+  | "mobile-lottery/revoke";
 export interface ChatSticker {
   sticker_id: number;
   name: string;

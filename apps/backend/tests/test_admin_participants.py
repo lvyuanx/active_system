@@ -73,11 +73,12 @@ def test_admin_lists_and_toggles_participants_with_activity_isolation(tmp_path: 
                 "activity_user_id": participant_id,
                 "username": "小明",
                 "phone": "13800000001",
-                "joined_at": first_user["joined_at"],
-                "is_active": True,
-                "is_muted": False,
-            }
-        ]
+                    "joined_at": first_user["joined_at"],
+                    "is_active": True,
+                    "is_muted": False,
+                    "can_mobile_lottery": False,
+                }
+            ]
 
         muted = client.post(
             f"/api/v1/admin/activities/{first['activity_id']}/participants/{participant_id}/mute",
@@ -106,11 +107,30 @@ def test_admin_lists_and_toggles_participants_with_activity_isolation(tmp_path: 
         )
         assert activated.status_code == 200 and activated.json()["is_active"] is True
 
+        granted = client.post(
+            f"/api/v1/admin/activities/{first['activity_id']}/participants/"
+            f"{participant_id}/mobile-lottery/grant",
+            headers=admin,
+        )
+        assert granted.status_code == 200 and granted.json()["can_mobile_lottery"] is True
+        revoked = client.post(
+            f"/api/v1/admin/activities/{first['activity_id']}/participants/"
+            f"{participant_id}/mobile-lottery/revoke",
+            headers=admin,
+        )
+        assert revoked.status_code == 200 and revoked.json()["can_mobile_lottery"] is False
+
         cross_activity = client.post(
             f"/api/v1/admin/activities/{second['activity_id']}/participants/{participant_id}/mute",
             headers=admin,
         )
         assert cross_activity.status_code == 404
+        cross_mobile_permission = client.post(
+            f"/api/v1/admin/activities/{second['activity_id']}/participants/"
+            f"{participant_id}/mobile-lottery/grant",
+            headers=admin,
+        )
+        assert cross_mobile_permission.status_code == 404
         assert second_user["activity_id"] != first["activity_id"]
 
         missing_activity = client.get("/api/v1/admin/activities/missing/participants", headers=admin)

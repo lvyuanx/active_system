@@ -10,7 +10,8 @@
 - 创建和校验活动参与者身份，生成带活动上下文的 JWT。
 - 通过稳定的 `activity_user_id` 支持旧令牌兼容与聊天身份关联。
 - 为活动参与者分配和读取 1–20 的 `avatar_id`。
-- 为超级用户提供活动隔离的参与者列表、禁言/解除禁言和停用/恢复操作。
+- 为超级用户提供活动隔离的参与者列表、禁言/解除禁言、停用/恢复和移动端抽奖授权操作。
+- 按活动用户保存 `can_mobile_lottery` 权限，供移动端抽奖接口实时校验。
 
 ## 目录说明
 
@@ -26,7 +27,10 @@
 
 认证响应统一返回 `activity_id`、`activity_user_id`、`username`、`joined_at` 和 `avatar_id`。头像归属使用 `(activity_id, activity_user_id)`，不同活动之间不共享分配结果。管理员参与者接口返回 `activity_id`、`activity_user_id`、`username`、`phone`、`joined_at`、`is_active` 和 `is_muted`。
 
-管理员接口统一使用 `/admin/activities/{activity_id}/participants` 前缀，所有读写都要求超级用户权限并带活动条件。
+管理员接口统一使用 `/admin/activities/{activity_id}/participants` 前缀，所有读写都要求超级用户权限并带活动条件；移动端抽奖授权使用
+`mobile-lottery/grant` 和 `mobile-lottery/revoke` 操作。
+
+`ActivityUserResponse` 和管理员参与者响应均返回 `can_mobile_lottery`。权限不写入 JWT，管理员取消授权后，用户旧 token 也不能继续调用移动端抽奖接口。
 
 新参与者注册事务只创建 `activity_users` 记录，不预创建每个奖品的名单行；抽奖服务对缺失的 `lottery_prize_entries` 按默认可参加处理。
 历史活动的旧 `lottery_entries` 记录由抽奖模块按活动懒迁移到已有奖品，迁移完成后新增奖品不会继承旧标记。

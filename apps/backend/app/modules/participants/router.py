@@ -45,6 +45,7 @@ class ActivityUserResponse(BaseModel):
     username: str
     joined_at: datetime
     avatar_id: int = Field(ge=AVATAR_ID_MIN, le=AVATAR_ID_MAX)
+    can_mobile_lottery: bool = False
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,7 @@ class ActivityPrincipal:
     activity_user_id: int
     username: str
     joined_at: datetime
+    can_mobile_lottery: bool
 
 
 def _token_session_version(payload: dict[str, object]) -> int | None:
@@ -101,7 +103,8 @@ def get_activity_principal(
             if isinstance(activity_user_id, bool) or not isinstance(activity_user_id, int):
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请重新登录活动")
             user = connection.execute(
-                "SELECT id, username, created_at, is_active, session_version FROM activity_users "
+                "SELECT id, username, created_at, is_active, session_version, can_mobile_lottery "
+                "FROM activity_users "
                 "WHERE activity_id = ? AND id = ?",
                 (activity_id, activity_user_id),
             ).fetchone()
@@ -111,7 +114,8 @@ def get_activity_principal(
             # Old tokens did not contain the stable ID. They remain valid only when
             # the username identifies exactly one participant in this activity.
             matches = connection.execute(
-                "SELECT id, username, created_at, is_active, session_version FROM activity_users "
+                "SELECT id, username, created_at, is_active, session_version, can_mobile_lottery "
+                "FROM activity_users "
                 "WHERE activity_id = ? AND username = ? ORDER BY id",
                 (activity_id, username),
             ).fetchall()
@@ -127,6 +131,7 @@ def get_activity_principal(
         activity_user_id=int(user["id"]),
         username=str(user["username"]),
         joined_at=datetime.fromisoformat(str(user["created_at"])),
+        can_mobile_lottery=bool(user["can_mobile_lottery"]),
     )
 
 
@@ -149,13 +154,15 @@ def make_user_response(
     with transaction(settings) as connection:
         if activity_user_id is None:
             row = connection.execute(
-                "SELECT id, username, created_at, avatar_id, session_version FROM activity_users "
+                "SELECT id, username, created_at, avatar_id, session_version, can_mobile_lottery "
+                "FROM activity_users "
                 "WHERE activity_id = ? AND username = ? ORDER BY id DESC LIMIT 1",
                 (activity_id, username),
             ).fetchone()
         else:
             row = connection.execute(
-                "SELECT id, username, created_at, avatar_id, session_version FROM activity_users "
+                "SELECT id, username, created_at, avatar_id, session_version, can_mobile_lottery "
+                "FROM activity_users "
                 "WHERE activity_id = ? AND id = ?",
                 (activity_id, activity_user_id),
             ).fetchone()
@@ -182,6 +189,7 @@ def make_user_response(
             username=str(row["username"]),
             joined_at=datetime.fromisoformat(str(row["created_at"])),
             avatar_id=avatar_id,
+            can_mobile_lottery=bool(row["can_mobile_lottery"]),
         )
 
 
@@ -202,7 +210,8 @@ def register_activity_user(
                 (activity_id, payload.username, payload.phone, now, avatar_id),
             )
             row = connection.execute(
-                "SELECT id, username, created_at, avatar_id, session_version FROM activity_users "
+                "SELECT id, username, created_at, avatar_id, session_version, can_mobile_lottery "
+                "FROM activity_users "
                 "WHERE activity_id = ? AND id = ?",
                 (activity_id, cursor.lastrowid),
             ).fetchone()
@@ -221,6 +230,7 @@ def register_activity_user(
                 username=str(row["username"]),
                 joined_at=datetime.fromisoformat(str(row["created_at"])),
                 avatar_id=int(row["avatar_id"]),
+                can_mobile_lottery=bool(row["can_mobile_lottery"]),
             )
     except sqlite3.IntegrityError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="该活动手机号已注册") from error

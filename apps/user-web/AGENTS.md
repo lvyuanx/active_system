@@ -11,13 +11,14 @@ deploy/build.py 指定 Vite `/user/` base，产物在 deploy/nginx/html/user，�
 
 ## 当前已实现功能
 
-- src/views/activity/：活动级入口页，按活动 ID读取公开信息、注册/登录并展示活动首页。
+- src/views/activity/：活动级入口页，按活动 ID读取公开信息、注册/登录并展示活动首页；有权限的用户可进入移动端抽奖页。
 - src/views/activity/activity.css、chat.css、activity-auth.css：活动入口专属视觉样式，分别负责页面公共、聊天页和认证页的黑金主题、Vant 覆盖、移动断点与安全区适配。
 - src/api/client.ts：活动公开详情、活动用户注册/登录、缓存 token 校验接口。
 - src/components/ActivityAvatar.vue 与 src/assets/avatars/：受信任的二十款本地卡通静态 SVG 头像映射和展示封装。
 - 活动用户 token 使用 active_user_token:{activity_id} 本地存储键，活动之间相互隔离。
 - 登录后的活动壳不渲染全局顶部 NavBar，通过顶部 safe-area 直接展示首页、聊天、我的三个嵌套路由；
   底部 Tabbar 使用命名路由持续匹配当前项，当前项以金色图标、金色加粗文字和包裹背景高亮。
+- `can_mobile_lottery` 为活动用户独立权限；首页仅对已授权用户显示移动端抽奖入口，抽奖页只能切换管理端已配置的启用奖品并发起开奖。
 - 聊天页使用 HTTP 历史游标和首帧认证 WebSocket，
   断线按指数退避重连并以 after_id 补齐消息；登录后读取当前活动启用表情，点击表情立即发送 sticker-only 消息；消息行以发送者用户名、头像和左右气泡展示，
   消息列表仅在追加前位于底部阈值内时自动滚动；输入框默认一行且与发送按钮同高，最多可视三行，超过三行后在控件内部滚动。

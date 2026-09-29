@@ -88,10 +88,13 @@
                         {{ row.is_active ? "正常" : "已停用" }}
                       </el-tag>
                       <el-tag v-if="row.is_muted" type="warning" effect="plain">已禁言</el-tag>
+                      <el-tag v-if="row.can_mobile_lottery" type="success" effect="plain">
+                        移动端可抽奖
+                      </el-tag>
                     </div>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" min-width="225" fixed="right">
+                <el-table-column label="操作" min-width="350" fixed="right">
                   <template #default="{ row }">
                     <div class="participant-actions">
                       <el-button
@@ -106,6 +109,12 @@
                         :loading="isActionLoading(row.activity_user_id)"
                         @click="toggleActive(row)"
                       >{{ row.is_active ? "停用" : "恢复" }}</el-button>
+                      <el-button
+                        text
+                        :type="row.can_mobile_lottery ? 'warning' : 'success'"
+                        :loading="isActionLoading(row.activity_user_id)"
+                        @click="toggleMobileLottery(row)"
+                      >{{ row.can_mobile_lottery ? "取消移动抽奖" : "授权移动抽奖" }}</el-button>
                     </div>
                   </template>
                 </el-table-column>
@@ -177,6 +186,8 @@ const updateParticipant = async (participant: ActivityParticipant, action: Parti
       unmute: "参与者已解除禁言",
       deactivate: "参与者已停用",
       activate: "参与者已恢复",
+      "mobile-lottery/grant": "已授权移动端抽奖",
+      "mobile-lottery/revoke": "已取消移动端抽奖权限",
     };
     ElMessage.success(messages[action]);
   } catch (err) {
@@ -217,6 +228,13 @@ const toggleActive = async (participant: ActivityParticipant) => {
       return;
     }
   }
+  await updateParticipant(participant, action);
+};
+
+const toggleMobileLottery = async (participant: ActivityParticipant) => {
+  const action: ParticipantAction = participant.can_mobile_lottery
+    ? "mobile-lottery/revoke"
+    : "mobile-lottery/grant";
   await updateParticipant(participant, action);
 };
 
@@ -325,7 +343,7 @@ onMounted(load);
 }
 
 .participants-table {
-  min-width: 860px;
+  min-width: 980px;
 }
 
 .participant-name {

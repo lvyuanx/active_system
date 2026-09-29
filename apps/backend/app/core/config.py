@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     database_path: str = "./data/active_system.db"
     media_root: str = "./data/media"
     jwt_secret: str = "development-only-change-this-secret"
-    jwt_expire_minutes: int = 60
+    jwt_expire_minutes: int = 1440
     danmaku_token_secret: str = ""
     lottery_security_code: str = ""
     superuser_username: str = "admin"

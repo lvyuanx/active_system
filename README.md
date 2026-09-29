@@ -45,6 +45,7 @@ Electron 仅通过 `?danmaku-overlay=1` 加载透明弹幕渲染层。
 ## 管理员活动管理
 
 启动后端前复制 `.env.example` 为 `.env`，设置 `SUPERUSER_USERNAME`、`SUPERUSER_PASSWORD`、`LOTTERY_SECURITY_CODE` 和随机的 `JWT_SECRET`。
+管理员和活动用户登录 JWT 默认有效期为 24 小时，可通过 `JWT_EXPIRE_MINUTES` 调整。
 可选设置独立的 `DANMAKU_TOKEN_SECRET`；为空时弹幕 token 使用 `JWT_SECRET` 派生。后端首次启动会初始化 SQLite 数据库和超级用户；只有该超级用户可以登录管理端。
 奖品图片和聊天表情包由管理员通过独立 multipart 接口上传，默认保存到 `MEDIA_ROOT=./data/media`；奖品支持 JPEG、PNG、WebP，
 聊天表情额外支持 GIF，单文件上限均为 5 MiB。Docker 部署将数据库和媒体一起持久化，配置 JSON 和聊天消息不承载图片二进制。
@@ -57,6 +58,11 @@ Electron 仅通过 `?danmaku-overlay=1` 加载透明弹幕渲染层。
 1–500 字符文本或点击发送活动表情，`closed` 或 `ended` 活动可查看历史但只读。表情包在管理端的活动级“聊天表情包”页面维护，
 移动端只显示当前活动启用的表情；聊天消息通过 HTTP 游标接口读取，并使用首帧认证的 WebSocket 实时广播。
 Nginx 已配置 WebSocket Upgrade。
+
+管理员可在活动参与者页面逐人授予或取消“移动端抽奖”权限。已授权用户的活动首页会显示移动端抽奖入口，
+只能选择管理端已配置的启用奖品并发起开奖；奖品数量、库存、黑白名单、跨奖品不重复等配置仍只能由管理端维护。
+移动端通过 `/api/v1/activities/{activity_id}/lottery/mobile/ws` 建立首帧认证的活动用户 WebSocket，
+发送与管理端一致的 `lottery.prize.select`、`lottery.draw.start` 和 `lottery.draw.stop` 消息；连接和每次控制都要求移动端抽奖权限。
 
 活动用户注册成功时会从二十款炭黑/哑金卡通 SVG 头像中随机分配一款；头像按活动和活动用户独立保存。
 历史用户在成功登录或调用 `/me` 时惰性补齐。聊天页采用微信式消息行：头像、真实用户名、时间和气泡按发送者左右对齐展示；

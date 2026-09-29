@@ -3,7 +3,7 @@
 ## 模块简介
 
 `lottery` 提供按 `activity_id` 隔离、并按 `prize_id` 细分名单规则的奖项、奖品、中奖记录和实时 WebSocket 协议，
-是管理端与大屏端之间的唯一抽奖消息中枢。
+是管理端、大屏端和已授权移动端之间的唯一抽奖消息中枢。
 
 ## 目录说明
 
@@ -14,7 +14,7 @@
 - `protocol.py`：管理员 WebSocket 的开始、停止、旧协议兼容、重置和错误事件处理。
 - `state.py`：抽奖操作共享异步锁。
 - `snapshot.py`：公开/管理员 ready 与 reset 快照及安全字段裁剪。
-- `router.py`：管理员配置/历史 HTTP 接口、管理员 JWT 首帧认证 WS、公开只读大屏 WS 和事件分发。
+- `router.py`：管理员配置/历史 HTTP 接口、已授权移动端奖品选择与开奖 HTTP 接口、管理员 JWT 首帧认证 WS、公开只读大屏 WS 和事件分发。
 - `media_service.py`：奖品图片上传、替换、移除、管理员/公开读取和孤儿文件扫描。
 - `manager.py`：进程内活动房间连接管理，按 `admin`/`screen` 角色广播并清理失败连接。
 
@@ -32,6 +32,10 @@
 `lottery.drawn`。相同轮次停止使用 `(activity_id, round_id)` 幂等；旧客户端仍可使用 `lottery.draw.request`。
 配置保存通过 HTTP 成功后广播安全的 `lottery.config.updated`。
 
+已授权活动用户通过 `/activities/{activity_id}/lottery/mobile/ws` 建立活动用户 WebSocket，首帧认证后接收安全快照，
+并发送现有的 `lottery.prize.select`、`lottery.draw.start` 和 `lottery.draw.stop` 消息。移动端不能修改奖品、数量、库存、名单或抽奖规则；
+开始、停止和开奖成功后仍向管理员和大屏广播现有事件。
+
 奖品图片通过独立 multipart 接口处理，不进入配置 PUT JSON；图片使用随机 key 保存，并以
 `/api/v1/activities/{activity_id}/lottery/prizes/{prize_id}/image?v={image_id}` 作为公开安全引用。
 替换和移除在数据库提交后清理旧文件，启动和配置操作后扫描无引用文件作为崩溃补偿。
@@ -44,6 +48,7 @@
 ## 安全与并发
 
 - 管理员 WS 必须使用超级用户 JWT，拒绝活动用户上下文和非管理员凭证；大屏 WS 不要求凭证但只能读取。
+- 移动端 HTTP 接口必须使用活动用户 JWT 且 `activity_users.can_mobile_lottery = 1`；停用用户和已取消授权用户不能读取配置或开奖。
 - 特殊配置安全码只从后端 `LOTTERY_SECURITY_CODE` 读取，校验接口要求超级用户 JWT、校验活动存在性并使用常量时间比较；安全码不进入响应或公开快照。
 - 公开快照、开奖事件和重置事件不包含手机号、黑名单、白名单、停用状态或管理员字段。
 - `(activity_id, request_id)` 唯一保证请求重试幂等；重试只返回已有结果，不重复广播大屏。

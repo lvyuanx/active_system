@@ -47,7 +47,8 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 
 ## 管理员认证与活动生命周期
 
-管理端使用 HS256 JWT Bearer Token，登录接口只允许 `is_superuser` 用户成功。
+管理端使用 HS256 JWT Bearer Token，登录接口只允许 `is_superuser` 用户成功；管理员和活动用户 JWT 默认有效期为 24 小时，
+由 `JWT_EXPIRE_MINUTES` 以分钟配置。
 超级用户由环境变量初始化，密码使用 PBKDF2 哈希保存。活动状态为 `closed`、`open`、`ended`，
 状态转换由后端校验：`closed <-> open` 可反复切换，非结束状态可手动转为 `ended`，结束后不可恢复。
 
@@ -57,7 +58,8 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 
 参与者管理由超级管理员通过 `/admin/activities/{activity_id}/participants` 访问，列表和状态操作始终带活动条件。
 `activity_users.is_muted` 为持久禁言标记，禁言只禁止聊天室发言；`is_active` 为可恢复的停用标记，停用会递增
-`session_version`，使已有活动用户 token 失效，恢复后必须重新登录。用户名、手机号、加入时间和两个状态字段由管理端展示。
+`session_version`，使已有活动用户 token 失效，恢复后必须重新登录。`can_mobile_lottery` 独立保存移动端抽奖授权，停用期间不能使用，恢复后权限保留。
+用户名、手机号、加入时间、状态和移动端抽奖权限由管理端展示。
 
 ### 活动用户头像
 
@@ -72,7 +74,7 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 
 活动聊天室消息存储在 `activity_chat_messages`，通过 `activity_user_id` 关联发送者，并按 `(activity_id, message_id)`
 提供游标查询。活动用户 JWT 额外携带稳定的 `activity_user_id`；缺少该 claim 的旧令牌仅在同活动用户名唯一时兼容。
-用户端活动壳下包含 `/activity/{activity_id}`、`/chat`、`/me` 三个入口，WebSocket 首帧需发送 `auth`。
+用户端活动壳下包含 `/activity/{activity_id}`、`/lottery`、`/chat`、`/me` 四个命名入口，WebSocket 首帧需发送 `auth`。
 聊天室每次发送都会重新检查参与用户的 active/muted 状态；禁言返回 `chat.error`/`muted`，停用后的现有连接返回未授权并关闭，
 聊天历史不会因管理操作删除。用户端收到未授权聊天错误后会清除当前活动 token 并停止重连，回到活动入口。
 
@@ -115,6 +117,10 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 停止请求先把轮次标记为 stopping 并广播仅含轮次 ID 的 `lottery.draw.stopping`，让公开大屏冻结旋转并执行打散动画；剩余库存由奖品数量减中奖记录计数得到；事务提交后才广播管理员完整 `lottery.draw.result` 和带轮次 ID的公开脱敏
 `lottery.drawn`。管理员连接首帧必须提供超级用户 JWT，带活动上下文的用户 JWT 会被拒绝；大屏不能发送控制命令。
 `lottery.ready` 带有当前选中奖品 ID和进行中的 `active_round`，公开开始事件只带活动用户 ID、用户名和头像 ID，不带手机号、名单标记、停用状态或管理员字段。
+
+已授权移动端用户通过 `/activities/{activity_id}/lottery/mobile/ws` 建立首帧认证的活动用户 WebSocket，接收管理端配置的安全快照，
+并发送与管理端一致的 `lottery.prize.select`、`lottery.draw.start` 和 `lottery.draw.stop` 消息。移动端不能修改抽奖配置；
+选择、开始、停止和开奖事件复用同一轮次协议，并向大屏广播脱敏的 `lottery.drawn`。
 
 公开大屏在 `scattering` 完成且收到匹配轮次的 `lottery.drawn` 后进入 `selecting`：中奖者保留从打散位置向舞台中心移动的 Canvas 轨迹，
 随后交接到中心用户层做明显的缩放揭晓；非中奖者渐隐，中心用户层持续展示到 `revealed`，不再额外切换矩形中奖卡片。中心层只渲染公开用户名和头像，不参与开奖控制。
@@ -197,6 +203,8 @@ Electron 主进程在内存保留 token、session 和 `displayIds`，预加载�
   成功和结束状态使用独立状态色。
 - 登录后活动壳使用首页、聊天、“我的”三个命名嵌套路由驱动底部 Tabbar；当前项使用金色图标、
   金色加粗文字和可见包裹背景高亮，直接访问、刷新和历史导航时均以当前路由为准。
+- 有 `can_mobile_lottery` 权限的用户在首页看到移动端抽奖服务入口；抽奖页仅提供奖品切换、库存展示和开奖按钮，
+  不承载奖品配置、名单或规则编辑。
 - 聊天页不再扣除顶部 Header 高度；消息区采用头像、用户名、时间和左右圆角气泡的微信式排列，
   输入框固定在 Tabbar 上方，默认一行与 44px 发送按钮等高并支持 1–3 行自适应，
   超过三行在控件内滚动；聊天 Field 不显示内部 `::after` 分隔线。输入区的表情入口和发送操作使用 44px 圆形按钮承载用户提供的白色 SVG，
