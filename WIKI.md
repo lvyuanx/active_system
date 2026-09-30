@@ -53,11 +53,11 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 状态转换由后端校验：`closed <-> open` 可反复切换，非结束状态可手动转为 `ended`，结束后不可恢复。
 
 活动用户存储在 `activity_users` 表中，以 `activity_id` 隔离；同一活动内手机号唯一。用户端通过短信验证码登录，
-已有手机号直接签发活动用户 token，新手机号在验证码核验成功后补充姓名才创建记录。
+已有手机号直接签发活动用户 token，新手机号在验证码核验成功后弹出姓名对话框，提交姓名后才创建记录。
 用户 JWT 携带活动 ID，用户端按 `active_user_token:{activity_id}` 缓存 token。
 管理端二维码目标地址使用 `VITE_USER_WEB_BASE_URL` 拼接 `/activity/{activity_id}`。
 
-参与者管理由超级管理员通过 `/admin/activities/{activity_id}/participants` 访问，列表和状态操作始终带活动条件。
+参与者管理由超级管理员通过 `/admin/activities/{activity_id}/participants` 访问，列表和状态操作始终带活动条件。参与者列表支持按用户名或手机号模糊搜索和服务端分页，查询参数为 `keyword`、`page`、`page_size`，响应包含 `items`、`page`、`page_size`、`total` 和 `has_more`。
 `activity_users.is_muted` 为持久禁言标记，禁言只禁止聊天室发言；`is_active` 为可恢复的停用标记，停用会递增
 `session_version`，使已有活动用户 token 失效，恢复后必须重新登录。`can_mobile_lottery` 独立保存移动端抽奖授权，停用期间不能使用，恢复后权限保留。
 用户名、手机号、加入时间、状态和移动端抽奖权限由管理端展示。

@@ -26,9 +26,9 @@ deploy/build.py 指定 Vite `/user/` base，产物在 deploy/nginx/html/user，�
 - `views/activity/home.vue` 和 `views/activity/me.vue` 展示当前活动用户头像；
   `views/activity/me.vue` 仍仅清除当前活动 token，展示活动用户稳定 ID 与加入时间。
 
-活动入口使用手机号发送验证码登录。已有手机号核验成功后直接进入活动；新手机号首次核验成功后在同一页面补充姓名，再完成活动用户创建。旧用户名/手机号接口保留给兼容调用方，当前页面不再调用。
+活动入口使用手机号发送验证码登录。已有手机号核验成功后直接进入活动；新手机号首次核验成功后弹出姓名对话框，提交姓名后再完成活动用户创建。取消对话框会回到手机号和验证码登录页。旧用户名/手机号接口保留给兼容调用方，当前页面不再调用。
 
-活动入口页使用 Vant 4 移动端组件体系：CellGroup、Cell、Form、Field、Button、Tag、Icon、Loading 和 Tabbar。
+活动入口页使用 Vant 4 移动端组件体系：CellGroup、Cell、Dialog、Form、Field、Button、Tag、Icon、Loading 和 Tabbar。
 认证页保留 B 方案的金线活动入口标题、居中圆环 A 标识、活动上下文、登录标题、独立字段信息流和单一金色主操作；
 登录后展示活动状态、欢迎摘要和现有服务入口。
 

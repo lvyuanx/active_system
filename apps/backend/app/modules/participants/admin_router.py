@@ -1,9 +1,10 @@
 from datetime import datetime
 from enum import Enum
 import sqlite3
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
 
 from app.core.config import Settings, get_settings
 from app.core.database import transaction
@@ -32,6 +33,14 @@ class ActivityParticipantResponse(BaseModel):
     is_active: bool
     is_muted: bool
     can_mobile_lottery: bool
+
+
+class ActivityParticipantPage(BaseModel):
+    items: list[ActivityParticipantResponse]
+    page: int = Field(ge=1)
+    page_size: int = Field(ge=1, le=100)
+    total: int = Field(ge=0)
+    has_more: bool
 
 
 def _participant_from_row(row: sqlite3.Row) -> ActivityParticipantResponse:
@@ -105,20 +114,42 @@ def _change_participant(
     return _participant_from_row(updated)
 
 
-@admin_router.get("/{activity_id}/participants", response_model=list[ActivityParticipantResponse])
+@admin_router.get("/{activity_id}/participants", response_model=ActivityParticipantPage)
 def list_participants(
     activity_id: str,
     _: str = Depends(require_superuser),
     settings: Settings = Depends(get_settings),
-) -> list[ActivityParticipantResponse]:
+    keyword: Annotated[str | None, Query(max_length=100)] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> ActivityParticipantPage:
     get_activity(activity_id, settings)
+    normalized_keyword = keyword.strip() if keyword else ""
+    clauses = ["activity_id = ?"]
+    parameters: list[object] = [activity_id]
+    if normalized_keyword:
+        clauses.append("(username LIKE ? OR phone LIKE ?)")
+        pattern = f"%{normalized_keyword}%"
+        parameters.extend([pattern, pattern])
+    where_clause = " AND ".join(clauses)
     with transaction(settings) as connection:
+        count_row = connection.execute(
+            f"SELECT COUNT(*) AS total FROM activity_users WHERE {where_clause}",
+            parameters,
+        ).fetchone()
         rows = connection.execute(
-            "SELECT id, activity_id, username, phone, created_at, is_active, is_muted, can_mobile_lottery "
-            "FROM activity_users WHERE activity_id = ? ORDER BY created_at DESC, id DESC",
-            (activity_id,),
+            f"SELECT id, activity_id, username, phone, created_at, is_active, is_muted, can_mobile_lottery "
+            f"FROM activity_users WHERE {where_clause} ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
+            (*parameters, page_size, (page - 1) * page_size),
         ).fetchall()
-    return [_participant_from_row(row) for row in rows]
+    total = int(count_row["total"])
+    return ActivityParticipantPage(
+        items=[_participant_from_row(row) for row in rows],
+        page=page,
+        page_size=page_size,
+        total=total,
+        has_more=page * page_size < total,
+    )
 
 
 @admin_router.post(

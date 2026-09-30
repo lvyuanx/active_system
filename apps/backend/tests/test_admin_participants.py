@@ -67,18 +67,24 @@ def test_admin_lists_and_toggles_participants_with_activity_isolation(tmp_path: 
             headers=admin,
         )
         assert listed.status_code == 200
-        assert listed.json() == [
-            {
-                "activity_id": first["activity_id"],
-                "activity_user_id": participant_id,
-                "username": "小明",
-                "phone": "13800000001",
+        assert listed.json() == {
+            "items": [
+                {
+                    "activity_id": first["activity_id"],
+                    "activity_user_id": participant_id,
+                    "username": "小明",
+                    "phone": "13800000001",
                     "joined_at": first_user["joined_at"],
                     "is_active": True,
                     "is_muted": False,
                     "can_mobile_lottery": False,
                 }
-            ]
+            ],
+            "page": 1,
+            "page_size": 20,
+            "total": 1,
+            "has_more": False,
+        }
 
         muted = client.post(
             f"/api/v1/admin/activities/{first['activity_id']}/participants/{participant_id}/mute",
@@ -140,6 +146,89 @@ def test_admin_lists_and_toggles_participants_with_activity_isolation(tmp_path: 
             headers=admin,
         )
         assert missing_user.status_code == 404
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_admin_participants_support_search_pagination_and_validation(tmp_path: Path) -> None:
+    client, _ = make_client(tmp_path)
+    try:
+        activity = create_activity(client, "参与者分页")
+        other_activity = create_activity(client, "其他活动")
+        activity_id = activity["activity_id"]
+        admin = admin_headers(client)
+        users = [
+            register_user(client, activity_id, f"用户{index}", f"138000010{index:02d}")
+            for index in range(5)
+        ]
+        register_user(client, other_activity["activity_id"], "其他用户", "13800001999")
+
+        first_page = client.get(
+            f"/api/v1/admin/activities/{activity_id}/participants?page=1&page_size=2",
+            headers=admin,
+        )
+        assert first_page.status_code == 200, first_page.text
+        assert [item["username"] for item in first_page.json()["items"]] == ["用户4", "用户3"]
+        assert first_page.json()["page"] == 1
+        assert first_page.json()["page_size"] == 2
+        assert first_page.json()["total"] == 5
+        assert first_page.json()["has_more"] is True
+
+        last_page = client.get(
+            f"/api/v1/admin/activities/{activity_id}/participants?page=3&page_size=2",
+            headers=admin,
+        )
+        assert [item["username"] for item in last_page.json()["items"]] == ["用户0"]
+        assert last_page.json()["has_more"] is False
+
+        by_username = client.get(
+            f"/api/v1/admin/activities/{activity_id}/participants?keyword=用户3",
+            headers=admin,
+        )
+        assert [item["username"] for item in by_username.json()["items"]] == ["用户3"]
+        assert by_username.json()["total"] == 1
+
+        by_phone = client.get(
+            f"/api/v1/admin/activities/{activity_id}/participants?keyword=01002",
+            headers=admin,
+        )
+        assert [item["username"] for item in by_phone.json()["items"]] == ["用户2"]
+
+        no_match = client.get(
+            f"/api/v1/admin/activities/{activity_id}/participants?keyword=不存在",
+            headers=admin,
+        )
+        assert no_match.json()["items"] == []
+        assert no_match.json()["total"] == 0
+        assert no_match.json()["has_more"] is False
+
+        cross_activity = client.get(
+            f"/api/v1/admin/activities/{activity_id}/participants?keyword=其他",
+            headers=admin,
+        )
+        assert cross_activity.json()["items"] == []
+
+        invalid_page = client.get(
+            f"/api/v1/admin/activities/{activity_id}/participants?page=0",
+            headers=admin,
+        )
+        assert invalid_page.status_code == 422
+        invalid_page_size = client.get(
+            f"/api/v1/admin/activities/{activity_id}/participants?page_size=101",
+            headers=admin,
+        )
+        assert invalid_page_size.status_code == 422
+        invalid_keyword = client.get(
+            f"/api/v1/admin/activities/{activity_id}/participants?keyword={'x' * 101}",
+            headers=admin,
+        )
+        assert invalid_keyword.status_code == 422
+
+        unauthenticated = client.get(
+            f"/api/v1/admin/activities/{activity_id}/participants?page=1&page_size=2"
+        )
+        assert unauthenticated.status_code == 401
+        assert users[0]["activity_id"] == activity_id
     finally:
         app.dependency_overrides.clear()
 

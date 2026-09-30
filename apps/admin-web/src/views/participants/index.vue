@@ -39,7 +39,7 @@
               <p class="eyebrow">PARTICIPANT MANAGEMENT</p>
               <h1>参与者</h1>
               <p class="activity-meta">
-                {{ activity.name }} · 共 {{ participants.length }} 位参与用户
+                {{ activity.name }} · {{ participantCountLabel }}
               </p>
             </div>
             <span class="status-badge" :class="`status-badge--${activity.status}`">
@@ -51,74 +51,65 @@
             <header class="content-heading">
               <div>
                 <p class="eyebrow">ACTIVITY PARTICIPANTS</p>
-                <h2>参与用户 <span class="count-badge">{{ participants.length }}</span></h2>
+                <h2>参与用户 <span class="count-badge">{{ total }}</span></h2>
               </div>
               <span class="content-hint">状态变更会立即生效</span>
             </header>
 
-            <div v-if="!participants.length" class="empty-state">
-              <span class="empty-mark">○</span>
-              <h3>暂时还没有参与用户</h3>
-              <p>用户通过活动入口完成登录后，会出现在这里。</p>
+            <div class="participants-toolbar">
+              <div class="participant-search-row">
+                <el-input
+                  v-model="keywordInput"
+                  clearable
+                  placeholder="搜索用户名或手机号"
+                  @keyup.enter="searchParticipants"
+                  @clear="searchParticipants"
+                />
+                <el-button
+                  type="primary"
+                  :loading="participantsLoading"
+                  @click="searchParticipants"
+                >
+                  搜索
+                </el-button>
+              </div>
             </div>
 
-            <div v-else class="participants-table-wrap">
-              <el-table
-                :data="participants"
-                row-key="activity_user_id"
-                class="participants-table"
-                aria-label="活动参与用户列表"
-              >
-                <el-table-column label="参与者" min-width="190" show-overflow-tooltip>
-                  <template #default="{ row }">
-                    <div class="participant-name">
-                      <strong>{{ row.username }}</strong>
-                      <span>ID {{ row.activity_user_id }}</span>
-                    </div>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="phone" label="手机号" min-width="150" />
-                <el-table-column label="加入时间" min-width="180">
-                  <template #default="{ row }">{{ formatDate(row.joined_at) }}</template>
-                </el-table-column>
-                <el-table-column label="状态" min-width="150">
-                  <template #default="{ row }">
-                    <div class="status-stack">
-                      <el-tag :type="row.is_active ? 'success' : 'info'" effect="plain">
-                        {{ row.is_active ? "正常" : "已停用" }}
-                      </el-tag>
-                      <el-tag v-if="row.is_muted" type="warning" effect="plain">已禁言</el-tag>
-                      <el-tag v-if="row.can_mobile_lottery" type="success" effect="plain">
-                        移动端可抽奖
-                      </el-tag>
-                    </div>
-                  </template>
-                </el-table-column>
-                <el-table-column label="操作" min-width="350" fixed="right">
-                  <template #default="{ row }">
-                    <div class="participant-actions">
-                      <el-button
-                        text
-                        :type="row.is_muted ? 'success' : 'warning'"
-                        :loading="isActionLoading(row.activity_user_id)"
-                        @click="toggleMute(row)"
-                      >{{ row.is_muted ? "解除禁言" : "禁言" }}</el-button>
-                      <el-button
-                        text
-                        :type="row.is_active ? 'danger' : 'primary'"
-                        :loading="isActionLoading(row.activity_user_id)"
-                        @click="toggleActive(row)"
-                      >{{ row.is_active ? "停用" : "恢复" }}</el-button>
-                      <el-button
-                        text
-                        :type="row.can_mobile_lottery ? 'warning' : 'success'"
-                        :loading="isActionLoading(row.activity_user_id)"
-                        @click="toggleMobileLottery(row)"
-                      >{{ row.can_mobile_lottery ? "取消移动抽奖" : "授权移动抽奖" }}</el-button>
-                    </div>
-                  </template>
-                </el-table-column>
-              </el-table>
+            <div v-loading="participantsLoading" class="participants-results">
+              <div v-if="!participants.length" class="empty-state">
+                <span class="empty-mark">○</span>
+                <h3>{{ keyword ? "没有匹配的参与用户" : "暂时还没有参与用户" }}</h3>
+                <p>
+                  {{
+                    keyword
+                      ? "请尝试其他用户名或手机号。"
+                      : "用户通过活动入口完成登录后，会出现在这里。"
+                  }}
+                </p>
+              </div>
+
+              <ParticipantTable
+                v-else
+                :participants="participants"
+                :action-participant-ids="actionParticipantIds"
+                @toggle-mute="toggleMute"
+                @toggle-active="toggleActive"
+                @toggle-mobile-lottery="toggleMobileLottery"
+              />
+
+              <div v-if="total" class="participants-footer">
+                <span>{{ rangeLabel }}</span>
+                <el-pagination
+                  v-model:current-page="page"
+                  v-model:page-size="pageSize"
+                  background
+                  layout="total, sizes, prev, pager, next"
+                  :page-sizes="[20, 50, 100]"
+                  :total="total"
+                  @current-change="loadParticipants"
+                  @size-change="changePageSize"
+                />
+              </div>
             </div>
           </section>
         </template>
@@ -128,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useRoute } from "vue-router";
 import {
@@ -137,39 +128,102 @@ import {
   listActivityParticipants,
   type Activity,
   type ActivityParticipant,
+  type ActivityParticipantPage,
   type ParticipantAction,
 } from "../../api/client";
 import ActivitySidebar from "../../components/ActivitySidebar.vue";
+import ParticipantTable from "./ParticipantTable.vue";
 
 const route = useRoute();
 const activityId = String(route.params.activityId);
 const activity = ref<Activity>();
 const participants = ref<ActivityParticipant[]>([]);
+const keywordInput = ref("");
+const keyword = ref("");
+const page = ref(1);
+const pageSize = ref(20);
+const total = ref(0);
 const loading = ref(true);
+const participantsLoading = ref(false);
 const actionParticipantIds = ref(new Set<number>());
 const error = ref("");
 const username = localStorage.getItem("active_admin_username") || "超级用户";
+let loadSequence = 0;
 
 const statusLabel = (status: Activity["status"]) =>
   ({ closed: "已关闭", open: "进行中", ended: "已结束" })[status];
-const formatDate = (value: string) => new Date(value).toLocaleString("zh-CN", { hour12: false });
-const isActionLoading = (participantId: number) => actionParticipantIds.value.has(participantId);
+const participantCountLabel = computed(() =>
+  keyword.value ? `匹配 ${total.value} 位参与用户` : `共 ${total.value} 位参与用户`,
+);
+const rangeLabel = computed(() => {
+  if (!total.value) return "暂无记录";
+  const start = (page.value - 1) * pageSize.value + 1;
+  const end = Math.min(page.value * pageSize.value, total.value);
+  return `显示第 ${start}-${end} 条`;
+});
+
+const applyParticipantPage = (response: ActivityParticipantPage) => {
+  participants.value = response.items;
+  page.value = response.page;
+  pageSize.value = response.page_size;
+  total.value = response.total;
+};
+
+const participantQuery = () => ({
+  keyword: keyword.value || undefined,
+  page: page.value,
+  pageSize: pageSize.value,
+});
 
 const load = async () => {
   loading.value = true;
   error.value = "";
+  const sequence = ++loadSequence;
+  participantsLoading.value = true;
   try {
     const [currentActivity, currentParticipants] = await Promise.all([
       getActivity(activityId),
-      listActivityParticipants(activityId),
+      listActivityParticipants(activityId, participantQuery()),
     ]);
+    if (sequence !== loadSequence) return;
     activity.value = currentActivity;
-    participants.value = currentParticipants;
+    applyParticipantPage(currentParticipants);
   } catch (err) {
-    error.value = err instanceof Error ? err.message : "参与者加载失败";
+    if (sequence === loadSequence) {
+      error.value = err instanceof Error ? err.message : "参与者加载失败";
+    }
   } finally {
+    if (sequence === loadSequence) participantsLoading.value = false;
     loading.value = false;
   }
+};
+
+const loadParticipants = async () => {
+  const sequence = ++loadSequence;
+  participantsLoading.value = true;
+  error.value = "";
+  try {
+    const response = await listActivityParticipants(activityId, participantQuery());
+    if (sequence === loadSequence) applyParticipantPage(response);
+  } catch (err) {
+    if (sequence === loadSequence) {
+      error.value = err instanceof Error ? err.message : "参与者加载失败";
+    }
+  } finally {
+    if (sequence === loadSequence) participantsLoading.value = false;
+  }
+};
+
+const searchParticipants = () => {
+  keyword.value = keywordInput.value.trim();
+  page.value = 1;
+  void loadParticipants();
+};
+
+const changePageSize = (size: number) => {
+  pageSize.value = size;
+  page.value = 1;
+  void loadParticipants();
 };
 
 const updateParticipant = async (participant: ActivityParticipant, action: ParticipantAction) => {
@@ -324,6 +378,24 @@ onMounted(load);
   font-size: 12px;
 }
 
+.participants-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.participant-search-row {
+  display: flex;
+  gap: 10px;
+  width: min(520px, 100%);
+}
+
+.participant-search-row :deep(.el-input) {
+  max-width: 420px;
+}
+
 .count-badge {
   display: inline-grid;
   place-items: center;
@@ -338,41 +410,24 @@ onMounted(load);
   vertical-align: 2px;
 }
 
-.participants-table-wrap {
-  overflow-x: auto;
+.participants-results {
+  min-height: 280px;
 }
 
-.participants-table {
-  min-width: 980px;
-}
-
-.participant-name {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.participant-name strong {
-  color: #26332f;
-  font-size: 14px;
-  font-weight: 650;
-}
-
-.participant-name span {
-  color: #9aa59f;
-  font: 11px Consolas, monospace;
-}
-
-.status-stack,
-.participant-actions {
+.participants-footer {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #edf1ef;
 }
 
-.participant-actions {
-  justify-content: flex-start;
-  gap: 2px;
+.participants-footer > span {
+  color: #849089;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .empty-state {
@@ -406,9 +461,24 @@ onMounted(load);
 
 @media (max-width: 800px) {
   .activity-titlebar,
-  .content-heading {
+  .content-heading,
+  .participants-toolbar,
+  .participants-footer {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .participant-search-row {
+    width: 100%;
+  }
+
+  .participant-search-row :deep(.el-input) {
+    max-width: none;
+  }
+
+  .participants-footer :deep(.el-pagination) {
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
   .participants-surface {

@@ -52,10 +52,8 @@
           <div class="login-kicker" aria-hidden="true"><span></span><strong>活动入口</strong><span></span></div>
           <img class="activity-logo" :src="activityLogo" alt="ACTIVE 活动标识" />
           <p class="activity-context">{{ activity?.name || "当前活动" }}</p>
-          <h1 class="login-title">{{ needsName ? "补充姓名" : "短信登录" }}</h1>
-          <p class="login-description">
-            {{ needsName ? "验证码已通过，请输入姓名完成登录。" : "使用手机号接收验证码，验证后进入活动。" }}
-          </p>
+          <h1 class="login-title">短信登录</h1>
+          <p class="login-description">使用手机号接收验证码，验证后进入活动。</p>
         </header>
         <VanForm class="login-form" :show-error="true" :show-error-message="false" @submit="submit">
           <section class="field-stack">
@@ -71,7 +69,6 @@
                 placeholder="请输入手机号"
                 autocomplete="tel"
                 clearable
-                :readonly="needsName"
                 :rules="[{ required: true, message: '请输入手机号' }]"
               />
             </div>
@@ -84,10 +81,11 @@
                 center
                 left-icon="shield-o"
                 type="tel"
-                maxlength="8"
+                :maxlength="smsCodeLength"
                 placeholder="请输入短信验证码"
                 autocomplete="one-time-code"
                 clearable
+                @update:model-value="normalizeSmsCode"
                 :rules="[{ required: true, message: '请输入验证码' }]"
               >
                 <template #button>
@@ -105,32 +103,47 @@
                 </template>
               </VanField>
             </div>
-            <div v-if="needsName" class="field-item">
-              <label for="activity-username">姓名</label>
-              <VanField
-                id="activity-username"
-                v-model="form.username"
-                name="username"
-                center
-                left-icon="contact-o"
-                placeholder="请输入姓名"
-                autocomplete="name"
-                maxlength="100"
-                clearable
-                :rules="[{ required: true, message: '请输入姓名' }]"
-              />
-            </div>
             <VanButton block type="primary" native-type="submit" :loading="submitting" class="login-submit">
-              {{ needsName ? "完成登录" : "验证并进入" }}
+              验证并进入
             </VanButton>
           </section>
         </VanForm>
         <p class="auto-register-note">
           <VanIcon name="info-o" aria-hidden="true" />
-          <span>{{ needsName ? "姓名仅在首次进入活动时填写" : "新用户验证后补充姓名即可进入" }}</span>
+          <span>新用户验证后会提示填写姓名</span>
         </p>
       </div>
     </section>
+
+    <VanDialog
+      v-model:show="nameDialogVisible"
+      class="name-dialog"
+      title="完成首次登录"
+      show-cancel-button
+      cancel-button-text="取消"
+      confirm-button-text="提交"
+      cancel-button-color="#c8c4bb"
+      confirm-button-color="#e7ca86"
+      :confirm-button-disabled="submitting || !form.username.trim()"
+      :before-close="handleNameDialogClose"
+    >
+      <div class="name-dialog-content">
+        <p class="name-dialog-description">验证码已验证，请输入姓名后进入活动。</p>
+        <VanField
+          id="activity-username"
+          class="name-dialog-field"
+          v-model="form.username"
+          name="username"
+          center
+          left-icon="contact-o"
+          placeholder="请输入姓名"
+          autocomplete="name"
+          maxlength="100"
+          clearable
+          :disabled="submitting"
+        />
+      </div>
+    </VanDialog>
   </main>
 </template>
 
@@ -139,6 +152,7 @@ import { computed, onMounted, onUnmounted, provide, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   Button as VanButton,
+  Dialog as VanDialog,
   Field as VanField,
   Form as VanForm,
   Icon as VanIcon,
@@ -173,11 +187,13 @@ const user = ref<ActivityUserResponse>();
 const loading = ref(true);
 const submitting = ref(false);
 const sendingCode = ref(false);
-const needsName = ref(false);
+const nameDialogVisible = ref(false);
 const codeCountdown = ref(0);
 const error = ref("");
 const form = reactive({ username: "", phone: "", code: "" });
 const phonePattern = /^1[3-9][0-9]{9}$/;
+const smsCodeLength = 6;
+const smsCodePattern = new RegExp(`^[0-9]{4,${smsCodeLength}}$`);
 let countdownTimer: number | undefined;
 const activeTab = computed(() => {
   if (route.path === basePath + "/chat") return 1;
@@ -232,6 +248,11 @@ const startCountdown = (seconds: number) => {
   }, 1000);
 };
 
+const normalizeSmsCode = (value: string | number) => {
+  const normalized = String(value).replace(/[^0-9]/g, "").slice(0, smsCodeLength);
+  if (form.code !== normalized) form.code = normalized;
+};
+
 const sendCode = async () => {
   const phone = form.phone.trim();
   if (!phonePattern.test(phone)) {
@@ -244,7 +265,7 @@ const sendCode = async () => {
     form.phone = phone;
     form.code = "";
     form.username = "";
-    needsName.value = false;
+    nameDialogVisible.value = false;
     startCountdown(result.retry_after);
     showToast(result.message);
   } catch (err) {
@@ -261,24 +282,18 @@ const submit = async () => {
     showToast("请输入有效的手机号");
     return;
   }
-  if (!/^[0-9]{4,8}$/.test(code)) {
-    showToast("请输入 4-8 位数字验证码");
-    return;
-  }
-  const username = form.username.trim();
-  if (needsName.value && !username) {
-    showToast("请输入姓名");
+  if (!smsCodePattern.test(code)) {
+    showToast(`请输入 4-${smsCodeLength} 位数字验证码`);
     return;
   }
   submitting.value = true;
   try {
-    const result = await smsLoginActivityUser(
-      activityId,
-      needsName.value ? { phone, code, username } : { phone, code },
-    );
+    const result = await smsLoginActivityUser(activityId, { phone, code });
     if (result.needs_name) {
-      needsName.value = true;
-      showToast("请输入姓名");
+      form.phone = phone;
+      form.code = code;
+      form.username = "";
+      nameDialogVisible.value = true;
       return;
     }
     if (!result.user) {
@@ -289,6 +304,44 @@ const submit = async () => {
     showToast("登录成功");
   } catch (err) {
     showToast(err instanceof Error ? err.message : "操作失败，请稍后重试");
+  } finally {
+    submitting.value = false;
+  }
+};
+
+const handleNameDialogClose = async (action: "confirm" | "cancel") => {
+  if (action === "cancel") {
+    form.username = "";
+    return true;
+  }
+
+  const username = form.username.trim();
+  if (!username) {
+    showToast("请输入姓名");
+    return false;
+  }
+
+  const phone = form.phone.trim();
+  const code = form.code.trim();
+  if (!phonePattern.test(phone) || !smsCodePattern.test(code)) {
+    nameDialogVisible.value = false;
+    showToast("请重新输入手机号和验证码");
+    return false;
+  }
+
+  submitting.value = true;
+  try {
+    const result = await smsLoginActivityUser(activityId, { phone, code, username });
+    if (result.needs_name || !result.user) {
+      throw new Error("登录响应缺少用户信息");
+    }
+    setActivityToken(activityId, result.user.access_token);
+    user.value = result.user;
+    showToast("登录成功");
+    return true;
+  } catch (err) {
+    showToast(err instanceof Error ? err.message : "操作失败，请稍后重试");
+    return false;
   } finally {
     submitting.value = false;
   }

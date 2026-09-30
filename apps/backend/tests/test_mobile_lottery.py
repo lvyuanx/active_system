@@ -30,7 +30,7 @@ def test_mobile_lottery_permission_is_activity_scoped_and_reflected_by_me(tmp_pa
         user = register_user(client, activity_id, "授权用户", "13800005001")
         listed = client.get(f"/api/v1/admin/activities/{activity_id}/participants", headers=headers)
         assert listed.status_code == 200
-        assert listed.json()[0]["can_mobile_lottery"] is False
+        assert listed.json()["items"][0]["can_mobile_lottery"] is False
 
         token_headers = {"Authorization": f"Bearer {user['access_token']}"}
         before = client.get(f"/api/v1/activities/{activity_id}/me", headers=token_headers)

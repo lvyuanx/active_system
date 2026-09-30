@@ -29,7 +29,7 @@ Docker 部署保留单 uvicorn，数据库和媒体均由 Compose 绑定在 `/ap
 - `app/modules/auth/router.py`：超级用户初始化、登录和管理员权限依赖。
 - `app/modules/activities/router.py`：活动 CRUD 列表、创建和生命周期状态转换接口。
 - `app/modules/participants/router.py`：活动公开详情、活动用户注册/登录、token 校验和用户身份接口。
-- `app/modules/participants/admin_router.py`：超级用户使用的参与者列表、禁言/解除禁言、停用/恢复和移动端抽奖授权接口。
+- `app/modules/participants/admin_router.py`：超级用户使用的参与者分页/搜索列表、禁言/解除禁言、停用/恢复和移动端抽奖授权接口。
 - `app/modules/participants/avatar.py`：活动用户头像范围校验、安全随机分配和空值惰性补齐。
 - `app/modules/chat/`：活动聊天室历史消息、活动级表情库、游标查询、WebSocket 认证和广播。
 - `app/modules/danmaku/`：活动弹幕配置、版本化 HMAC token、只读会话和独立实时广播。

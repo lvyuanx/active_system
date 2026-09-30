@@ -51,6 +51,13 @@ export interface ActivityParticipant {
   is_muted: boolean;
   can_mobile_lottery: boolean;
 }
+export interface ActivityParticipantPage {
+  items: ActivityParticipant[];
+  page: number;
+  page_size: number;
+  total: number;
+  has_more: boolean;
+}
 export type ParticipantAction =
   | "mute"
   | "unmute"
@@ -246,8 +253,19 @@ export const createActivity = (payload: Pick<Activity, "name" | "description" | 
   request<Activity>("/admin/activities", { method: "POST", body: JSON.stringify(payload) });
 export const changeActivityStatus = (id: string, action: "open" | "close" | "end") =>
   request<Activity>(`/admin/activities/${id}/${action}`, { method: "POST" });
-export const listActivityParticipants = (activityId: string) =>
-  request<ActivityParticipant[]>(`/admin/activities/${activityId}/participants`);
+export const listActivityParticipants = (
+  activityId: string,
+  options: { keyword?: string; page?: number; pageSize?: number } = {},
+) => {
+  const params = new URLSearchParams();
+  if (options.keyword) params.set("keyword", options.keyword);
+  if (options.page) params.set("page", String(options.page));
+  if (options.pageSize) params.set("page_size", String(options.pageSize));
+  const query = params.toString();
+  return request<ActivityParticipantPage>(
+    `/admin/activities/${activityId}/participants${query ? `?${query}` : ""}`,
+  );
+};
 export const changeActivityParticipant = (
   activityId: string,
   activityUserId: number,
