@@ -20,7 +20,10 @@ def _snapshot_from_connection(
         (activity_id,),
     ).fetchall()
     all_draws = [draw_row(connection, int(row["draw_id"])) for row in rows]
-    draw_models = [admin_draw(row) if include_sensitive else public_draw(row) for row in all_draws]
+    draw_models = [
+        admin_draw(row) if include_sensitive else public_draw(connection, row)
+        for row in all_draws
+    ]
     awards = connection.execute(
         "SELECT award_id, name, sort_order FROM lottery_awards WHERE activity_id = ? "
         "ORDER BY sort_order, award_id",
@@ -123,7 +126,7 @@ def _public_draw_from_dict(draw: dict[str, Any]) -> dict[str, Any]:
     winner = draw.get("winner")
     safe_winner: dict[str, Any] = {}
     if isinstance(winner, dict):
-        for key in ("activity_user_id", "username"):
+        for key in ("activity_user_id", "username", "avatar_id"):
             if key in winner:
                 safe_winner[key] = winner[key]
     return {

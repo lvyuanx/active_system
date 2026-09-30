@@ -60,7 +60,7 @@ export interface LotteryDraw {
   prize_name: string;
   draw_number: number;
   remaining_quantity: number;
-  winner: { activity_user_id: number; username: string };
+  winner: { activity_user_id: number; username: string; avatar_id: number };
   drawn_at: string;
   prize_image_url: string | null;
 }

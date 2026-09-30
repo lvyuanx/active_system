@@ -171,6 +171,12 @@ class LotteryDrawAdmin(BaseModel):
     drawn_at: datetime
 
 
+class LotteryWinnerPublic(BaseModel):
+    activity_user_id: int = Field(ge=1)
+    username: str = Field(min_length=1, max_length=100)
+    avatar_id: int = Field(ge=1, le=20)
+
+
 class LotteryDrawPublic(BaseModel):
     draw_id: int
     activity_id: str
@@ -181,7 +187,7 @@ class LotteryDrawPublic(BaseModel):
     draw_number: int
     remaining_quantity: int
     prize_image_url: str | None = None
-    winner: dict[str, object]
+    winner: LotteryWinnerPublic
     drawn_at: datetime
 
 

@@ -76,7 +76,7 @@ export interface MobileLotteryDraw {
   draw_number: number;
   remaining_quantity: number;
   prize_image_url: string | null;
-  winner: { activity_user_id: number; username: string };
+  winner: { activity_user_id: number; username: string; avatar_id: number };
   drawn_at: string;
 }
 export interface MobileLotteryAward {

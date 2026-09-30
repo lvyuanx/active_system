@@ -31,7 +31,7 @@ const winnerParticipant = computed(() => props.participants.find(
   (participant) => participant.activity_user_id === winnerId.value,
 ));
 const winnerName = computed(() => winnerParticipant.value?.username || props.winner?.username);
-const winnerAvatarId = computed(() => winnerParticipant.value?.avatar_id || 1);
+const winnerAvatarId = computed(() => winnerParticipant.value?.avatar_id || props.winner?.avatar_id || 1);
 </script>
 
 <style scoped src="./LotteryWinnerReveal.css"></style>

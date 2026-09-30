@@ -112,7 +112,83 @@ def test_round_starts_animation_without_drawing_and_freezes_pool(tmp_path: Path)
                 assert drawn["round_id"] == round_id
                 assert drawn["draw"]["winner"]["activity_user_id"] == first["activity_user_id"]
                 assert drawn["draw"]["winner"]["activity_user_id"] != late["activity_user_id"]
+                first_round_participant = next(
+                    item
+                    for item in public_round["participants"]
+                    if item["activity_user_id"] == first["activity_user_id"]
+                )
+                assert drawn["draw"]["winner"]["avatar_id"] == first_round_participant["avatar_id"]
                 assert _draw_count(settings, activity_id) == 1
+    finally:
+        lottery_round_store.clear_all()
+        app.dependency_overrides.clear()
+
+
+def test_round_persists_missing_avatar_and_reuses_it_in_public_history(tmp_path: Path) -> None:
+    client, settings = make_client(tmp_path)
+    lottery_round_store.clear_all()
+    try:
+        activity_id, headers = create_activity(client, "旧用户头像")
+        user = register_user(client, activity_id, "旧头像用户", "13800003005")
+        with transaction(settings) as connection:
+            connection.execute(
+                "UPDATE activity_users SET avatar_id = NULL WHERE activity_id = ? AND id = ?",
+                (activity_id, user["activity_user_id"]),
+            )
+        config = configure_lottery(client, activity_id, headers, quantity=1)
+        open_activity(client, activity_id, headers)
+        prize_id = int(config["prizes"][0]["prize_id"])
+        round_id = "round-avatar-persist-001"
+
+        with client.websocket_connect(f"/api/v1/activities/{activity_id}/lottery/ws") as screen:
+            screen.receive_json()
+            with client.websocket_connect(f"/api/v1/admin/activities/{activity_id}/lottery/ws") as admin:
+                admin.send_json({"type": "auth", "token": admin_token(client)})
+                admin.receive_json()
+                admin.send_json({"type": "lottery.draw.start", "round_id": round_id, "prize_id": prize_id})
+                assert admin.receive_json()["type"] == "lottery.draw.started"
+                screen_started = screen.receive_json()
+                participant = next(
+                    item
+                    for item in screen_started["round"]["participants"]
+                    if item["activity_user_id"] == user["activity_user_id"]
+                )
+                assert 1 <= participant["avatar_id"] <= 20
+                with transaction(settings) as connection:
+                    stored = connection.execute(
+                        "SELECT avatar_id FROM activity_users WHERE activity_id = ? AND id = ?",
+                        (activity_id, user["activity_user_id"]),
+                    ).fetchone()
+                assert stored["avatar_id"] == participant["avatar_id"]
+
+                admin.send_json({"type": "lottery.draw.stop", "round_id": round_id, "prize_id": prize_id})
+                assert admin.receive_json()["type"] == "lottery.draw.stopping"
+                assert screen.receive_json()["type"] == "lottery.draw.stopping"
+                result = admin.receive_json()
+                drawn = screen.receive_json()
+                assert result["type"] == "lottery.draw.result"
+                assert drawn["type"] == "lottery.drawn"
+                assert drawn["draw"]["winner"]["avatar_id"] == participant["avatar_id"]
+
+            with client.websocket_connect(f"/api/v1/activities/{activity_id}/lottery/ws") as recovered_screen:
+                recovered = recovered_screen.receive_json()
+                assert recovered["draws"][0]["winner"]["avatar_id"] == participant["avatar_id"]
+
+            with transaction(settings) as connection:
+                connection.execute(
+                    "UPDATE activity_users SET avatar_id = NULL WHERE activity_id = ? AND id = ?",
+                    (activity_id, user["activity_user_id"]),
+                )
+            with client.websocket_connect(f"/api/v1/activities/{activity_id}/lottery/ws") as legacy_screen:
+                legacy_ready = legacy_screen.receive_json()
+                legacy_avatar_id = legacy_ready["draws"][0]["winner"]["avatar_id"]
+                assert 1 <= legacy_avatar_id <= 20
+            with transaction(settings) as connection:
+                stored = connection.execute(
+                    "SELECT avatar_id FROM activity_users WHERE activity_id = ? AND id = ?",
+                    (activity_id, user["activity_user_id"]),
+                ).fetchone()
+            assert stored["avatar_id"] == legacy_avatar_id
     finally:
         lottery_round_store.clear_all()
         app.dependency_overrides.clear()

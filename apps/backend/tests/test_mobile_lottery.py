@@ -144,7 +144,12 @@ def test_mobile_lottery_controls_the_same_round_as_admin_and_screen(tmp_path: Pa
                     assert admin_result["round_id"] == round_id
                     assert screen_result["type"] == mobile_result["type"] == "lottery.drawn"
                     assert screen_result["round_id"] == mobile_result["round_id"] == round_id
-                    assert set(mobile_result["draw"]["winner"]) == {"activity_user_id", "username"}
+                    assert set(mobile_result["draw"]["winner"]) == {
+                        "activity_user_id",
+                        "username",
+                        "avatar_id",
+                    }
+                    assert 1 <= mobile_result["draw"]["winner"]["avatar_id"] <= 20
                     assert "phone" not in json.dumps(screen_result, ensure_ascii=False)
                     assert "phone" not in json.dumps(mobile_result, ensure_ascii=False)
 

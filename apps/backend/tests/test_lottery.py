@@ -436,7 +436,13 @@ def test_draw_commits_before_broadcast_and_request_retry_is_idempotent(tmp_path:
                     key: result["draw"][key]
                     for key in result["draw"]
                     if key != "winner"
-                } | {"winner": {"activity_user_id": user["activity_user_id"], "username": "小明"}}
+                } | {
+                    "winner": {
+                        "activity_user_id": user["activity_user_id"],
+                        "username": "小明",
+                        "avatar_id": user["avatar_id"],
+                    }
+                }
                 assert "phone" not in json.dumps(drawn, ensure_ascii=False)
                 admin.send_json(request)
                 retry = admin.receive_json()
@@ -447,6 +453,7 @@ def test_draw_commits_before_broadcast_and_request_retry_is_idempotent(tmp_path:
                 recovered = reconnected_screen.receive_json()
                 assert recovered["type"] == "lottery.ready"
                 assert [draw["draw_id"] for draw in recovered["draws"]] == [result["draw"]["draw_id"]]
+                assert recovered["draws"][0]["winner"]["avatar_id"] == user["avatar_id"]
         with transaction(settings) as connection:
             count = connection.execute(
                 "SELECT COUNT(*) AS count FROM lottery_draws WHERE activity_id = ?",

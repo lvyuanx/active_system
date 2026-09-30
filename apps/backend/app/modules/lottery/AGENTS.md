@@ -32,6 +32,10 @@
 `lottery.drawn`。相同轮次停止使用 `(activity_id, round_id)` 幂等；旧客户端仍可使用 `lottery.draw.request`。
 配置保存通过 HTTP 成功后广播安全的 `lottery.config.updated`。
 
+公开中奖结果的 `winner` 固定包含 `activity_user_id`、`username` 和持久化的 `avatar_id`。
+抽奖轮次准备阶段会使用活动用户头像的惰性补齐逻辑，历史公开快照读取旧空值中奖人时也会按需补齐；不在
+`lottery_draws` 中重复存储头像快照。
+
 已授权活动用户通过 `/activities/{activity_id}/lottery/mobile/ws` 建立活动用户 WebSocket，首帧认证后接收安全快照，
 并发送现有的 `lottery.prize.select`、`lottery.draw.start` 和 `lottery.draw.stop` 消息。移动端不能修改奖品、数量、库存、名单或抽奖规则；
 开始、停止和开奖成功后仍向管理员和大屏广播现有事件。
@@ -51,6 +55,7 @@
 - 移动端 HTTP 接口必须使用活动用户 JWT 且 `activity_users.can_mobile_lottery = 1`；停用用户和已取消授权用户不能读取配置或开奖。
 - 特殊配置安全码只从后端 `LOTTERY_SECURITY_CODE` 读取，校验接口要求超级用户 JWT、校验活动存在性并使用常量时间比较；安全码不进入响应或公开快照。
 - 公开快照、开奖事件和重置事件不包含手机号、黑名单、白名单、停用状态或管理员字段。
+- 公开 `winner.avatar_id` 只表示活动用户已持久化的 1–20 本地头像编号，不包含头像路径或外部资源引用。
 - `(activity_id, request_id)` 唯一保证请求重试幂等；重试只返回已有结果，不重复广播大屏。
 - 每个活动同时只能存在一个内存抽奖轮次；轮次期间禁止修改抽奖配置和黑白名单，服务重启会取消未落库轮次。
 - 公开开始事件只返回活动用户 ID、用户名和头像 ID，不返回候选资格、手机号、停用状态或名单标记。

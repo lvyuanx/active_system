@@ -6,7 +6,7 @@ import sqlite3
 
 from app.core.config import Settings
 from app.core.database import transaction
-from app.modules.participants.avatar import AVATAR_COUNT, AvatarAssignmentError, validate_avatar_id
+from app.modules.participants.avatar import AvatarAssignmentError, ensure_avatar_id
 from .media_service import cleanup_lottery_media_keys, scan_lottery_media
 from .models import (
     LotteryConfigError,
@@ -380,11 +380,16 @@ def validate_lottery_prize_selection(
             raise LotteryDrawError("inventory_exhausted", "奖品库存不足")
 
 
-def _round_avatar_id(activity_user_id: int, value: object) -> int:
+def _round_avatar_id(
+    connection: sqlite3.Connection,
+    activity_id: str,
+    activity_user_id: int,
+    value: object,
+) -> int:
     try:
-        return validate_avatar_id(value)
-    except AvatarAssignmentError:
-        return (activity_user_id - 1) % AVATAR_COUNT + 1
+        return ensure_avatar_id(connection, activity_id, activity_user_id, value)
+    except AvatarAssignmentError as error:
+        raise LotteryDrawError("avatar_assignment_failed", "活动用户头像分配失败") from error
 
 
 def prepare_lottery_round(
@@ -430,7 +435,12 @@ def prepare_lottery_round(
             LotteryRoundParticipant(
                 activity_user_id=int(row["id"]),
                 username=str(row["username"]),
-                avatar_id=_round_avatar_id(int(row["id"]), row["avatar_id"]),
+                avatar_id=_round_avatar_id(
+                    connection,
+                    activity_id,
+                    int(row["id"]),
+                    row["avatar_id"],
+                ),
             )
             for row in participant_rows
         )
@@ -473,7 +483,7 @@ def draw_lottery(
             row = draw_row(connection, int(existing["draw_id"]))
             if int(row["prize_id"]) != prize_id:
                 raise LotteryDrawError("request_conflict", "request_id 已用于其他奖品")
-            return LotteryDrawOutcome(admin_draw(row), public_draw(row), [], True)
+            return LotteryDrawOutcome(admin_draw(row), public_draw(connection, row), [], True)
         if existing_only:
             raise LotteryDrawError("round_not_found", "抽奖轮次不存在或已过期")
         activity = activity_or_raise(connection, activity_id)
@@ -524,7 +534,7 @@ def draw_lottery(
         if len(other_names) > max(0, roll_count - 1):
             other_names = secrets.SystemRandom().sample(other_names, roll_count - 1)
         roll_names = other_names + [str(winner["username"])]
-        return LotteryDrawOutcome(admin_draw(row), public_draw(row), roll_names, False)
+        return LotteryDrawOutcome(admin_draw(row), public_draw(connection, row), roll_names, False)
 
 
 def list_lottery_history(

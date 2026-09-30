@@ -231,13 +231,18 @@ const displayPrizeImageURL = computed(() => {
 });
 const currentWinnerAvatarSource = computed(() => avatarSources[currentWinnerAvatarId.value] || avatarSources[1]);
 
-const fallbackWinnerAvatarId = (activityUserId: number) => {
-  const normalizedId = Math.max(1, Math.abs(Math.trunc(activityUserId)));
-  return ((normalizedId - 1) % Object.keys(avatarSources).length) + 1;
-};
+const isValidAvatarId = (value: unknown): value is number => (
+  typeof value === "number"
+  && Number.isInteger(value)
+  && value >= 1
+  && value <= 20
+  && Boolean(avatarSources[value])
+);
 const rememberWinnerAvatar = (draw: LotteryDraw, participants: LotteryRoundParticipant[] = []) => {
   const participant = participants.find((item) => item.activity_user_id === draw.winner.activity_user_id);
-  currentWinnerAvatarId.value = participant?.avatar_id || fallbackWinnerAvatarId(draw.winner.activity_user_id);
+  currentWinnerAvatarId.value = isValidAvatarId(draw.winner.avatar_id)
+    ? draw.winner.avatar_id
+    : participant?.avatar_id || 1;
 };
 const syncCurrentDrawToSelectedPrize = (prizeId: number | undefined) => {
   const draw = latestLotteryDrawForPrize(snapshot.value?.draws || [], prizeId);

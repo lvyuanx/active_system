@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 import sqlite3
 from urllib.parse import quote
 
+from app.modules.participants.avatar import AvatarAssignmentError, ensure_avatar_id
 from .models import (
     LotteryAward,
     LotteryConfigError,
@@ -355,7 +356,8 @@ def draw_row(connection: sqlite3.Connection, draw_id: int) -> sqlite3.Row:
                   p.name AS prize_name, p.image_id, d.draw_number, p.quantity -
                   (SELECT COUNT(*) FROM lottery_draws d2 WHERE d2.activity_id = d.activity_id
                    AND d2.prize_id = d.prize_id) AS remaining_quantity,
-                  d.request_id, d.drawn_at, u.id AS activity_user_id, u.username, u.phone, u.created_at
+                  d.request_id, d.drawn_at, u.id AS activity_user_id, u.username, u.phone, u.created_at,
+                  u.avatar_id
              FROM lottery_draws d
              JOIN lottery_awards a ON a.award_id = d.award_id AND a.activity_id = d.activity_id
              JOIN lottery_prizes p ON p.prize_id = d.prize_id AND p.activity_id = d.activity_id
@@ -389,7 +391,16 @@ def admin_draw(row: sqlite3.Row) -> LotteryDrawAdmin:
     )
 
 
-def public_draw(row: sqlite3.Row) -> LotteryDrawPublic:
+def public_draw(connection: sqlite3.Connection, row: sqlite3.Row) -> LotteryDrawPublic:
+    try:
+        avatar_id = ensure_avatar_id(
+            connection,
+            str(row["activity_id"]),
+            int(row["activity_user_id"]),
+            row["avatar_id"],
+        )
+    except AvatarAssignmentError as error:
+        raise LotteryDrawError("avatar_assignment_failed", "中奖用户头像分配失败") from error
     return LotteryDrawPublic(
         draw_id=int(row["draw_id"]),
         activity_id=str(row["activity_id"]),
@@ -403,6 +414,7 @@ def public_draw(row: sqlite3.Row) -> LotteryDrawPublic:
         winner={
             "activity_user_id": int(row["activity_user_id"]),
             "username": str(row["username"]),
+            "avatar_id": avatar_id,
         },
         drawn_at=datetime.fromisoformat(str(row["drawn_at"])),
     )
