@@ -1,0 +1,43 @@
+<view class="wx-page me-page" style="padding-top: {{statusBarHeight}}px;">
+  <block wx:if="{{loading}}">
+    <view class="state-page">
+      <view class="state-page__inner">
+        <view class="state-symbol">...</view>
+        <text class="state-title">正在加载活动</text>
+      </view>
+    </view>
+  </block>
+  <block wx:elif="{{error}}">
+    <view class="state-page">
+      <view class="state-page__inner">
+        <view class="state-symbol state-symbol--error">!</view>
+        <text class="state-title">暂时无法进入活动</text>
+        <text class="state-message">{{error}}</text>
+        <button class="primary-button" bindtap="load">重新加载</button>
+      </view>
+    </view>
+  </block>
+  <block wx:elif="{{activity && user}}">
+    <scroll-view class="page-scroll" scroll-y="true">
+      <view class="page-content me-content">
+        <view class="me-hero">
+          <view class="me-profile">
+            <activity-avatar avatar-id="{{user.avatar_id}}" alt="{{user.username}}的活动头像" />
+            <view class="me-profile-copy">
+              <text class="section-kicker">我的活动身份</text>
+              <text class="me-title">{{user.username}}</text>
+              <text class="me-description">你正在参与「{{activity.name}}」</text>
+            </view>
+          </view>
+        </view>
+        <view class="me-list">
+          <view class="me-cell"><text>活动名称</text><text class="me-value">{{activity.name}}</text></view>
+          <view class="me-cell"><text>活动状态</text><text class="me-value">{{statusLabel}}</text></view>
+          <view class="me-cell"><text>活动用户 ID</text><text class="me-value">{{user.activity_user_id}}</text></view>
+          <view class="me-cell"><text>加入时间</text><text class="me-value">{{joinedAt}}</text></view>
+        </view>
+        <view class="logout-button" bindtap="logout">退出当前活动</view>
+      </view>
+    </scroll-view>
+  </block>
+</view>

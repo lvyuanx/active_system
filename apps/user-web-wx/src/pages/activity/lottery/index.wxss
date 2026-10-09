@@ -1,0 +1,252 @@
+.lottery-content {
+  padding-top: 40rpx;
+}
+
+.sub-header {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  margin-bottom: 52rpx;
+}
+
+.back-button {
+  display: flex;
+  width: 80rpx;
+  height: 80rpx;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0 0 8rpx;
+  border: 1px solid #303433;
+  border-radius: 20rpx;
+  color: #c8c4bb;
+  background: #151819;
+  font-size: 58rpx;
+  line-height: 68rpx;
+}
+
+.sub-header__copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.sub-title {
+  display: block;
+  margin-top: 10rpx;
+  color: #f5f2eb;
+  font-size: 48rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.inline-state {
+  display: flex;
+  min-height: 720rpx;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24rpx;
+  color: #8f918d;
+  font-size: 28rpx;
+  text-align: center;
+}
+
+.inline-state--error .state-symbol {
+  color: #dc7c7c;
+}
+
+.retry-button {
+  min-width: 220rpx;
+  height: 82rpx;
+  padding: 0 28rpx;
+  border: 1px solid #d5b36b;
+  border-radius: 18rpx;
+  color: #e7ca86;
+  background: transparent;
+  font-size: 28rpx;
+  line-height: 82rpx;
+}
+
+.control-prize-list {
+  margin-top: 26rpx;
+  overflow: hidden;
+  border: 1px solid #303433;
+  border-radius: 26rpx;
+  background: #151819;
+}
+
+.control-prize {
+  display: flex;
+  min-height: 148rpx;
+  align-items: center;
+  width: 100%;
+  gap: 24rpx;
+  padding: 24rpx 28rpx;
+  border-bottom: 1px solid #303433;
+  border-radius: 0;
+  color: #f5f2eb;
+  background: #151819;
+  text-align: left;
+}
+
+.control-prize:last-child {
+  border-bottom: 0;
+}
+
+.control-prize--selected {
+  background: #302d23;
+}
+
+.control-prize--hover {
+  background: #24231e;
+}
+
+.control-prize--disabled {
+  opacity: 0.48;
+}
+
+.control-prize-image {
+  display: flex;
+  width: 92rpx;
+  height: 92rpx;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 92rpx;
+  overflow: hidden;
+  border: 1px solid #80663a;
+  border-radius: 18rpx;
+  color: #e7ca86;
+  background: #1b1e1f;
+  font-size: 36rpx;
+}
+
+.control-prize-image image {
+  width: 100%;
+  height: 100%;
+}
+
+.control-prize-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.control-prize-name,
+.control-prize-label {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.control-prize-name {
+  color: #f5f2eb;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.control-prize-label {
+  margin-top: 8rpx;
+  color: #8f918d;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.control-prize-check {
+  color: #e7ca86;
+  font-size: 40rpx;
+  font-weight: 700;
+}
+
+.empty-box {
+  display: flex;
+  height: 300rpx;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #303433;
+  border-radius: 26rpx;
+  color: #8f918d;
+  background: #151819;
+  font-size: 28rpx;
+}
+
+.draw-panel,
+.last-result {
+  margin-top: 36rpx;
+  padding: 36rpx;
+  border: 1px solid #303433;
+  border-radius: 26rpx;
+  background: #151819;
+}
+
+.draw-current {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  color: #8f918d;
+  font-size: 24rpx;
+}
+
+.draw-current-name {
+  color: #e7ca86;
+  font-size: 36rpx;
+  font-weight: 700;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.draw-hint {
+  display: block;
+  min-height: 42rpx;
+  margin-top: 22rpx;
+  color: #8f918d;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.draw-button {
+  display: flex;
+  width: 100%;
+  height: 96rpx;
+  margin-top: 26rpx;
+  border-radius: 20rpx;
+  color: #1e180e;
+  background: #d5b36b;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 96rpx;
+}
+
+.draw-button--disabled {
+  opacity: 0.45;
+}
+
+.action-error {
+  display: block;
+  margin-top: 20rpx;
+  color: #dc7c7c;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.last-result {
+  border-color: #80663a;
+  text-align: center;
+}
+
+.last-result-title {
+  display: block;
+  margin-top: 16rpx;
+  color: #f5f2eb;
+  font-size: 48rpx;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.last-result-meta {
+  display: block;
+  margin-top: 8rpx;
+  color: #8f918d;
+  font-size: 24rpx;
+}

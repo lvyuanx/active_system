@@ -266,9 +266,23 @@
   background: transparent;
 }
 
+.activity-page .chat-composer .chat-sticker-toggle.van-button--disabled {
+  opacity: 1;
+  border-color: #485052 !important;
+  color: var(--activity-text-muted);
+  background: #202526 !important;
+}
+
 .activity-page .chat-composer .chat-send-button {
   border-color: var(--activity-gold);
   box-shadow: 0 4px 12px rgb(213 179 107 / 18%);
+}
+
+.activity-page .chat-composer .chat-send-button.van-button--disabled {
+  opacity: 1;
+  border-color: #586163 !important;
+  background: #303738 !important;
+  box-shadow: none;
 }
 
 .activity-page .chat-control-icon {
@@ -302,8 +316,6 @@
   box-shadow: 0 5px 14px rgb(213 179 107 / 28%);
   outline: none;
 }
-
-.activity-page .chat-composer .chat-send-button.van-button--disabled { box-shadow: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .activity-page .chat-composer .van-button { transition: none; }

@@ -39,7 +39,13 @@ def create_activity(settings: Settings, activity_id: str = "activity-a") -> None
 def test_existing_phone_logs_in_and_keeps_original_name(tmp_path: Path, monkeypatch) -> None:
     client, settings = make_client(tmp_path)
     create_activity(settings)
-    monkeypatch.setattr(participants_module, "check_sms_code", lambda phone, code, configured: True)
+    calls: list[tuple[str, str]] = []
+
+    def check_sms_code(phone: str, code: str, configured: Settings) -> bool:
+        calls.append((phone, code))
+        return True
+
+    monkeypatch.setattr(participants_module, "check_sms_code", check_sms_code)
     try:
         registered = client.post(
             "/api/v1/activities/activity-a/auth/register",
@@ -47,13 +53,14 @@ def test_existing_phone_logs_in_and_keeps_original_name(tmp_path: Path, monkeypa
         )
         response = client.post(
             "/api/v1/activities/activity-a/auth/sms-login",
-            json={"phone": PHONE, "code": "123456", "username": "新姓名"},
+            json={"phone": PHONE, "code": "123456"},
         )
         assert registered.status_code == 201
         assert response.status_code == 200
         assert response.json()["needs_name"] is False
         assert response.json()["user"]["username"] == "原姓名"
         assert response.json()["user"]["access_token"]
+        assert calls == [(PHONE, "123456")]
     finally:
         app.dependency_overrides.clear()
 
@@ -61,14 +68,23 @@ def test_existing_phone_logs_in_and_keeps_original_name(tmp_path: Path, monkeypa
 def test_new_phone_requires_name_before_creating_user(tmp_path: Path, monkeypatch) -> None:
     client, settings = make_client(tmp_path)
     create_activity(settings)
-    monkeypatch.setattr(participants_module, "check_sms_code", lambda phone, code, configured: True)
+    calls: list[tuple[str, str]] = []
+
+    def check_sms_code(phone: str, code: str, configured: Settings) -> bool:
+        calls.append((phone, code))
+        return True
+
+    monkeypatch.setattr(participants_module, "check_sms_code", check_sms_code)
     try:
         needs_name = client.post(
             "/api/v1/activities/activity-a/auth/sms-login",
             json={"phone": PHONE, "code": "123456"},
         )
         assert needs_name.status_code == 200
-        assert needs_name.json() == {"needs_name": True, "user": None}
+        needs_name_body = needs_name.json()
+        verification_token = needs_name_body.pop("verification_token")
+        assert len(verification_token) >= 32
+        assert needs_name_body == {"needs_name": True, "user": None}
         with transaction(settings) as connection:
             assert connection.execute(
                 "SELECT COUNT(*) FROM activity_users WHERE activity_id = ? AND phone = ?",
@@ -76,17 +92,24 @@ def test_new_phone_requires_name_before_creating_user(tmp_path: Path, monkeypatc
             ).fetchone()[0] == 0
 
         completed = client.post(
-            "/api/v1/activities/activity-a/auth/sms-login",
-            json={"phone": PHONE, "code": "123456", "username": "新用户"},
+            "/api/v1/activities/activity-a/auth/sms-login/complete",
+            json={"verification_token": verification_token, "username": "新用户"},
         )
         assert completed.status_code == 200
-        assert completed.json()["needs_name"] is False
-        assert completed.json()["user"]["username"] == "新用户"
+        assert completed.json()["username"] == "新用户"
+        assert calls == [(PHONE, "123456")]
         with transaction(settings) as connection:
             assert connection.execute(
                 "SELECT username FROM activity_users WHERE activity_id = ? AND phone = ?",
                 ("activity-a", PHONE),
             ).fetchone()["username"] == "新用户"
+
+        reused = client.post(
+            "/api/v1/activities/activity-a/auth/sms-login/complete",
+            json={"verification_token": verification_token, "username": "重复提交"},
+        )
+        assert reused.status_code == 401
+        assert reused.json() == {"detail": "短信验证已失效，请重新验证"}
     finally:
         app.dependency_overrides.clear()
 

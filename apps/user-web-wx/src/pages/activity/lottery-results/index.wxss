@@ -1,0 +1,238 @@
+.results-content {
+  padding-top: 40rpx;
+}
+
+.sub-header {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  margin-bottom: 52rpx;
+}
+
+.back-button {
+  display: flex;
+  width: 80rpx;
+  height: 80rpx;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0 0 8rpx;
+  border: 1px solid #303433;
+  border-radius: 20rpx;
+  color: #c8c4bb;
+  background: #151819;
+  font-size: 58rpx;
+  line-height: 68rpx;
+}
+
+.sub-header__copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.sub-title {
+  display: block;
+  margin-top: 10rpx;
+  color: #f5f2eb;
+  font-size: 48rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.inline-state {
+  display: flex;
+  min-height: 720rpx;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24rpx;
+  color: #8f918d;
+  font-size: 28rpx;
+  text-align: center;
+}
+
+.retry-button {
+  min-width: 220rpx;
+  height: 82rpx;
+  padding: 0 28rpx;
+  border: 1px solid #d5b36b;
+  border-radius: 18rpx;
+  color: #e7ca86;
+  background: transparent;
+  font-size: 28rpx;
+  line-height: 82rpx;
+}
+
+.inline-state--error .state-symbol {
+  color: #dc7c7c;
+}
+
+.section-heading--results {
+  margin: 0 8rpx 24rpx;
+}
+
+.prize-swiper {
+  height: 440rpx;
+  overflow: hidden;
+  border: 1px solid #303433;
+  border-radius: 28rpx;
+  background: #151819;
+}
+
+.prize-slide {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  gap: 30rpx;
+  padding: 40rpx;
+}
+
+.prize-image-wrap {
+  display: flex;
+  width: 220rpx;
+  height: 220rpx;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 220rpx;
+  overflow: hidden;
+  border: 1px solid #80663a;
+  border-radius: 28rpx;
+  background: #1b1e1f;
+}
+
+.prize-image {
+  width: 100%;
+  height: 100%;
+}
+
+.prize-image-fallback {
+  color: #e7ca86;
+  font-size: 72rpx;
+}
+
+.prize-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.prize-award,
+.prize-index {
+  display: block;
+  color: #d5b36b;
+  font-size: 26rpx;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.prize-name {
+  display: block;
+  margin-top: 14rpx;
+  color: #f5f2eb;
+  font-size: 42rpx;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.prize-index {
+  margin-top: 20rpx;
+  color: #8f918d;
+  font-size: 24rpx;
+}
+
+.empty-box {
+  display: flex;
+  height: 360rpx;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #303433;
+  border-radius: 28rpx;
+  color: #8f918d;
+  background: #151819;
+  font-size: 28rpx;
+}
+
+.prize-info {
+  margin-top: 36rpx;
+  padding: 36rpx;
+  border: 1px solid #303433;
+  border-radius: 26rpx;
+  background: #151819;
+}
+
+.info-heading,
+.winner-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.info-title {
+  display: block;
+  margin-top: 10rpx;
+  color: #f5f2eb;
+  font-size: 40rpx;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx 28rpx;
+  margin-top: 24rpx;
+  color: #8f918d;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.winner-section {
+  margin-top: 34rpx;
+  padding-top: 28rpx;
+  border-top: 1px solid #303433;
+}
+
+.winner-heading > text:last-child {
+  color: #c8c4bb;
+  font-size: 26rpx;
+}
+
+.winner-list {
+  display: flex;
+  max-height: 460rpx;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-top: 20rpx;
+}
+
+.winner-row {
+  display: flex;
+  min-height: 76rpx;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 12rpx 20rpx;
+  border: 1px solid #303433;
+  border-radius: 18rpx;
+  color: #8f918d;
+  background: #1b1e1f;
+  font-size: 24rpx;
+}
+
+.winner-name {
+  min-width: 0;
+  color: #f5f2eb;
+  font-size: 28rpx;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.no-winner {
+  display: block;
+  margin-top: 20rpx;
+  color: #8f918d;
+  font-size: 26rpx;
+  line-height: 1.6;
+}

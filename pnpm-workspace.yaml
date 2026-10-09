@@ -3,6 +3,7 @@ packages:
   - "apps/danmaku-desktop"
   - "apps/screen-web"
   - "apps/user-web"
+  - "apps/user-web-wx"
 allowBuilds:
   electron-winstaller: false
   esbuild: true

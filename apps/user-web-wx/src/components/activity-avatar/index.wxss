@@ -1,0 +1,15 @@
+.activity-avatar {
+  display: block;
+  flex: 0 0 auto;
+  width: 112rpx;
+  height: 112rpx;
+  overflow: hidden;
+  border: 1px solid #4b463a;
+  border-radius: 50%;
+  background: #1b1e1f;
+}
+
+.activity-avatar--small {
+  width: 72rpx;
+  height: 72rpx;
+}

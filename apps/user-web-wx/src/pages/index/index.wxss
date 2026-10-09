@@ -1,0 +1,11 @@
+.legacy-entry-page {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+}
+
+.legacy-entry-loading {
+  color: #8f918d;
+  font-size: 28rpx;
+}

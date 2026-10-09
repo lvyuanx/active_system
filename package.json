@@ -9,6 +9,7 @@
     "dev:danmaku": "pnpm --filter @active/danmaku-desktop dev",
     "dev:screen": "pnpm --filter @active/screen-web dev",
     "dev:user": "pnpm --filter @active/user-web dev",
+    "typecheck:wx": "pnpm --filter @active/user-web-wx typecheck",
     "dist:danmaku:win": "pnpm --filter @active/danmaku-desktop dist:win",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",

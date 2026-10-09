@@ -25,7 +25,7 @@
       :class="{ 'activity-shell--keyboard-visible': keyboardVisible }"
     >
       <RouterView v-slot="{ Component }">
-        <component :is="Component" :activity="activity" :user="user" />
+        <component :is="Component" :key="route.fullPath" :activity="activity" :user="user" />
       </RouterView>
       <VanTabbar
         v-show="!keyboardVisible"
@@ -52,11 +52,45 @@
           <div class="login-kicker" aria-hidden="true"><span></span><strong>活动入口</strong><span></span></div>
           <img class="activity-logo" :src="activityLogo" alt="ACTIVE 活动标识" />
           <p class="activity-context">{{ activity?.name || "当前活动" }}</p>
-          <h1 class="login-title">短信登录</h1>
-          <p class="login-description">使用手机号接收验证码，验证后进入活动。</p>
+          <h1 class="login-title">{{ needsName ? "完善首次登录" : "短信登录" }}</h1>
+          <p class="login-description">
+            {{ needsName ? "短信验证成功，请输入姓名后进入活动。" : "使用手机号接收验证码，验证后进入活动。" }}
+          </p>
         </header>
-        <VanForm class="login-form" :show-error="true" :show-error-message="false" @submit="submit">
-          <section class="field-stack">
+        <VanForm class="login-form" :show-error="true" :show-error-message="false" @submit="handleAuthSubmit">
+          <section v-if="needsName" class="field-stack">
+            <div class="field-item">
+              <label for="activity-username">姓名</label>
+              <VanField
+                id="activity-username"
+                v-model="form.username"
+                name="username"
+                center
+                left-icon="contact-o"
+                placeholder="请输入姓名"
+                autocomplete="name"
+                maxlength="100"
+                clearable
+                :disabled="submitting"
+              />
+            </div>
+            <VanButton block type="primary" native-type="submit" :loading="submitting" class="login-submit">
+              提交并进入
+            </VanButton>
+            <VanButton
+              block
+              plain
+              type="default"
+              native-type="button"
+              class="auth-back-button"
+              :disabled="submitting"
+              icon="arrow-left"
+              @click="backToLogin"
+            >
+              返回短信验证
+            </VanButton>
+          </section>
+          <section v-else class="field-stack">
             <div class="field-item">
               <label for="activity-phone">手机号</label>
               <VanField
@@ -104,46 +138,16 @@
               </VanField>
             </div>
             <VanButton block type="primary" native-type="submit" :loading="submitting" class="login-submit">
-              验证并进入
+              验证并继续
             </VanButton>
           </section>
         </VanForm>
-        <p class="auto-register-note">
+        <p v-if="!needsName" class="auto-register-note">
           <VanIcon name="info-o" aria-hidden="true" />
-          <span>新用户验证后会提示填写姓名</span>
+          <span>新用户验证后进入姓名补充</span>
         </p>
       </div>
     </section>
-
-    <VanDialog
-      v-model:show="nameDialogVisible"
-      class="name-dialog"
-      title="完成首次登录"
-      show-cancel-button
-      cancel-button-text="取消"
-      confirm-button-text="提交"
-      cancel-button-color="#c8c4bb"
-      confirm-button-color="#e7ca86"
-      :confirm-button-disabled="submitting || !form.username.trim()"
-      :before-close="handleNameDialogClose"
-    >
-      <div class="name-dialog-content">
-        <p class="name-dialog-description">验证码已验证，请输入姓名后进入活动。</p>
-        <VanField
-          id="activity-username"
-          class="name-dialog-field"
-          v-model="form.username"
-          name="username"
-          center
-          left-icon="contact-o"
-          placeholder="请输入姓名"
-          autocomplete="name"
-          maxlength="100"
-          clearable
-          :disabled="submitting"
-        />
-      </div>
-    </VanDialog>
   </main>
 </template>
 
@@ -152,7 +156,6 @@ import { computed, onMounted, onUnmounted, provide, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   Button as VanButton,
-  Dialog as VanDialog,
   Field as VanField,
   Form as VanForm,
   Icon as VanIcon,
@@ -168,6 +171,7 @@ import { activitySessionKey, type ActivitySession } from "./session";
 import { activityKeyboardVisibleKey, useKeyboardViewport } from "./useKeyboardViewport";
 import {
   clearActivityToken,
+  completeSmsLogin,
   getActivity,
   getActivityMe,
   getActivityToken,
@@ -187,7 +191,8 @@ const user = ref<ActivityUserResponse>();
 const loading = ref(true);
 const submitting = ref(false);
 const sendingCode = ref(false);
-const nameDialogVisible = ref(false);
+const needsName = ref(false);
+const verificationToken = ref("");
 const codeCountdown = ref(0);
 const error = ref("");
 const form = reactive({ username: "", phone: "", code: "" });
@@ -265,7 +270,8 @@ const sendCode = async () => {
     form.phone = phone;
     form.code = "";
     form.username = "";
-    nameDialogVisible.value = false;
+    needsName.value = false;
+    verificationToken.value = "";
     startCountdown(result.retry_after);
     showToast(result.message);
   } catch (err) {
@@ -290,10 +296,14 @@ const submit = async () => {
   try {
     const result = await smsLoginActivityUser(activityId, { phone, code });
     if (result.needs_name) {
+      if (!result.verification_token) {
+        throw new Error("短信验证凭证缺失，请重新验证");
+      }
+      verificationToken.value = result.verification_token;
       form.phone = phone;
-      form.code = code;
+      form.code = "";
       form.username = "";
-      nameDialogVisible.value = true;
+      needsName.value = true;
       return;
     }
     if (!result.user) {
@@ -309,42 +319,49 @@ const submit = async () => {
   }
 };
 
-const handleNameDialogClose = async (action: "confirm" | "cancel") => {
-  if (action === "cancel") {
-    form.username = "";
-    return true;
-  }
-
+const submitName = async () => {
   const username = form.username.trim();
   if (!username) {
     showToast("请输入姓名");
-    return false;
+    return;
   }
-
-  const phone = form.phone.trim();
-  const code = form.code.trim();
-  if (!phonePattern.test(phone) || !smsCodePattern.test(code)) {
-    nameDialogVisible.value = false;
-    showToast("请重新输入手机号和验证码");
-    return false;
+  if (!verificationToken.value) {
+    backToLogin();
+    showToast("短信验证已失效，请重新验证");
+    return;
   }
 
   submitting.value = true;
   try {
-    const result = await smsLoginActivityUser(activityId, { phone, code, username });
-    if (result.needs_name || !result.user) {
-      throw new Error("登录响应缺少用户信息");
-    }
-    setActivityToken(activityId, result.user.access_token);
-    user.value = result.user;
+    const result = await completeSmsLogin(activityId, {
+      verification_token: verificationToken.value,
+      username,
+    });
+    setActivityToken(activityId, result.access_token);
+    user.value = result;
     showToast("登录成功");
-    return true;
+    needsName.value = false;
+    verificationToken.value = "";
   } catch (err) {
     showToast(err instanceof Error ? err.message : "操作失败，请稍后重试");
-    return false;
   } finally {
     submitting.value = false;
   }
+};
+
+const handleAuthSubmit = () => {
+  if (needsName.value) {
+    void submitName();
+    return;
+  }
+  void submit();
+};
+
+const backToLogin = () => {
+  needsName.value = false;
+  verificationToken.value = "";
+  form.username = "";
+  form.code = "";
 };
 
 onMounted(load);

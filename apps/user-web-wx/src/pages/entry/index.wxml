@@ -1,0 +1,115 @@
+<view class="wx-page entry-page" style="padding-top: {{statusBarHeight}}px;">
+  <block wx:if="{{loading}}">
+    <view class="state-page">
+      <view class="state-page__inner">
+        <view class="state-symbol">...</view>
+        <text class="state-kicker">活动入口</text>
+        <text class="state-title">正在加载活动</text>
+        <text class="state-description">请稍候，马上为你打开活动页面。</text>
+      </view>
+    </view>
+  </block>
+
+  <block wx:elif="{{error}}">
+    <view class="state-page">
+      <view class="state-page__inner">
+        <view class="state-symbol state-symbol--error">!</view>
+        <text class="state-kicker">进入失败</text>
+        <text class="state-title">暂时无法进入活动</text>
+        <text class="state-message">{{error}}</text>
+        <button class="primary-button" bindtap="load">重新加载</button>
+      </view>
+    </view>
+  </block>
+
+  <block wx:elif="{{!activityId}}">
+    <view class="entry-empty">
+      <image class="entry-logo" src="/assets/active-logo.png" mode="aspectFit" />
+      <text class="entry-title">活动入口</text>
+      <text class="entry-description">请扫描活动小程序码或打开带有活动参数的链接</text>
+      <button class="primary-button scan-button" bindtap="scanActivity">扫码进入活动</button>
+    </view>
+  </block>
+
+  <block wx:elif="{{needsName}}">
+    <view class="auth-page">
+      <view class="login-kicker"><text>◆</text><text>活动入口</text><text>◆</text></view>
+      <image class="activity-logo" src="/assets/active-logo.png" mode="aspectFit" />
+      <text class="activity-context">{{activity ? activity.name : "当前活动"}}</text>
+      <text class="login-title">完善首次登录</text>
+      <text class="login-description">短信验证成功，请输入姓名后进入活动。</text>
+
+      <view class="login-form">
+        <view class="field-item">
+          <text class="field-label">姓名</text>
+          <input
+            class="field-input"
+            maxlength="100"
+            value="{{form.username}}"
+            placeholder="请输入姓名"
+            placeholder-class="field-placeholder"
+            bindinput="handleUsernameInput"
+          />
+        </view>
+        <button
+          class="primary-button login-button"
+          loading="{{submitting}}"
+          disabled="{{submitting}}"
+          bindtap="confirmName"
+        >
+          提交并进入
+        </button>
+        <button class="auth-back-button" disabled="{{submitting}}" bindtap="backToLogin">← 返回短信验证</button>
+      </view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="auth-page">
+      <view class="login-kicker"><text>◆</text><text>活动入口</text><text>◆</text></view>
+      <image class="activity-logo" src="/assets/active-logo.png" mode="aspectFit" />
+      <text class="activity-context">{{activity ? activity.name : "当前活动"}}</text>
+      <text class="login-title">短信登录</text>
+      <text class="login-description">使用手机号接收验证码，验证后进入活动。</text>
+
+      <view class="login-form">
+        <view class="field-item">
+          <text class="field-label">手机号</text>
+          <input
+            class="field-input"
+            type="number"
+            maxlength="11"
+            value="{{form.phone}}"
+            placeholder="请输入手机号"
+            placeholder-class="field-placeholder"
+            bindinput="handlePhoneInput"
+          />
+        </view>
+        <view class="field-item">
+          <text class="field-label">验证码</text>
+          <view class="code-field">
+            <input
+              class="field-input code-input"
+              type="number"
+              maxlength="6"
+              value="{{form.code}}"
+              placeholder="请输入短信验证码"
+              placeholder-class="field-placeholder"
+              bindinput="handleCodeInput"
+            />
+            <button
+              class="code-button"
+              loading="{{sendingCode}}"
+              disabled="{{sendingCode || codeCountdown > 0}}"
+              bindtap="sendCode"
+            >{{codeCountdown > 0 ? codeCountdown + "s" : "发送验证码"}}</button>
+          </view>
+        </view>
+        <button class="primary-button login-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submit">
+          验证并继续
+        </button>
+      </view>
+      <view class="auto-register-note">ⓘ 新用户验证后进入姓名补充</view>
+    </view>
+  </block>
+</view>

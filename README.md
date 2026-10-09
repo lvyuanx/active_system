@@ -6,6 +6,7 @@
 - `apps/admin-web`：Vue 3 + Element Plus 管理端。
 - `apps/screen-web`：Vue 3 + ECharts 活动大屏，以及 Electron 弹幕渲染层。
 - `apps/user-web`：Vue 3 + Vant 4 用户端。
+- `apps/user-web-wx`：原生 TypeScript + WXML + WXSS 微信小程序用户端。
 - `apps/danmaku-desktop`：Electron Windows 弹幕悬浮工具。
 
 ## Linux 服务器部署
@@ -39,6 +40,15 @@ pnpm dev:danmaku
 - 用户端：http://localhost:5175
 - API 文档：http://localhost:8000/docs
 
+微信小程序用户端使用微信开发者工具打开 `apps/user-web-wx`。开发联调时在工具中关闭合法域名校验，
+并在 `apps/user-web-wx/src/config.ts` 使用 development API；开发者工具自动选择 development，体验版和正式版自动选择 production，
+发布前需要确认 production 的 HTTPS/WSS 地址，
+并在微信公众平台配置 request 和 socket 合法域名。体验版二维码的页面路径使用 `pages/entry/index`；
+工程同时保留 `pages/index/index` 兼容旧二维码，打开后会自动跳转到正式入口。入口页的“扫码进入活动”
+会解析管理员生成的 Web 活动二维码（`/activity/{activity_id}`），也支持启动参数 `activity_id` 或扫码场景
+`scene=activity_id%3D...`。扫描公网二维码后，小程序会将该二维码的域名用于同源 `/api/v1` 和 WebSocket 请求；
+仍需把该 HTTPS 域名加入微信 request、download 和 socket 合法域名。
+
 `pnpm dev:danmaku` 需要先运行 `pnpm dev:screen`，桌面工具会加载该本地渲染服务。直接访问大屏端仍显示普通活动大屏；
 Electron 仅通过 `?danmaku-overlay=1` 加载透明弹幕渲染层。
 
@@ -56,7 +66,7 @@ Electron 仅通过 `?danmaku-overlay=1` 加载透明弹幕渲染层。
 
 登录后默认进入活动选择页。活动状态为“已关闭”“进行中”“已结束”：新建活动默认为已关闭，可在已关闭和进行中之间反复切换；管理员手动结束后不可再次开启或关闭。活动名称必填，描述、开始时间和结束时间可选，若同时填写时间则结束时间必须晚于开始时间。
 
-点击活动卡片进入活动管理页；活动列表卡片底部和活动管理首页的“活动入口”面板都提供“打开抽奖大屏”按钮，会在新标签页打开该活动的实时抽奖大屏。大屏地址由管理端 `VITE_SCREEN_WEB_BASE_URL` 配置（默认 `http://localhost:5174`），并自动附加当前活动的 `activity_id`。活动管理首页会生成用户端地址和二维码。二维码地址由管理端 `VITE_USER_WEB_BASE_URL` 配置（默认 `http://localhost:5175`）。用户端按活动收集手机号并发送短信验证码登录；新手机号首次登录时在验证码核验成功后弹出姓名对话框，提交姓名后完成登录，手机号在同一活动内唯一；登录 token 按活动 ID 缓存，缓存有效时扫码可直接进入活动首页。
+点击活动卡片进入活动管理页；活动列表卡片底部和活动管理首页的“活动入口”面板都提供“打开抽奖大屏”按钮，会在新标签页打开该活动的实时抽奖大屏。大屏地址由管理端 `VITE_SCREEN_WEB_BASE_URL` 配置（默认 `http://localhost:5174`），并自动附加当前活动的 `activity_id`。活动管理首页会生成用户端地址和二维码。二维码地址由管理端 `VITE_USER_WEB_BASE_URL` 配置（默认 `http://localhost:5175`）。用户端按活动收集手机号并发送短信验证码登录；新手机号首次核验成功后进入姓名补充步骤，提交姓名后完成登录，姓名提交不会再次调用短信核验服务，手机号在同一活动内唯一；登录 token 按活动 ID 缓存，缓存有效时扫码可直接进入活动首页。
 
 登录活动后，用户端底部提供“首页 / 聊天 / 我的”三个入口。每个活动自动拥有聊天室：`open` 活动可发送
 1–500 字符文本或点击发送活动表情，`closed` 或 `ended` 活动可查看历史但只读。表情包在管理端的活动级“聊天表情包”页面维护，

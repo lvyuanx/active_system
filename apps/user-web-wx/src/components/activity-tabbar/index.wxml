@@ -1,0 +1,18 @@
+<view class="activity-tabbar" style="padding-bottom: {{safeBottom}}px;" hidden="{{hidden}}">
+  <button
+    wx:for="{{items}}"
+    wx:key="name"
+    class="activity-tabbar__item {{active === item.name ? 'activity-tabbar__item--active' : ''}}"
+    data-name="{{item.name}}"
+    bindtap="handleTap"
+    aria-label="{{item.label}}"
+  >
+    <image
+      class="activity-tabbar__icon"
+      src="{{active === item.name ? item.activeIcon : item.icon}}"
+      mode="aspectFit"
+      aria-hidden="true"
+    />
+    <text>{{item.label}}</text>
+  </button>
+</view>

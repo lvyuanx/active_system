@@ -1,0 +1,7 @@
+<image
+  class="activity-avatar activity-avatar--{{size}}"
+  src="{{src}}"
+  mode="aspectFill"
+  aria-label="{{alt}}"
+  binderror="handleError"
+/>

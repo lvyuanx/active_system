@@ -1,0 +1,18 @@
+<view class="custom-tab-bar" style="padding-bottom: {{safeBottom}}px;" hidden="{{hidden}}">
+  <button
+    wx:for="{{items}}"
+    wx:key="name"
+    class="custom-tab-bar__item {{selected === index ? 'custom-tab-bar__item--active' : ''}}"
+    data-index="{{index}}"
+    bindtap="handleTap"
+    aria-label="{{item.label}}"
+  >
+    <image
+      class="custom-tab-bar__icon"
+      src="{{selected === index ? item.activeIcon : item.icon}}"
+      mode="aspectFit"
+      aria-hidden="true"
+    />
+    <text>{{item.label}}</text>
+  </button>
+</view>

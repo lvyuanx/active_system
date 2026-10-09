@@ -1,0 +1,220 @@
+.entry-page {
+  min-height: 100vh;
+}
+
+.entry-empty {
+  display: flex;
+  min-height: calc(100vh - 80rpx);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 48rpx;
+  text-align: center;
+}
+
+.entry-logo,
+.activity-logo {
+  display: block;
+  width: 160rpx;
+  height: 160rpx;
+}
+
+.entry-title {
+  margin-top: 34rpx;
+  color: #f5f2eb;
+  font-size: 48rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.entry-description {
+  margin-top: 22rpx;
+  color: #c8c4bb;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+.scan-button {
+  margin-top: 48rpx;
+}
+
+.primary-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.4;
+}
+
+.auth-page {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  padding: 56rpx 40rpx 80rpx;
+  text-align: center;
+}
+
+.login-kicker {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  color: #e7ca86;
+  font-size: 28rpx;
+  letter-spacing: 4rpx;
+}
+
+.login-kicker text:first-child,
+.login-kicker text:last-child {
+  color: #d5b36b;
+  font-size: 14rpx;
+}
+
+.activity-logo {
+  width: 144rpx;
+  height: 144rpx;
+  margin: 46rpx 0 24rpx;
+  border-radius: 50%;
+}
+
+.activity-context {
+  max-width: 100%;
+  color: #d5b36b;
+  font-size: 26rpx;
+  font-weight: 700;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.login-title {
+  margin-top: 14rpx;
+  color: #f5f2eb;
+  font-family: "Songti SC", "STSong", serif;
+  font-size: 60rpx;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 4rpx;
+}
+
+.login-description {
+  margin-top: 20rpx;
+  color: #c8c4bb;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+.login-form {
+  width: 100%;
+  margin-top: 62rpx;
+  text-align: left;
+}
+
+.field-item {
+  margin-bottom: 34rpx;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 14rpx;
+  color: #c8c4bb;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.field-input {
+  width: 100%;
+  height: 112rpx;
+  padding: 0 28rpx;
+  border: 1px solid #4b463a;
+  border-radius: 24rpx;
+  color: #f5f2eb;
+  background: #151819;
+  font-size: 32rpx;
+}
+
+.field-placeholder {
+  color: #8f918d;
+}
+
+.code-field {
+  display: flex;
+  min-height: 112rpx;
+  align-items: center;
+  gap: 16rpx;
+  padding: 0 16rpx 0 28rpx;
+  border: 1px solid #4b463a;
+  border-radius: 24rpx;
+  background: #151819;
+}
+
+.code-field:focus-within {
+  border-color: #d5b36b;
+  box-shadow: 0 0 0 3rpx rgba(213, 179, 107, 0.15);
+}
+
+.code-field .code-input {
+  height: 100rpx;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.code-field .code-input:focus {
+  border: 0;
+}
+
+.code-field .code-button {
+  flex: 0 0 196rpx;
+}
+
+.code-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.code-button {
+  flex: 0 0 196rpx;
+  height: 72rpx;
+  padding: 0 12rpx;
+  border: 1px solid #d5b36b;
+  border-radius: 16rpx;
+  color: #1e180e;
+  background: #d5b36b;
+  font-size: 24rpx;
+  line-height: 72rpx;
+  white-space: nowrap;
+}
+
+.code-button[disabled] {
+  opacity: 0.5;
+}
+
+.login-button {
+  width: 100%;
+  margin-top: 10rpx;
+}
+
+.auto-register-note {
+  margin-top: 40rpx;
+  color: #8f918d;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.auth-back-button {
+  width: 100%;
+  margin-top: 4rpx;
+  padding: 0;
+  border: 0;
+  color: #c8c4bb;
+  background: transparent;
+  font-size: 26rpx;
+  line-height: 72rpx;
+}
+
+.auth-back-button::after {
+  border: 0;
+}
+
+.auth-back-button[disabled] {
+  opacity: 0.5;
+}

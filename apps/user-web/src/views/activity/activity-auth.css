@@ -216,6 +216,19 @@
   outline-offset: 3px;
 }
 
+.activity-page .auth-back-button {
+  min-height: 44px;
+  margin-top: -6px;
+  border-color: transparent;
+  color: var(--activity-text-soft);
+  background: transparent;
+}
+
+.activity-page .auth-back-button:focus-visible {
+  outline: 2px solid var(--activity-gold-strong);
+  outline-offset: 3px;
+}
+
 .activity-page .auto-register-note {
   display: flex;
   align-items: center;
@@ -232,92 +245,6 @@
   flex: 0 0 auto;
   color: var(--activity-gold);
   font-size: 15px;
-}
-
-.name-dialog {
-  --van-dialog-background: #151819;
-  --van-dialog-confirm-button-text-color: #e7ca86;
-  --van-dialog-message-padding: 22px;
-  --van-border-color: #303433;
-  --van-text-color: #f5f2eb;
-  --van-text-color-2: #c8c4bb;
-  --van-text-color-3: #8f918d;
-  --van-field-input-text-color: #f5f2eb;
-  --van-field-input-placeholder-text-color: #8f918d;
-  --van-field-icon-color: #e7ca86;
-  --van-button-default-color: #c8c4bb;
-  --van-button-default-background: transparent;
-  --van-button-default-border-color: transparent;
-  width: min(320px, calc(100vw - 40px));
-  color: #f5f2eb;
-}
-
-.name-dialog .van-dialog__header {
-  color: #f5f2eb;
-  font-family: "Songti SC", "STSong", serif;
-  font-size: 19px;
-  letter-spacing: 1px;
-}
-
-.name-dialog .van-dialog__content {
-  padding: 0 22px 24px;
-}
-
-.name-dialog-description {
-  margin: 14px 0 16px;
-  color: #c8c4bb;
-  font-size: 14px;
-  line-height: 1.6;
-  text-align: center;
-}
-
-.name-dialog .name-dialog-field {
-  min-height: 50px;
-  padding: 0 12px;
-  border: 1px solid #4b463a;
-  border-radius: 10px;
-  background: #1b1e1f;
-}
-
-.name-dialog .name-dialog-field:focus-within {
-  border-color: #d5b36b;
-  box-shadow: 0 0 0 3px rgb(213 179 107 / 15%);
-}
-
-.name-dialog .van-field__control {
-  min-width: 0;
-  height: 24px;
-  color: #f5f2eb;
-  font-size: 16px;
-  line-height: 24px;
-}
-
-.name-dialog .van-field__control::placeholder {
-  color: #8f918d;
-}
-
-.name-dialog .van-field__left-icon,
-.name-dialog .van-field__clear {
-  color: #e7ca86;
-}
-
-.name-dialog .van-dialog__cancel {
-  color: #c8c4bb;
-}
-
-.name-dialog .van-dialog__confirm {
-  color: #e7ca86;
-}
-
-.name-dialog .van-dialog__footer,
-.name-dialog .van-dialog__cancel,
-.name-dialog .van-dialog__confirm {
-  background: #151819;
-}
-
-.name-dialog .van-dialog__cancel,
-.name-dialog .van-dialog__confirm {
-  border-color: transparent;
 }
 
 @media (min-width: 600px) {

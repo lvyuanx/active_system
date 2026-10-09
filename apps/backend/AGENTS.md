@@ -24,7 +24,7 @@ Docker 部署保留单 uvicorn，数据库和媒体均由 Compose 绑定在 `/ap
 
 ## 当前已实现模块
 
-- `app/core/database.py`：SQLite 连接、事务和表结构初始化。
+- `app/core/database.py`：SQLite 连接、事务和表结构初始化；维护活动用户短信登录的一次性验证凭证。
 - `app/core/security.py`：PBKDF2 密码哈希和 HS256 JWT。
 - `app/modules/auth/router.py`：超级用户初始化、登录和管理员权限依赖。
 - `app/modules/activities/router.py`：活动 CRUD 列表、创建和生命周期状态转换接口。

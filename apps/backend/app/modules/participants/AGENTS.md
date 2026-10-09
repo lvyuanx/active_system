@@ -23,13 +23,15 @@
 ## 主要流程
 
 新用户注册时在 `activity_users` 插入事务内生成头像；已有用户登录或访问 `/me` 时，如果头像为空则使用 `avatar_id IS NULL` 条件更新。条件更新竞争失败时读取已经落库的合法值，不覆盖已有分配；仍为空或非法时返回错误。管理员停用用户时只保留用户数据并递增 `session_version`，恢复后必须重新登录；禁言只改变发言权限，不影响登录和聊天历史读取。
-短信登录先调用短信模块核验验证码；已有手机号直接签发原活动用户 token，新手机号在未提交姓名时只返回 `needs_name`，提交姓名后才在原有注册事务中创建用户。
+短信登录先调用短信模块核验验证码；已有手机号直接签发原活动用户 token，新手机号核验成功后返回短期一次性 `verification_token` 和 `needs_name`。
+姓名补充通过 `/auth/sms-login/complete` 消费该凭证并在同一事务内创建活动用户，不能再次调用短信核验服务。
 
 ## 数据流
 
 认证响应统一返回 `activity_id`、`activity_user_id`、`username`、`joined_at` 和 `avatar_id`。头像归属使用 `(activity_id, activity_user_id)`，不同活动之间不共享分配结果。管理员参与者单项响应返回 `activity_id`、`activity_user_id`、`username`、`phone`、`joined_at`、`is_active`、`is_muted` 和 `can_mobile_lottery`；分页列表额外返回 `items`、`page`、`page_size`、`total` 和 `has_more`。
 列表接口支持 `keyword`（匹配用户名或手机号）、`page`（默认 1）和 `page_size`（默认 20，最大 100）查询参数，排序按加入时间和稳定用户 ID 倒序。
-短信登录接口为 `/api/v1/activities/{activity_id}/auth/sms-login`，成功响应包含 `needs_name` 和可选的 `user`；已有用户不接受登录请求中的姓名修改。
+短信登录接口为 `/api/v1/activities/{activity_id}/auth/sms-login`，成功响应包含 `needs_name`、可选的 `user` 和新用户所需的 `verification_token`；
+姓名补充接口为 `/api/v1/activities/{activity_id}/auth/sms-login/complete`，接收一次性凭证和姓名；已有用户不接受登录请求中的姓名修改。
 
 管理员接口统一使用 `/admin/activities/{activity_id}/participants` 前缀，所有读写都要求超级用户权限并带活动条件；移动端抽奖授权使用
 `mobile-lottery/grant` 和 `mobile-lottery/revoke` 操作。

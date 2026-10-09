@@ -148,6 +148,7 @@ export interface SmsCodeSendResponse {
 export interface SmsLoginResponse {
   needs_name: boolean;
   user: ActivityUserResponse | null;
+  verification_token: string | null;
 }
 
 export class ApiError extends Error {
@@ -202,9 +203,14 @@ export const sendActivitySmsCode = (activityId: string, phone: string) =>
   });
 export const smsLoginActivityUser = (
   activityId: string,
-  payload: { phone: string; code: string; username?: string },
+  payload: { phone: string; code: string },
 ) =>
   request<SmsLoginResponse>(`/activities/${activityId}/auth/sms-login`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+export const completeSmsLogin = (activityId: string, payload: { verification_token: string; username: string }) =>
+  request<ActivityUserResponse>(`/activities/${activityId}/auth/sms-login/complete`, {
     method: "POST",
     body: JSON.stringify(payload),
   });

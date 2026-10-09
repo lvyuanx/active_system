@@ -1,0 +1,48 @@
+{
+  "pages": [
+    "pages/entry/index",
+    "pages/index/index",
+    "pages/activity/home/index",
+    "pages/activity/chat/index",
+    "pages/activity/me/index",
+    "pages/activity/lottery-results/index",
+    "pages/activity/lottery/index"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "navigationBarBackgroundColor": "#0b0d0e",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#0b0d0e",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#8f918d",
+    "selectedColor": "#e7ca86",
+    "backgroundColor": "#151819",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/activity/home/index",
+        "text": "首页",
+        "iconPath": "assets/icons/tab-home.png",
+        "selectedIconPath": "assets/icons/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/activity/chat/index",
+        "text": "聊天",
+        "iconPath": "assets/icons/tab-chat.png",
+        "selectedIconPath": "assets/icons/tab-chat-active.png"
+      },
+      {
+        "pagePath": "pages/activity/me/index",
+        "text": "我的",
+        "iconPath": "assets/icons/tab-me.png",
+        "selectedIconPath": "assets/icons/tab-me-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

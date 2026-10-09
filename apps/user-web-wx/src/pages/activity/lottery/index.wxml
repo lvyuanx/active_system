@@ -1,0 +1,77 @@
+<view class="wx-page lottery-page" style="padding-top: {{statusBarHeight}}px;">
+  <scroll-view class="page-scroll" scroll-y="true">
+    <view class="page-content lottery-content">
+      <view class="sub-header">
+        <view class="back-button" bindtap="goHome">‹</view>
+        <view class="sub-header__copy">
+          <text class="section-kicker">LOTTERY CONTROL</text>
+          <text class="sub-title">抽奖控制</text>
+        </view>
+        <text class="tag {{connectionClass}}">{{connectionLabel}}</text>
+      </view>
+
+      <block wx:if="{{loading}}">
+        <view class="inline-state">
+          <view class="state-symbol">...</view>
+          <text>正在连接抽奖服务</text>
+        </view>
+      </block>
+      <block wx:elif="{{error}}">
+        <view class="inline-state inline-state--error">
+          <view class="state-symbol state-symbol--error">!</view>
+          <text>{{error}}</text>
+          <button class="retry-button" bindtap="load">重新连接</button>
+        </view>
+      </block>
+      <block wx:else>
+        <view class="section-heading">
+          <view>
+            <text class="section-kicker">PRIZE CONTROL</text>
+            <text class="section-title">选择奖品</text>
+          </view>
+          <text class="tag {{activityClass}}">{{activityStatusLabel}}</text>
+        </view>
+        <view wx:if="{{prizes.length}}" class="control-prize-list">
+          <view
+            wx:for="{{prizes}}"
+            wx:key="prize_id"
+            class="{{item.className}}"
+            hover-class="control-prize--hover"
+            data-id="{{item.prize_id}}"
+            bindtap="selectPrize"
+          >
+            <view class="control-prize-image">
+              <image wx:if="{{item.showImage}}" src="{{item.imageURL}}" mode="aspectFill" />
+              <text wx:else>✦</text>
+            </view>
+            <view class="control-prize-copy">
+              <text class="control-prize-name">{{item.name}}</text>
+              <text class="control-prize-label">库存 {{item.remaining_quantity}} / {{item.quantity}}</text>
+            </view>
+            <text class="control-prize-check">{{item.selected ? "✓" : ""}}</text>
+          </view>
+        </view>
+        <view wx:else class="empty-box">暂无启用奖品</view>
+
+        <view class="draw-panel">
+          <view class="draw-current">
+            <text>当前奖品</text>
+            <text class="draw-current-name">{{selectedPrizeName || "请选择奖品"}}</text>
+          </view>
+          <text class="draw-hint">{{drawHint}}</text>
+          <view
+            class="draw-button {{controlDisabled ? 'draw-button--disabled' : ''}}"
+            bindtap="toggleDraw"
+          >{{drawButtonLabel}}</view>
+          <text wx:if="{{actionError}}" class="action-error">{{actionError}}</text>
+        </view>
+
+        <view wx:if="{{lastDraw}}" class="last-result">
+          <text class="section-kicker">LATEST RESULT</text>
+          <text class="last-result-title">{{lastDraw.winner.username}}</text>
+          <text class="last-result-meta">{{lastDraw.prize_name}} · 第 {{lastDraw.draw_number}} 位</text>
+        </view>
+      </block>
+    </view>
+  </scroll-view>
+</view>

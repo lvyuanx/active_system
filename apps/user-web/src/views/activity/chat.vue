@@ -89,7 +89,12 @@
           :aria-label="stickerPickerOpen ? '关闭表情包' : '打开表情包'"
           @click="stickerPickerOpen = !stickerPickerOpen"
         >
-          <img class="chat-control-icon chat-smile-icon" :src="chatSmileIcon" alt="" aria-hidden="true" />
+          <img
+            class="chat-control-icon chat-smile-icon"
+            :src="canSendSticker && !sending ? chatSmileIcon : chatSmileDisabledIcon"
+            alt=""
+            aria-hidden="true"
+          />
         </VanButton>
         <VanButton
           native-type="submit"
@@ -99,7 +104,12 @@
           aria-label="发送"
           class="chat-send-button"
         >
-          <img class="chat-control-icon chat-send-icon" :src="chatSendIcon" alt="" aria-hidden="true" />
+          <img
+            class="chat-control-icon chat-send-icon"
+            :src="canSend && !sending ? chatSendIcon : chatSendDisabledIcon"
+            alt=""
+            aria-hidden="true"
+          />
         </VanButton>
       </div>
     </form>
@@ -111,7 +121,9 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { Button as VanButton, Field as VanField, Loading as VanLoading, showToast } from "vant";
 import "./chat.css";
 import chatSendIcon from "../../assets/icons/chat-send.svg";
+import chatSendDisabledIcon from "../../assets/icons/chat-send-disabled.svg";
 import chatSmileIcon from "../../assets/icons/chat-smile.svg";
+import chatSmileDisabledIcon from "../../assets/icons/chat-smile-disabled.svg";
 import {
   getActivityToken,
   getChatMessages,

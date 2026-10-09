@@ -1,0 +1,113 @@
+<view class="wx-page chat-page" style="padding-top: {{statusBarHeight}}px;">
+  <block wx:if="{{loading}}">
+    <view class="state-page">
+      <view class="state-page__inner">
+        <view class="state-symbol">...</view>
+        <text class="state-title">正在加载聊天室</text>
+      </view>
+    </view>
+  </block>
+  <block wx:elif="{{error}}">
+    <view class="state-page">
+      <view class="state-page__inner">
+        <view class="state-symbol state-symbol--error">!</view>
+        <text class="state-title">聊天室暂时不可用</text>
+        <text class="state-message">{{error}}</text>
+        <button class="primary-button" bindtap="load">重新加载</button>
+      </view>
+    </view>
+  </block>
+  <block wx:else>
+    <view
+      class="chat-layout {{keyboardVisible ? 'chat-layout--keyboard' : ''}}"
+      style="{{chatLayoutStyle}}"
+      catchtap="closePicker"
+    >
+      <scroll-view
+        id="chat-scroll"
+        class="chat-messages"
+        scroll-y="true"
+        scroll-with-animation="false"
+        scroll-into-view="{{scrollIntoView}}"
+        bindscroll="handleScroll"
+      >
+        <button wx:if="{{hasMore}}" class="load-more" catchtap="loadOlder">加载更早消息</button>
+        <text wx:if="{{!messages.length}}" class="chat-empty">还没有消息，来打个招呼吧。</text>
+        <view
+          wx:for="{{messages}}"
+          wx:key="message_id"
+          id="message-{{item.message_id}}"
+          class="chat-message {{item.self ? 'chat-message--self' : ''}}"
+        >
+          <activity-avatar avatar-id="{{item.avatarId}}" size="small" alt="{{item.sender_username}}的活动头像" />
+          <view class="chat-message-content">
+            <view class="chat-message-meta">
+              <text class="chat-sender">{{item.sender_username}}</text>
+              <text class="chat-time">{{item.time}}</text>
+            </view>
+            <view class="chat-bubble {{item.message_type === 'sticker' ? 'chat-bubble--sticker' : ''}}">
+              <image
+                wx:if="{{item.message_type === 'sticker' && item.sticker && item.showStickerImage}}"
+                src="{{item.stickerImageURL}}"
+                mode="aspectFit"
+                binderror="markStickerError"
+                data-id="{{item.message_id}}"
+              />
+              <text wx:else>{{item.body}}</text>
+            </view>
+          </view>
+        </view>
+        <view id="chat-bottom" class="chat-bottom"></view>
+      </scroll-view>
+
+      <view wx:if="{{stickerPickerOpen}}" class="sticker-panel" catchtap="stopPickerPropagation">
+        <text wx:if="{{stickersLoading}}" class="sticker-empty">正在加载表情</text>
+        <text wx:elif="{{!stickers.length}}" class="sticker-empty">暂无表情</text>
+        <button
+          wx:for="{{stickers}}"
+          wx:key="sticker_id"
+          class="sticker-option"
+          disabled="{{!canSendSticker || sending}}"
+          data-id="{{item.sticker_id}}"
+          bindtap="sendSticker"
+        ><image src="{{item.imageURL}}" mode="aspectFit" /></button>
+      </view>
+
+      <view class="chat-composer" catchtap="stopPickerPropagation">
+        <textarea
+          class="chat-input"
+          value="{{draft}}"
+          maxlength="500"
+          auto-height="true"
+          cursor-spacing="20"
+          show-confirm-bar="false"
+          adjust-position="true"
+          disabled="{{activityStatus !== 'open' || sending}}"
+          placeholder="输入消息"
+          placeholder-class="chat-placeholder"
+          bindinput="handleDraftInput"
+          bindfocus="handleInputFocus"
+        />
+        <button
+          class="chat-icon-button sticker-toggle"
+          disabled="{{!canSendSticker}}"
+          bindtap="toggleStickerPicker"
+          aria-label="打开表情包"
+        >
+          <image wx:if="{{canSendSticker}}" src="/assets/icons/chat-smile.svg" mode="aspectFit" />
+          <image wx:else src="/assets/icons/chat-smile-disabled.svg" mode="aspectFit" />
+        </button>
+        <button
+          class="chat-icon-button send-button"
+          disabled="{{!canSend}}"
+          loading="{{sending}}"
+          bindtap="sendMessage"
+          aria-label="发送"
+        >
+          <image wx:if="{{canSend}}" src="/assets/icons/chat-send.svg" mode="aspectFit" />
+          <image wx:else src="/assets/icons/chat-send-disabled.svg" mode="aspectFit" />
+        </button>
+      </view>
+    </view>
+  </block>
+</view>

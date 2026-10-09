@@ -1,5 +1,7 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import hashlib
+import secrets
 import sqlite3
 
 import jwt
@@ -58,7 +60,6 @@ class ActivityUserResponse(BaseModel):
 class SmsLoginRequest(BaseModel):
     phone: str = Field(min_length=11, max_length=11)
     code: str = Field(min_length=4, max_length=8)
-    username: str | None = Field(default=None, max_length=100)
 
     @field_validator("phone", mode="before")
     @classmethod
@@ -70,19 +71,36 @@ class SmsLoginRequest(BaseModel):
     def validate_code(cls, value: object) -> str:
         return normalize_sms_code(value)
 
+
+class SmsNameCompletionRequest(BaseModel):
+    verification_token: str = Field(min_length=32, max_length=128)
+    username: str = Field(min_length=1, max_length=100)
+
+    @field_validator("verification_token", mode="before")
+    @classmethod
+    def strip_verification_token(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("短信验证凭证无效")
+        value = value.strip()
+        if not value:
+            raise ValueError("短信验证凭证无效")
+        return value
+
     @field_validator("username", mode="before")
     @classmethod
-    def strip_username(cls, value: object) -> str | None:
-        if value is None:
-            return None
+    def strip_username(cls, value: object) -> str:
         if not isinstance(value, str):
             raise ValueError("姓名必须是文本")
-        return value.strip() or None
+        value = value.strip()
+        if not value:
+            raise ValueError("姓名不能为空")
+        return value
 
 
 class SmsLoginResponse(BaseModel):
     needs_name: bool = False
     user: ActivityUserResponse | None = None
+    verification_token: str | None = None
 
 
 @dataclass(frozen=True)
@@ -230,6 +248,66 @@ def make_user_response(
         )
 
 
+def _create_activity_user(
+    connection: sqlite3.Connection,
+    activity_id: str,
+    payload: ActivityCredentials,
+    settings: Settings,
+) -> ActivityUserResponse:
+    now = datetime.now(timezone.utc).isoformat()
+    avatar_id = random_avatar_id()
+    cursor = connection.execute(
+        "INSERT INTO activity_users(activity_id, username, phone, created_at, avatar_id) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (activity_id, payload.username, payload.phone, now, avatar_id),
+    )
+    row = connection.execute(
+        "SELECT id, username, created_at, avatar_id, session_version, can_mobile_lottery "
+        "FROM activity_users WHERE activity_id = ? AND id = ?",
+        (activity_id, cursor.lastrowid),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="活动用户创建失败")
+    return ActivityUserResponse(
+        access_token=create_access_token(
+            str(row["username"]),
+            settings,
+            activity_id=activity_id,
+            activity_user_id=int(row["id"]),
+            activity_user_session_version=int(row["session_version"]),
+        ),
+        activity_id=activity_id,
+        activity_user_id=int(row["id"]),
+        username=str(row["username"]),
+        joined_at=datetime.fromisoformat(str(row["created_at"])),
+        avatar_id=int(row["avatar_id"]),
+        can_mobile_lottery=bool(row["can_mobile_lottery"]),
+    )
+
+
+def _issue_sms_login_verification(activity_id: str, phone: str, settings: Settings) -> str:
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(seconds=max(1, settings.aliyun_sms_valid_time))
+    with transaction(settings) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        connection.execute(
+            "DELETE FROM activity_sms_login_verifications WHERE expires_at <= ?",
+            (now.isoformat(),),
+        )
+        connection.execute(
+            "DELETE FROM activity_sms_login_verifications WHERE activity_id = ? AND phone = ?",
+            (activity_id, phone),
+        )
+        connection.execute(
+            "INSERT INTO activity_sms_login_verifications "
+            "(token_hash, activity_id, phone, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
+            (token_hash, activity_id, phone, now.isoformat(), expires_at.isoformat()),
+        )
+    return token
+
+
 @router.post("/{activity_id}/auth/register", response_model=ActivityUserResponse, status_code=status.HTTP_201_CREATED)
 def register_activity_user(
     activity_id: str,
@@ -237,38 +315,9 @@ def register_activity_user(
     settings: Settings = Depends(get_settings),
 ) -> ActivityUserResponse:
     get_activity(activity_id, settings)
-    now = datetime.now(timezone.utc).isoformat()
     try:
         with transaction(settings) as connection:
-            avatar_id = random_avatar_id()
-            cursor = connection.execute(
-                "INSERT INTO activity_users(activity_id, username, phone, created_at, avatar_id) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (activity_id, payload.username, payload.phone, now, avatar_id),
-            )
-            row = connection.execute(
-                "SELECT id, username, created_at, avatar_id, session_version, can_mobile_lottery "
-                "FROM activity_users "
-                "WHERE activity_id = ? AND id = ?",
-                (activity_id, cursor.lastrowid),
-            ).fetchone()
-            if not row:
-                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="活动用户创建失败")
-            return ActivityUserResponse(
-                access_token=create_access_token(
-                    str(row["username"]),
-                    settings,
-                    activity_id=activity_id,
-                    activity_user_id=int(row["id"]),
-                    activity_user_session_version=int(row["session_version"]),
-                ),
-                activity_id=activity_id,
-                activity_user_id=int(row["id"]),
-                username=str(row["username"]),
-                joined_at=datetime.fromisoformat(str(row["created_at"])),
-                avatar_id=int(row["avatar_id"]),
-                can_mobile_lottery=bool(row["can_mobile_lottery"]),
-            )
+            return _create_activity_user(connection, activity_id, payload, settings)
     except sqlite3.IntegrityError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="该活动手机号已注册") from error
 
@@ -327,15 +376,46 @@ def sms_login_activity_user(
         return SmsLoginResponse(
             user=make_user_response(activity_id, str(user["username"]), settings, activity_user_id=int(user["id"]))
         )
-    if not payload.username:
-        return SmsLoginResponse(needs_name=True)
-
-    created = register_activity_user(
-        activity_id,
-        ActivityCredentials(username=payload.username, phone=payload.phone),
-        settings,
+    return SmsLoginResponse(
+        needs_name=True,
+        verification_token=_issue_sms_login_verification(activity_id, payload.phone, settings),
     )
-    return SmsLoginResponse(user=created)
+
+
+@router.post("/{activity_id}/auth/sms-login/complete", response_model=ActivityUserResponse)
+def complete_sms_login(
+    activity_id: str,
+    payload: SmsNameCompletionRequest,
+    settings: Settings = Depends(get_settings),
+) -> ActivityUserResponse:
+    get_activity(activity_id, settings)
+    token_hash = hashlib.sha256(payload.verification_token.encode("utf-8")).hexdigest()
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        with transaction(settings) as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            verification = connection.execute(
+                "SELECT phone FROM activity_sms_login_verifications "
+                "WHERE token_hash = ? AND activity_id = ? AND used_at IS NULL AND expires_at > ?",
+                (token_hash, activity_id, now),
+            ).fetchone()
+            if not verification:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="短信验证已失效，请重新验证")
+            consumed = connection.execute(
+                "UPDATE activity_sms_login_verifications SET used_at = ? "
+                "WHERE token_hash = ? AND activity_id = ? AND used_at IS NULL AND expires_at > ?",
+                (now, token_hash, activity_id, now),
+            )
+            if consumed.rowcount != 1:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="短信验证已失效，请重新验证")
+            return _create_activity_user(
+                connection,
+                activity_id,
+                ActivityCredentials(username=payload.username, phone=str(verification["phone"])),
+                settings,
+            )
+    except sqlite3.IntegrityError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="该活动手机号已注册") from error
 
 
 @router.get("/{activity_id}/me", response_model=ActivityUserResponse)

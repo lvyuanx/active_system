@@ -164,6 +164,16 @@ CREATE TABLE IF NOT EXISTS sms_verification_sends (
     phone TEXT PRIMARY KEY,
     last_sent_at INTEGER NOT NULL CHECK(last_sent_at >= 0)
 );
+CREATE TABLE IF NOT EXISTS activity_sms_login_verifications (
+    token_hash TEXT PRIMARY KEY,
+    activity_id TEXT NOT NULL REFERENCES activities(activity_id) ON DELETE CASCADE,
+    phone TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_activity_sms_login_verifications_lookup
+    ON activity_sms_login_verifications(activity_id, phone, expires_at);
 """
 
 

@@ -27,8 +27,25 @@ Nginx 不监听 80，/api 转发至 activate-backend:8000。
 
 ## 架构概览
 
-项目采用 Monorepo，包含一个 FastAPI 模块化单体、三个 Vue 3 前端应用和一个 Electron Windows 弹幕工具：
-Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层）、Vant 4 用户端和 `danmaku-desktop`。
+项目采用 Monorepo，包含一个 FastAPI 模块化单体、三个 Vue 3 前端应用、一个原生微信小程序和一个 Electron Windows 弹幕工具：
+Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层）、Vant 4 用户端、原生微信小程序用户端和 `danmaku-desktop`。
+
+### 原生微信小程序用户端
+
+`apps/user-web-wx` 使用 TypeScript、WXML、WXSS 和微信原生 API，复用现有活动用户、聊天和抽奖后端协议。
+小程序启动时从 `query.activity_id` 或 `query.scene` 读取活动 ID；没有活动参数时显示入口提示，入口页也可以调用相机扫描
+管理员生成的 Web 活动二维码，并从 `/activity/{activity_id}` 路径提取活动 ID，不复用其他活动上下文。
+`pages/index/index` 仅作为旧体验版二维码的兼容入口，加载后立即跳转至 `pages/entry/index`。
+活动 token 使用 `active_user_token:{activity_id}` 存储，避免不同活动之间串用会话。
+首页、聊天和“我的”配置为微信原生 custom tab bar 页面，导航实例跨 `switchTab` 保持，页面内容在 `onShow` 中刷新；抽奖结果和抽奖控制作为二级页面保留兼容底部导航。
+
+配置位于 `apps/user-web-wx/src/config.ts`。微信开发者工具的 `develop` 环境连接本地 `http://localhost:8000` 和
+`ws://localhost:8000`，体验版和正式版自动使用 production 的 HTTPS/WSS 地址；对应域名必须在微信公众平台配置为
+request、download 和 socket 合法域名。
+如果日志出现 `Connection refused`，说明 TCP/握手前连接被拒绝，不能通过修改首帧 token 或业务协议解决；应检查最终 URL 对应的
+公网 443 网关、WebSocket Upgrade 转发和后端容器状态。HTTP `/health` 成功只能证明 HTTP 链路可用，不能证明 WSS 链路没有瞬时故障。
+管理员现有 Web 二维码可以由小程序入口页直接扫描解析；二维码本身仍然是 Web 地址，不会自动跳转到小程序页面。
+扫描公网二维码后，客户端会将其域名作为同源 API/WS 地址；微信后台仍必须配置该域名的 request、download 和 socket 合法域名。
 
 ### 用户端聊天室视口适配
 
@@ -53,7 +70,8 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 状态转换由后端校验：`closed <-> open` 可反复切换，非结束状态可手动转为 `ended`，结束后不可恢复。
 
 活动用户存储在 `activity_users` 表中，以 `activity_id` 隔离；同一活动内手机号唯一。用户端通过短信验证码登录，
-已有手机号直接签发活动用户 token，新手机号在验证码核验成功后弹出姓名对话框，提交姓名后才创建记录。
+已有手机号直接签发活动用户 token，新手机号在验证码核验成功后进入姓名补充步骤，提交姓名后才创建记录。
+短信核验成功后生成短期一次性凭证，姓名补充接口消费该凭证，不重复调用短信服务。
 用户 JWT 携带活动 ID，用户端按 `active_user_token:{activity_id}` 缓存 token。
 管理端二维码目标地址使用 `VITE_USER_WEB_BASE_URL` 拼接 `/activity/{activity_id}`。
 
@@ -70,7 +88,9 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 阿里云凭据使用默认凭据链，签名、模板、Endpoint、方案名、验证码长度和有效期由 `ALIYUN_SMS_*` 环境变量提供。
 核验接口为 `/api/v1/activities/{activity_id}/auth/sms-code/verify`，请求体包含手机号和 4–8 位数字验证码，
 直接调用 `CheckSmsVerifyCode`。阿里云返回 `PASS` 时返回 `verified=true`，返回 `UNKNOWN` 时返回 `verified=false`，
-两种结果均为 HTTP 200；供应商调用失败才返回 502，配置或 SDK 缺失返回 503。
+两种结果均为 HTTP 200；供应商调用失败才返回 502，配置或 SDK 缺失返回 503。活动登录接口首次核验成功后返回的
+`verification_token` 存储为哈希并绑定活动和手机号，完成接口 `/api/v1/activities/{activity_id}/auth/sms-login/complete`
+只允许在有效期内消费一次。
 
 ### 活动用户头像
 
@@ -86,6 +106,8 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 活动聊天室消息存储在 `activity_chat_messages`，通过 `activity_user_id` 关联发送者，并按 `(activity_id, message_id)`
 提供游标查询。活动用户 JWT 额外携带稳定的 `activity_user_id`；缺少该 claim 的旧令牌仅在同活动用户名唯一时兼容。
 用户端活动壳下包含 `/activity/{activity_id}`、`/lottery`、`/chat`、`/me` 四个命名入口，WebSocket 首帧需发送 `auth`。
+小程序 WebSocket 停止时只关闭已经触发 `onOpen` 的 `SocketTask`；未建立任务可能没有底层 task ID，不能直接调用 `close`。
+连接错误会在开发者工具控制台记录不含 token 的 URL 和微信 `errMsg`，页面状态显示“连接失败，重连中”。
 聊天室每次发送都会重新检查参与用户的 active/muted 状态；禁言返回 `chat.error`/`muted`，停用后的现有连接返回未授权并关闭，
 聊天历史不会因管理操作删除。用户端收到未授权聊天错误后会清除当前活动 token 并停止重连，回到活动入口。
 
@@ -222,6 +244,9 @@ Electron 主进程在内存保留 token、session 和 `displayIds`，预加载�
   输入框固定在 Tabbar 上方，默认一行与 44px 发送按钮等高并支持 1–3 行自适应，
   超过三行在控件内滚动；聊天 Field 不显示内部 `::after` 分隔线。输入区的表情入口和发送操作使用 44px 圆形按钮承载用户提供的白色 SVG，
   分别为笑脸和纸飞机图标，笑脸主体放大显示，并提供无障碍标签；表情选择器点击输入框、输入区域外或按 `Escape` 自动隐藏。
+  H5 和微信小程序的聊天表情、发送按钮禁用时切换专用深灰 SVG 图标，并保持独立的深色按钮背景与边框，不能只对整个按钮统一降透明度，避免禁用态图标与背景对比不足。
+  微信小程序表情抽屉固定为四列 Grid，表情格子使用 `width: 100%` 和 `min-width: 0`，空状态跨越整行，以保证 320px 至 430px 窄屏下不退化为单列。
+  抽屉必须使用 `box-sizing: border-box`、`max-width: 100%` 和 `overflow-x: hidden; overflow-y: auto`，避免窄屏下出现横向滚动条。
   表情列表加载期间显示“正在加载表情”，加载完成且没有启用表情时显示“暂无表情”。
 - 活动入口需要适配 320px 起的移动宽度、短屏和 safe-area inset，动态活动名称、描述和用户名必须允许换行，不得造成横向溢出。
 
