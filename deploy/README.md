@@ -83,6 +83,9 @@ Shell 中同名环境变量优先于 --env-file，请避免意外覆盖。必填
 | ALIYUN_SMS_SCHEME_NAME | 空 | 阿里云短信方案名，空值使用默认方案 |
 | ALIYUN_SMS_CODE_LENGTH | 6 | 验证码长度 |
 | ALIYUN_SMS_VALID_TIME | 300 | 验证码有效期，单位为秒 |
+| WECHAT_MINIAPP_APPID | 空 | 微信小程序 AppID，用于生成活动专属小程序码 |
+| WECHAT_MINIAPP_SECRET | 空 | 微信小程序 AppSecret，仅后端使用 |
+| WECHAT_MINIAPP_PAGE | pages/entry/index | 小程序码目标页面，必须是已发布页面 |
 
 外部网关接入 `open-getaway-network` 后统一转发至 Nginx。默认访问：
 
@@ -105,6 +108,10 @@ HTTPS 由外部代理提供，需要保留 Host、X-Forwarded-Proto 和 WebSocke
 
 短信接口为 `POST /api/v1/activities/{activity_id}/auth/sms-code`，核验接口为其 `/verify` 子路径。
 短信签名和模板未配置时接口返回 503；同一手机号每 60 秒最多发送一次，限流记录保存在后端 SQLite 数据库中。
+
+管理员可通过 `GET /api/v1/admin/activities/{activity_id}/mini-code` 获取活动专属 PNG 小程序码。
+接口使用 `pages/entry/index?activity_id={activity_id}` 作为目标路径，微信小程序扫码后会直接进入对应活动；
+未配置 `WECHAT_MINIAPP_APPID` 或 `WECHAT_MINIAPP_SECRET` 时返回 503。微信 AppSecret 不应提交到仓库或返回给浏览器。
 
 ## 挂载与持久化
 

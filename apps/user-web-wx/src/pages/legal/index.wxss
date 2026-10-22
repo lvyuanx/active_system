@@ -1,0 +1,131 @@
+.legal-page {
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.legal-header {
+  display: flex;
+  min-height: 152rpx;
+  align-items: center;
+  gap: 22rpx;
+  padding: 26rpx 32rpx 22rpx;
+  border-bottom: 1px solid #303433;
+  background: #111415;
+}
+
+.legal-back {
+  display: flex;
+  width: 68rpx;
+  height: 68rpx;
+  flex: 0 0 68rpx;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #4b463a;
+  border-radius: 18rpx;
+  color: #e7ca86;
+  background: #151819;
+  font-size: 38rpx;
+  line-height: 68rpx;
+}
+
+.legal-header-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.legal-kicker {
+  color: #d5b36b;
+  font-size: 22rpx;
+  font-weight: 700;
+  letter-spacing: 4rpx;
+  line-height: 1.4;
+}
+
+.legal-title {
+  margin-top: 6rpx;
+  color: #f5f2eb;
+  font-size: 38rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.legal-subtitle {
+  margin-top: 4rpx;
+  color: #8f918d;
+  font-size: 22rpx;
+  line-height: 1.4;
+}
+
+.legal-scroll {
+  height: calc(100vh - 152rpx);
+}
+
+.legal-content {
+  padding: 34rpx 34rpx 100rpx;
+}
+
+.legal-updated {
+  display: block;
+  color: #8f918d;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.legal-section {
+  margin-top: 38rpx;
+}
+
+.legal-section-title {
+  display: block;
+  color: #e7ca86;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.legal-paragraph {
+  display: block;
+  margin-top: 18rpx;
+  color: #c8c4bb;
+  font-size: 27rpx;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+
+.legal-list {
+  margin-top: 12rpx;
+}
+
+.legal-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14rpx;
+  margin-top: 12rpx;
+}
+
+.legal-list-marker {
+  flex: 0 0 auto;
+  color: #d5b36b;
+  font-size: 32rpx;
+  line-height: 1.45;
+}
+
+.legal-list-text {
+  min-width: 0;
+  flex: 1;
+  color: #c8c4bb;
+  font-size: 27rpx;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+
+.legal-footer {
+  margin-top: 52rpx;
+  padding-top: 28rpx;
+  border-top: 1px solid #303433;
+  color: #8f918d;
+  font-size: 24rpx;
+  line-height: 1.7;
+  text-align: center;
+}

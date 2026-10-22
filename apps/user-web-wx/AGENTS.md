@@ -17,19 +17,21 @@
 
 ## 目录说明
 
-- `src/pages/entry/`：活动参数提示、活动加载、短信登录和姓名补充。
+- `src/pages/entry/`：活动参数提示、活动加载、协议同意、短信登录和姓名补充。
 - `src/pages/index/`：兼容旧体验版二维码默认路径的入口跳转页，最终统一进入 `pages/entry/index`。
+- `src/pages/legal/`：用户服务协议和隐私政策阅读页，按查询参数展示对应文档。
 - `src/pages/activity/`：首页、聊天、抽奖结果、抽奖控制和我的页面。
 - `src/components/`：头像和二级页面使用的兼容底部导航。
 - `src/custom-tab-bar/`：微信原生 custom tab bar，持久承载首页、聊天和“我的”主导航。
 - `src/services/`：HTTP API、活动会话和可重连 WebSocket；socket 服务负责微信任务生命周期、重连和连接错误诊断。
-- `src/utils/`：启动参数、token 存储、地址生成、聊天合并和抽奖状态逻辑。
+- `src/utils/`：启动参数、token 存储、地址生成、聊天合并、抽奖状态和协议同意逻辑。
 - `src/assets/`：ACTIVE Logo、头像、聊天按钮和底部导航图标。
 
 ## 核心流程
 
 小程序启动时优先读取 `query.activity_id`，其次读取并解码 `query.scene`。活动 ID 不存在时显示活动入口提示；
-存在时加载公开活动和按活动隔离的 token。有效 token 直接进入首页，失效 token 回到短信登录。
+存在时先加载公开活动。用户服务协议和隐私政策按版本记录本地同意状态，未同意时不读取活动用户接口，
+并禁用手机号、验证码和姓名输入。有效 token 且已同意协议时直接进入首页，失效 token 回到短信登录。
 新手机号短信核验成功后由后端签发短期一次性凭证；姓名提交只消费该凭证，不重复调用短信核验服务。返回登录步骤会丢弃凭证并要求重新获取验证码。
 
 主导航使用微信原生 custom tab bar，主 Tab 页面通过 `switchTab` 切换，导航实例不随上方页面重建；页面在 `onShow` 中刷新活动内容。
@@ -42,6 +44,8 @@
 
 `src/config.ts` 根据微信运行环境自动选择 development 和 production 地址。小程序正式运行必须使用 HTTPS API 和 WSS，
 并将对应域名加入微信公众平台的 request、download 和 socket 合法域名。开发者工具本地联调可关闭合法域名校验。
+`app.json` 显式开启 `__usePrivacyCheck__`；发送验证码、短信登录和首次姓名提交前还会调用
+`wx.requirePrivacyAuthorize`，因此发布前必须在微信公众平台完成真实的“小程序用户隐私保护指引”配置。
 
 ## 扩展方式
 
@@ -53,6 +57,10 @@
 ## 注意事项
 
 - token 必须使用 `active_user_token:{activity_id}`，不能改成全局单 token。
+- 用户协议同意状态使用 `src/utils/privacy.ts` 中的版本号；协议内容、版本或处理目的变化时必须提升版本，
+  让小程序重新取得用户同意。
+- 任何发送短信、短信登录、首次姓名提交或读取活动用户信息的入口都必须经过协议同意检查；协议阅读页通过
+  `pages/legal/index?type=service|privacy` 打开。
 - 活动数据、聊天消息和抽奖消息都必须保留 `activity_id` 上下文。
 - 聊天历史加载只允许使用 `before_id`，重连补齐只允许使用 `after_id`，并需按 `message_id` 去重。
 - 抽奖控制必须保持开始、停止、开奖三阶段协议，不得改成单次请求直接开奖。

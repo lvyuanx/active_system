@@ -3,12 +3,17 @@ from enum import Enum
 import sqlite3
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field, model_validator
 
 from app.core.config import Settings, get_settings
 from app.core.database import transaction
 from app.modules.auth import require_superuser
+from app.modules.activities.mini_code import (
+    MiniProgramCodeConfigurationError,
+    MiniProgramCodeError,
+    generate_mini_program_code,
+)
 
 
 router = APIRouter(prefix="/admin/activities", tags=["activities"])
@@ -89,6 +94,29 @@ def get_activity_detail(
     settings: Settings = Depends(get_settings),
 ) -> ActivityResponse:
     return get_activity(activity_id, settings)
+
+
+@router.get("/{activity_id}/mini-code", response_class=Response)
+def get_activity_mini_code(
+    activity_id: str,
+    _: str = Depends(require_superuser),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    get_activity(activity_id, settings)
+    try:
+        image = generate_mini_program_code(activity_id, settings)
+    except MiniProgramCodeConfigurationError as error:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(error)) from error
+    except MiniProgramCodeError as error:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(error)) from error
+    return Response(
+        content=image,
+        media_type="image/png",
+        headers={
+            "Cache-Control": "private, max-age=300",
+            "Content-Disposition": f'inline; filename="activity-{activity_id}.png"',
+        },
+    )
 
 
 @router.get("", response_model=list[ActivityResponse])

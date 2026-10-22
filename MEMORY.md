@@ -1,5 +1,14 @@
 # 当前进度
 
+- 2026-10-09：补充微信小程序用户协议和隐私政策。新增版本化的本地同意状态、协议阅读页和“我的”页面入口；
+  入口页在短信发送、短信登录和首次姓名提交前要求勾选同意，并调用 `wx.requirePrivacyAuthorize`，未同意时禁用个人信息输入并阻止活动用户接口调用；
+  `loadActivityContext` 同步检查同意状态，避免已有 token 或深链页面绕过授权。协议运营主体、联系方式和公众平台隐私保护指引仍需上架前按实际主体确认并替换。
+
+- 2026-10-09：新增管理员接口 `GET /api/v1/admin/activities/{activity_id}/mini-code`，后端调用微信 `getwxacode` 返回活动专属 PNG 小程序码；目标路径为
+  `pages/entry/index?activity_id={activity_id}`。新增 `WECHAT_MINIAPP_APPID`、`WECHAT_MINIAPP_SECRET`、`WECHAT_MINIAPP_PAGE` 配置，
+  access_token 在进程内缓存并支持失效重试；管理端活动入口页同时展示和下载小程序码、网页二维码。后端全量测试 95 项、部署测试 17 项，
+  管理端类型检查和生产构建均通过；真实微信调用仍需部署环境配置 AppSecret 并发布入口页面。
+
 - 2026-09-30：根据微信开发者工具日志修复小程序 WebSocket 清理异常。`SocketTask` 尚未触发 `onOpen` 时不再调用 `close`，
   已建立连接的关闭失败通过 `fail` 回调消费；聊天、公开抽奖和移动端抽奖连接失败会记录脱敏 URL 与 `errMsg`。
   同时将页面级 `Set` 改为 `onLoad` 初始化，入口页不再通过 `setData` 写入 `undefined`，小程序 10 项测试和类型检查通过。

@@ -1,6 +1,7 @@
 import { Activity, ActivityUserResponse } from "../types/api";
 import { getActivity, getActivityMe } from "./api";
 import { clearActivityToken, getActivityToken, setActivityToken } from "../utils/storage";
+import { isUserAgreementAccepted, requestWechatPrivacyAuthorize } from "../utils/privacy";
 
 export interface ActivityContext {
   activity: Activity;
@@ -18,6 +19,8 @@ export const resolveActivityId = (options?: { activity_id?: string }) =>
 
 export const loadActivityContext = async (activityId: string): Promise<ActivityContext> => {
   const activity = await getActivity(activityId);
+  if (!isUserAgreementAccepted()) return { activity };
+  if (!await requestWechatPrivacyAuthorize()) return { activity };
   const token = getActivityToken(activityId);
   if (!token) return { activity };
   try {

@@ -1,0 +1,33 @@
+<view class="wx-page legal-page" style="padding-top: {{statusBarHeight}}px;">
+  <view class="legal-header">
+    <button class="legal-back" aria-label="返回" bindtap="goBack">←</button>
+    <view class="legal-header-copy">
+      <text class="legal-kicker">ACTIVE</text>
+      <text class="legal-title">{{title}}</text>
+      <text class="legal-subtitle">{{subtitle}}</text>
+    </view>
+  </view>
+
+  <scroll-view class="legal-scroll" scroll-y="true">
+    <view class="legal-content">
+      <text class="legal-updated">更新日期：{{updatedAt}}</text>
+      <block wx:for="{{sections}}" wx:key="title" wx:for-item="section">
+        <view class="legal-section">
+          <text class="legal-section-title">{{section.title}}</text>
+          <block wx:for="{{section.paragraphs}}" wx:key="*this" wx:for-item="paragraph">
+            <text class="legal-paragraph">{{paragraph}}</text>
+          </block>
+          <view wx:if="{{section.items && section.items.length}}" class="legal-list">
+            <block wx:for="{{section.items}}" wx:key="*this" wx:for-item="point">
+              <view class="legal-list-item">
+                <text class="legal-list-marker">·</text>
+                <text class="legal-list-text">{{point}}</text>
+              </view>
+            </block>
+          </view>
+        </view>
+      </block>
+      <view class="legal-footer">请在使用相关服务前仔细阅读并确认同意。</view>
+    </view>
+  </scroll-view>
+</view>

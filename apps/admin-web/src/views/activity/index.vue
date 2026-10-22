@@ -49,13 +49,24 @@
                 </div>
               </article>
               <article class="entry-panel qr-panel">
-                <div class="panel-kicker">扫码进入</div>
+                <div class="panel-kicker">微信小程序码</div>
+                <div class="qr-frame">
+                  <img v-if="miniCodeUrl" :src="miniCodeUrl" alt="微信小程序码" />
+                  <span v-else-if="miniCodeLoading" class="qr-loading" aria-label="小程序码生成中"></span>
+                  <span v-else class="qr-unavailable">{{ miniCodeError || "小程序码暂不可用" }}</span>
+                </div>
+                <el-button text class="download-button" :disabled="!miniCodeUrl" @click="downloadMiniCode">
+                  <Download :size="15" />下载小程序码
+                </el-button>
+              </article>
+              <article class="entry-panel qr-panel">
+                <div class="panel-kicker">网页二维码</div>
                 <div class="qr-frame">
                   <img v-if="qrDataUrl" :src="qrDataUrl" alt="活动移动端二维码" />
                   <span v-else class="qr-loading" aria-label="二维码生成中"></span>
                 </div>
                 <el-button text class="download-button" :disabled="!qrDataUrl" @click="downloadQr">
-                  ↓ 下载二维码
+                  <Download :size="15" />下载网页二维码
                 </el-button>
               </article>
             </div>
@@ -68,12 +79,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
+import { Download } from "@element-plus/icons-vue";
 import { useRoute } from "vue-router";
 import QRCode from "qrcode";
 import { activityScreenURL, activityUserURL } from "../../app-links";
-import { getActivity, type Activity } from "../../api/client";
+import { getActivity, getActivityMiniCode, type Activity } from "../../api/client";
 import ActivitySidebar from "../../components/ActivitySidebar.vue";
 
 const route = useRoute();
@@ -81,6 +93,9 @@ const activity = ref<Activity>();
 const loading = ref(true);
 const error = ref("");
 const qrDataUrl = ref("");
+const miniCodeUrl = ref("");
+const miniCodeLoading = ref(true);
+const miniCodeError = ref("");
 const username = localStorage.getItem("active_admin_username") || "超级用户";
 const activityId = String(route.params.activityId);
 const userUrl = activityUserURL(activityId);
@@ -93,8 +108,17 @@ const load = async () => {
       margin: 2,
       color: { dark: "#17211e", light: "#ffffff" },
     });
+    try {
+      const image = await getActivityMiniCode(activityId);
+      miniCodeUrl.value = URL.createObjectURL(image);
+    } catch (err) {
+      miniCodeError.value = err instanceof Error ? err.message : "小程序码暂不可用";
+    } finally {
+      miniCodeLoading.value = false;
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : "活动加载失败";
+    miniCodeLoading.value = false;
   } finally {
     loading.value = false;
   }
@@ -107,17 +131,29 @@ const openUserUrl = () => window.open(userUrl, "_blank", "noopener,noreferrer");
 const openLotteryScreen = () => {
   window.open(activityScreenURL(activityId), "_blank", "noopener,noreferrer");
 };
-const downloadQr = () => {
+const safeActivityName = () =>
+  (activity.value?.name || "活动").replace(/[\\/:*?"<>|]/g, "_");
+const downloadImage = (url: string, filename: string) => {
   const link = document.createElement("a");
-  link.href = qrDataUrl.value;
-  link.download = `${activity.value?.name || "活动"}-二维码.png`;
+  link.href = url;
+  link.download = filename;
   link.click();
+  link.remove();
+};
+const downloadQr = () => {
+  if (qrDataUrl.value) downloadImage(qrDataUrl.value, `${safeActivityName()}-网页二维码.png`);
+};
+const downloadMiniCode = () => {
+  if (miniCodeUrl.value) downloadImage(miniCodeUrl.value, `${safeActivityName()}-小程序码.png`);
 };
 const statusLabel = (status: Activity["status"]) =>
   ({ closed: "已关闭", open: "进行中", ended: "已结束" })[status];
 const formatDate = (value: string) =>
   new Date(value).toLocaleString("zh-CN", { hour12: false });
 onMounted(load);
+onBeforeUnmount(() => {
+  if (miniCodeUrl.value) URL.revokeObjectURL(miniCodeUrl.value);
+});
 </script>
 
 <style scoped>
@@ -238,7 +274,7 @@ onMounted(load);
 }
 .entry-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) repeat(2, 240px);
   gap: 18px;
 }
 .entry-panel {
@@ -286,8 +322,8 @@ onMounted(load);
 .qr-frame {
   display: grid;
   place-items: center;
-  width: 220px;
-  height: 220px;
+  width: 190px;
+  height: 190px;
   margin: 20px 0 12px;
   background: #fff;
 }
@@ -304,7 +340,19 @@ onMounted(load);
   border-radius: 50%;
   animation: spin 800ms linear infinite;
 }
+.qr-unavailable {
+  width: 100%;
+  padding: 18px;
+  color: #849089;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
 .download-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: #0f6652;
 }
 .entry-note {
@@ -320,6 +368,15 @@ onMounted(load);
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+@media (max-width: 1100px) {
+  .entry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .entry-address-panel {
+    grid-column: 1 / -1;
+    min-height: auto;
   }
 }
 @media (max-width: 800px) {
@@ -338,6 +395,9 @@ onMounted(load);
   }
   .entry-grid {
     grid-template-columns: 1fr;
+  }
+  .entry-address-panel {
+    grid-column: auto;
   }
   .qr-panel {
     min-height: 300px;

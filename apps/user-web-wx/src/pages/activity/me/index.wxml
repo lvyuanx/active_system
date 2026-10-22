@@ -36,6 +36,16 @@
           <view class="me-cell"><text>活动用户 ID</text><text class="me-value">{{user.activity_user_id}}</text></view>
           <view class="me-cell"><text>加入时间</text><text class="me-value">{{joinedAt}}</text></view>
         </view>
+        <view class="policy-list">
+          <view class="policy-cell" bindtap="openServiceAgreement">
+            <text>用户服务协议</text>
+            <text class="policy-arrow">查看</text>
+          </view>
+          <view class="policy-cell" bindtap="openPrivacyPolicy">
+            <text>隐私政策</text>
+            <text class="policy-arrow">查看</text>
+          </view>
+        </view>
         <view class="logout-button" bindtap="logout">退出当前活动</view>
       </view>
     </scroll-view>

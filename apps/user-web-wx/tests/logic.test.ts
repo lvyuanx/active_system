@@ -3,6 +3,7 @@ import { apiURL, lotteryWebSocketURL, mediaURL } from "../src/utils/http";
 import { setRuntimeConfigFromOrigin } from "../src/config";
 import { parseActivityId, parseActivityIdFromScanValue, parseScanTarget } from "../src/utils/launch";
 import { activityTokenKey } from "../src/utils/storage";
+import { isAgreementVersionAccepted, userAgreementVersion } from "../src/utils/privacy";
 import { mergeChatMessages, messageAvatarId } from "../src/utils/chat";
 import { applySnapshotToControl, drawsForPrize, flattenPrizes } from "../src/utils/lottery";
 import { ChatMessage, MobileLotterySnapshot } from "../src/types/api";
@@ -47,6 +48,14 @@ describe("小程序活动入口和请求地址", () => {
   it("不从本地开发二维码覆盖 API 端口", () => {
     expect(setRuntimeConfigFromOrigin("http://localhost:5175")).toBe(false);
     expect(setRuntimeConfigFromOrigin("https://public.example.com")).toBe(true);
+  });
+});
+
+describe("用户协议同意状态", () => {
+  it("只接受当前版本的本地同意记录", () => {
+    expect(isAgreementVersionAccepted({ version: userAgreementVersion })).toBe(true);
+    expect(isAgreementVersionAccepted({ version: "2026-01-01" })).toBe(false);
+    expect(isAgreementVersionAccepted(undefined)).toBe(false);
   });
 });
 

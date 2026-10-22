@@ -39,6 +39,13 @@ Element Plus 管理端、ECharts 活动大屏（同时提供 Vue 弹幕渲染层
 活动 token 使用 `active_user_token:{activity_id}` 存储，避免不同活动之间串用会话。
 首页、聊天和“我的”配置为微信原生 custom tab bar 页面，导航实例跨 `switchTab` 保持，页面内容在 `onShow` 中刷新；抽奖结果和抽奖控制作为二级页面保留兼容底部导航。
 
+手机号短信登录前必须在 `pages/entry/index` 勾选《用户服务协议》和《隐私政策》，并通过微信原生
+`wx.requirePrivacyAuthorize` 完成平台隐私授权；协议正文由
+`pages/legal/index` 按 `type=service|privacy` 展示，版本化同意记录保存在 `active_user_agreement` 本地键中。
+`services/session.ts` 在调用活动用户接口前统一验证当前协议版本，协议版本或处理目的变化时应更新
+`utils/privacy.ts` 的 `userAgreementVersion`，以重新取得用户同意。协议文案涉及运营主体、活动主办方和联系方式，
+发布前必须按实际法律主体补充确认。
+
 配置位于 `apps/user-web-wx/src/config.ts`。微信开发者工具的 `develop` 环境连接本地 `http://localhost:8000` 和
 `ws://localhost:8000`，体验版和正式版自动使用 production 的 HTTPS/WSS 地址；对应域名必须在微信公众平台配置为
 request、download 和 socket 合法域名。
@@ -46,6 +53,11 @@ request、download 和 socket 合法域名。
 公网 443 网关、WebSocket Upgrade 转发和后端容器状态。HTTP `/health` 成功只能证明 HTTP 链路可用，不能证明 WSS 链路没有瞬时故障。
 管理员现有 Web 二维码可以由小程序入口页直接扫描解析；二维码本身仍然是 Web 地址，不会自动跳转到小程序页面。
 扫描公网二维码后，客户端会将其域名作为同源 API/WS 地址；微信后台仍必须配置该域名的 request、download 和 socket 合法域名。
+管理员还可以调用 `GET /api/v1/admin/activities/{activity_id}/mini-code` 获取活动专属 PNG 小程序码。
+后端使用 `WECHAT_MINIAPP_APPID`、`WECHAT_MINIAPP_SECRET` 和 `WECHAT_MINIAPP_PAGE` 调用微信接口，默认目标为
+`pages/entry/index?activity_id={activity_id}`；使用页面 query 传递 UUID，不受无限量小程序码 `scene` 长度限制影响。
+AppSecret 只存在后端配置，不返回给管理端浏览器；未配置时接口返回 503，微信接口失败时返回 502。
+管理端活动入口页同时展示微信小程序码和网页二维码，分别提供独立下载操作；小程序码加载失败不影响网页二维码使用。
 
 ### 用户端聊天室视口适配
 

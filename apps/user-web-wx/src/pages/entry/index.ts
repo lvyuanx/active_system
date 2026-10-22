@@ -9,6 +9,14 @@ import {
 } from "../../services/session";
 import { setRuntimeConfigFromOrigin } from "../../config";
 import { parseActivityId, parseScanTarget } from "../../utils/launch";
+import {
+  acceptUserAgreement,
+  isUserAgreementAccepted,
+  openLegalDocument,
+  requestWechatPrivacyAuthorize,
+  revokeUserAgreement,
+} from "../../utils/privacy";
+import { getActivityToken } from "../../utils/storage";
 
 interface EntryData {
   loading: boolean;
@@ -22,6 +30,8 @@ interface EntryData {
   codeCountdown: number;
   needsName: boolean;
   verificationToken: string;
+  agreementAccepted: boolean;
+  privacyAuthorizing: boolean;
   form: { phone: string; code: string; username: string };
 }
 
@@ -41,6 +51,8 @@ Page({
     codeCountdown: 0,
     needsName: false,
     verificationToken: "",
+    agreementAccepted: false,
+    privacyAuthorizing: false,
     form: { phone: "", code: "", username: "" },
   } as EntryData,
 
@@ -49,8 +61,28 @@ Page({
   onLoad(options: Record<string, string | undefined>) {
     const activityId = parseActivityId({ query: options }) ?? currentActivityId();
     const metrics = getApp<IAppOption>().globalData;
-    this.setData({ activityId: activityId ?? "", statusBarHeight: metrics.statusBarHeight });
-    if (activityId) this.load();
+    this.setData({
+      activityId: activityId ?? "",
+      statusBarHeight: metrics.statusBarHeight,
+      agreementAccepted: false,
+    });
+    if (activityId) void this.loadWithAgreement();
+  },
+
+  async loadWithAgreement() {
+    if (isUserAgreementAccepted()) await this.restoreAgreement();
+    await this.load();
+  },
+
+  async restoreAgreement() {
+    const authorized = await this.authorizeWechatPrivacy();
+    if (authorized) {
+      this.setData({ agreementAccepted: true });
+      return true;
+    }
+    revokeUserAgreement();
+    wx.showToast({ title: "请先完成微信隐私授权", icon: "none" });
+    return false;
   },
 
   async load() {
@@ -84,6 +116,33 @@ Page({
     this.setData({ "form.username": event.detail.value });
   },
 
+  async handleAgreementChange(event: WechatMiniprogram.CheckboxGroupChange) {
+    const accepted = event.detail.value.includes("accepted");
+    if (!accepted) {
+      revokeUserAgreement();
+      this.setData({ agreementAccepted: false });
+      return;
+    }
+
+    const authorized = await this.authorizeWechatPrivacy();
+    this.setData({ agreementAccepted: authorized });
+    if (!authorized) {
+      revokeUserAgreement();
+      wx.showToast({ title: "请先完成微信隐私授权", icon: "none" });
+      return;
+    }
+    acceptUserAgreement();
+    if (getActivityToken(this.data.activityId)) void this.load();
+  },
+
+  openServiceAgreement() {
+    openLegalDocument("service");
+  },
+
+  openPrivacyPolicy() {
+    openLegalDocument("privacy");
+  },
+
   scanActivity() {
     wx.scanCode({
       onlyFromCamera: true,
@@ -97,8 +156,8 @@ Page({
         }
         if (target.origin) setRuntimeConfigFromOrigin(target.origin);
         setCurrentActivityId(activityId);
-        this.setData({ activityId, activity: null, user: null, error: "" });
-        this.load();
+        this.setData({ activityId, activity: null, user: null, error: "", agreementAccepted: false });
+        void this.loadWithAgreement();
       },
       fail: (error) => {
         if (!error.errMsg || !error.errMsg.toLowerCase().includes("cancel")) {
@@ -109,6 +168,7 @@ Page({
   },
 
   async sendCode() {
+    if (!await this.ensureAgreement()) return;
     const phone = this.data.form.phone.trim();
     if (!phonePattern.test(phone)) {
       wx.showToast({ title: "请输入有效的手机号", icon: "none" });
@@ -134,6 +194,7 @@ Page({
   },
 
   async submit() {
+    if (!await this.ensureAgreement()) return;
     const phone = this.data.form.phone.trim();
     const code = this.data.form.code.trim();
     if (!phonePattern.test(phone)) {
@@ -168,6 +229,7 @@ Page({
   },
 
   async confirmName() {
+    if (!await this.ensureAgreement()) return;
     const username = this.data.form.username.trim();
     if (!username) {
       wx.showToast({ title: "请输入姓名", icon: "none" });
@@ -195,6 +257,27 @@ Page({
 
   backToLogin() {
     this.setData({ needsName: false, verificationToken: "", "form.code": "", "form.username": "" });
+  },
+
+  async ensureAgreement() {
+    if (!this.data.agreementAccepted || !isUserAgreementAccepted()) {
+      wx.showToast({ title: "请先阅读并同意用户协议和隐私政策", icon: "none" });
+      return false;
+    }
+    const authorized = await this.authorizeWechatPrivacy();
+    if (!authorized) {
+      revokeUserAgreement();
+      this.setData({ agreementAccepted: false });
+      wx.showToast({ title: "请先完成微信隐私授权", icon: "none" });
+    }
+    return authorized;
+  },
+
+  async authorizeWechatPrivacy() {
+    this.setData({ privacyAuthorizing: true });
+    const authorized = await requestWechatPrivacyAuthorize();
+    this.setData({ privacyAuthorizing: false });
+    return authorized;
   },
 
   finishLogin(user: ActivityUserResponse) {

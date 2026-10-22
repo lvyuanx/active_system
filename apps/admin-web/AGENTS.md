@@ -16,7 +16,7 @@ WebSocket 先用 URL 解析为绝对地址再转换 ws/wss。`src/app-links.ts` 
 - `src/views/home/`：登录后的活动卡片选择页，提供状态概览、状态筛选、创建、开启、关闭和结束操作，并可从活动卡片直接打开抽奖大屏。
 - `src/api/client.ts`：认证令牌、活动接口和统一 401 处理。
 - `src/router/index.ts`：登录路由和管理员路由守卫。
-- `src/views/activity/`：单个活动管理页，展示活动移动端地址、二维码，并提供打开移动端和抽奖大屏的入口操作。
+- `src/views/activity/`：单个活动管理页，展示活动移动端地址、网页二维码、微信小程序码，并提供打开移动端和抽奖大屏的入口操作。
 - `src/views/participants/`：活动参与者分页/搜索列表，以及禁言/解除禁言、停用/恢复和移动端抽奖授权/取消授权操作。
 - `src/views/stickers/`：活动级聊天表情包批量上传、预览、下架和恢复。
 - `src/views/danmaku/`：活动级弹幕配置、当前 token 复制和 token 轮换页面。

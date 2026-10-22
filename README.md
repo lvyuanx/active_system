@@ -57,6 +57,9 @@ Electron 仅通过 `?danmaku-overlay=1` 加载透明弹幕渲染层。
 启动后端前复制 `.env.example` 为 `.env`，设置 `SUPERUSER_USERNAME`、`SUPERUSER_PASSWORD`、`LOTTERY_SECURITY_CODE` 和随机的 `JWT_SECRET`。
 管理员和活动用户登录 JWT 默认有效期为 24 小时，可通过 `JWT_EXPIRE_MINUTES` 调整。
 可选设置独立的 `DANMAKU_TOKEN_SECRET`；为空时弹幕 token 使用 `JWT_SECRET` 派生。后端首次启动会初始化 SQLite 数据库和超级用户；只有该超级用户可以登录管理端。
+管理员可通过 `GET /api/v1/admin/activities/{activity_id}/mini-code` 获取活动专属 PNG 小程序码。
+后端使用 `WECHAT_MINIAPP_APPID`、`WECHAT_MINIAPP_SECRET` 和 `WECHAT_MINIAPP_PAGE` 调用微信接口，默认目标页面为
+`pages/entry/index?activity_id={activity_id}`；AppSecret 只配置在服务端。
 短信验证码通过 `POST /api/v1/activities/{activity_id}/auth/sms-code` 发送。接口只接受中国大陆手机号，按手机号全局限制每 60 秒一次；
 配置 `ALIBABA_CLOUD_ACCESS_KEY_ID`、`ALIBABA_CLOUD_ACCESS_KEY_SECRET`、`ALIYUN_SMS_SIGN_NAME` 和
 `ALIYUN_SMS_TEMPLATE_CODE` 后，阿里云会生成并发送验证码，后端不会保存或返回验证码。核验接口为

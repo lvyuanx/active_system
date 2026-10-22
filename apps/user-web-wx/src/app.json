@@ -2,12 +2,14 @@
   "pages": [
     "pages/entry/index",
     "pages/index/index",
+    "pages/legal/index",
     "pages/activity/home/index",
     "pages/activity/chat/index",
     "pages/activity/me/index",
     "pages/activity/lottery-results/index",
     "pages/activity/lottery/index"
   ],
+  "__usePrivacyCheck__": true,
   "window": {
     "navigationStyle": "custom",
     "navigationBarBackgroundColor": "#0b0d0e",

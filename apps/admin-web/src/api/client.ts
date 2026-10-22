@@ -30,6 +30,22 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   return body as T;
 }
 
+export async function requestBlob(path: string): Promise<Blob> {
+  const headers = new Headers();
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const response = await fetch(apiURL(path), { headers });
+  if (response.status === 401) {
+    clearToken();
+    window.dispatchEvent(new CustomEvent("admin-unauthorized"));
+  }
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.detail ?? "请求失败，请稍后重试");
+  }
+  return response.blob();
+}
+
 export interface LoginResponse { access_token: string; token_type: string; username: string }
 export interface Activity {
   activity_id: string;
@@ -253,6 +269,7 @@ export const createActivity = (payload: Pick<Activity, "name" | "description" | 
   request<Activity>("/admin/activities", { method: "POST", body: JSON.stringify(payload) });
 export const changeActivityStatus = (id: string, action: "open" | "close" | "end") =>
   request<Activity>(`/admin/activities/${id}/${action}`, { method: "POST" });
+export const getActivityMiniCode = (id: string) => requestBlob(`/admin/activities/${id}/mini-code`);
 export const listActivityParticipants = (
   activityId: string,
   options: { keyword?: string; page?: number; pageSize?: number } = {},

@@ -7,6 +7,7 @@ import {
   resetActivitySession,
   setActivityTab,
 } from "../../../services/session";
+import { openLegalDocument } from "../../../utils/privacy";
 
 interface MeData {
   loading: boolean;
@@ -84,6 +85,14 @@ Page({
         goToEntry();
       },
     });
+  },
+
+  openServiceAgreement() {
+    openLegalDocument("service");
+  },
+
+  openPrivacyPolicy() {
+    openLegalDocument("privacy");
   },
 });
 

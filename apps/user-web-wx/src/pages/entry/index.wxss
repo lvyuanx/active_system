@@ -108,6 +108,37 @@
   text-align: left;
 }
 
+.agreement-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8rpx;
+  margin-top: 40rpx;
+  color: #c8c4bb;
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.agreement-checkbox-group {
+  flex: 0 0 auto;
+  height: 44rpx;
+  margin-top: 4rpx;
+}
+
+.agreement-checkbox {
+  transform: scale(0.82);
+  transform-origin: left top;
+}
+
+.agreement-copy {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.agreement-link {
+  color: #e7ca86;
+}
+
 .field-item {
   margin-bottom: 34rpx;
 }
@@ -133,6 +164,12 @@
 
 .field-placeholder {
   color: #8f918d;
+}
+
+.field-input[disabled] {
+  color: #8f918d;
+  background: #111415;
+  opacity: 0.72;
 }
 
 .code-field {

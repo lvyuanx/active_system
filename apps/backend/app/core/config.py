@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     aliyun_sms_scheme_name: str = ""
     aliyun_sms_code_length: int = 6
     aliyun_sms_valid_time: int = 300
+    wechat_miniapp_appid: str = ""
+    wechat_miniapp_secret: str = ""
+    wechat_miniapp_page: str = "pages/entry/index"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

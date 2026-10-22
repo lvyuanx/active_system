@@ -28,6 +28,7 @@ Docker 部署保留单 uvicorn，数据库和媒体均由 Compose 绑定在 `/ap
 - `app/core/security.py`：PBKDF2 密码哈希和 HS256 JWT。
 - `app/modules/auth/router.py`：超级用户初始化、登录和管理员权限依赖。
 - `app/modules/activities/router.py`：活动 CRUD 列表、创建和生命周期状态转换接口。
+- `app/modules/activities/mini_code.py`：微信 access_token 缓存和活动专属小程序码生成。
 - `app/modules/participants/router.py`：活动公开详情、活动用户注册/登录、token 校验和用户身份接口。
 - `app/modules/participants/admin_router.py`：超级用户使用的参与者分页/搜索列表、禁言/解除禁言、停用/恢复和移动端抽奖授权接口。
 - `app/modules/participants/avatar.py`：活动用户头像范围校验、安全随机分配和空值惰性补齐。
@@ -51,3 +52,5 @@ Docker 部署保留单 uvicorn，数据库和媒体均由 Compose 绑定在 `/ap
 `SUPERUSER_USERNAME`、`SUPERUSER_PASSWORD` 以及 `ALIYUN_SMS_*` 配置数据库、令牌、抽奖特殊配置安全码、初始超级用户和短信服务。
 `JWT_EXPIRE_MINUTES` 默认值为 1440（24 小时）。
 `DANMAKU_TOKEN_SECRET` 为空时回退使用 `JWT_SECRET`；启动时会创建表，并在密码变量非空时初始化或更新超级用户。
+小程序码接口额外使用 `WECHAT_MINIAPP_APPID`、`WECHAT_MINIAPP_SECRET` 和 `WECHAT_MINIAPP_PAGE`；
+其中 AppSecret 只在后端调用微信接口时使用。

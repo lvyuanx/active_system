@@ -48,6 +48,36 @@
   background: #151819;
 }
 
+.policy-list {
+  margin-top: 28rpx;
+  overflow: hidden;
+  border: 1px solid #303433;
+  border-radius: 26rpx;
+  background: #151819;
+}
+
+.policy-cell {
+  display: flex;
+  min-height: 88rpx;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 20rpx 28rpx;
+  border-bottom: 1px solid #303433;
+  color: #c8c4bb;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
+.policy-cell:last-child {
+  border-bottom: 0;
+}
+
+.policy-arrow {
+  color: #d5b36b;
+  font-size: 24rpx;
+}
+
 .me-cell {
   display: flex;
   min-height: 98rpx;
